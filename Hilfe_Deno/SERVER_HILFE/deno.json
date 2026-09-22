@@ -1,8 +1,11 @@
 {
   "tasks": {
-    "dev": "deno run --watch --env-file --allow-net --allow-env --allow-read app.ts"
+    "dev": "deno run --watch --env-file --allow-net --allow-env --allow-read --allow-write --allow-ffi app.ts"
   },
   "imports": {
-    "@std/assert": "jsr:@std/assert@1"
-  }
+    "@felix/bcrypt": "jsr:@felix/bcrypt@^2.1.0",
+    "@std/assert": "jsr:@std/assert@1",
+    "@zaubrik/djwt": "jsr:@zaubrik/djwt@^3.0.2"
+  },
+  "nodeModulesDir": "auto"
 }
