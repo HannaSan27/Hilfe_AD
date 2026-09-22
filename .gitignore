@@ -1,0 +1,11 @@
+# Astro
+Hilfe_Astro/ASTRO_HILFE/node_modules/
+Hilfe_Astro/ASTRO_HILFE/dist/
+Hilfe_Astro/ASTRO_HILFE/.astro/
+
+# Deno
+Hilfe_Deno/SERVER_HILFE/.env
+
+# Sistema operativo / editor
+.DS_Store
+Thumbs.db
