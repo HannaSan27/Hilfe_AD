@@ -1,0 +1,40 @@
+---
+interface Props {
+	id: number;
+	nombre: string;
+	titulo: string;
+	precio: string;
+	ubicacion: string;
+	verificado: boolean;
+	inicial: string;
+	gradient: string;
+}
+
+const { id, nombre, titulo, precio, ubicacion, verificado, inicial, gradient } = Astro.props;
+const animDelay = ((id % 6) * 0.1).toFixed(1);
+---
+
+<div class="worker-card profesional-card" style={`animation: fadeUp .5s ease both; animation-delay:${animDelay}s`}>
+	<div class="worker-banner" style={`background: linear-gradient(135deg, ${gradient}); overflow:hidden;`}>
+		{
+			verificado ? (
+				<span class="worker-badge">✓ Verificado</span>
+			) : (
+				<span class="worker-badge" style="background:rgba(239,68,68,0.15);color:#ef4444;">✗ Sin verificar</span>
+			)
+		}
+		<span class="worker-avatar">{inicial}</span>
+	</div>
+	<div class="worker-info">
+		<h4>{nombre}</h4>
+		<span class="worker-service">{titulo}</span>
+		<div class="worker-meta">
+			<span>{ubicacion}</span>
+			<span class="worker-available">Disponible hoy</span>
+		</div>
+		<div class="worker-footer">
+			<strong>${precio}</strong>
+			<a href={`/trabajador/perfil/${id}`} class="worker-btn">Ver perfil</a>
+		</div>
+	</div>
+</div>

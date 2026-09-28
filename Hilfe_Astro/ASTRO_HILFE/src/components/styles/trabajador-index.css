@@ -1,0 +1,174 @@
+.sidebar {
+    padding: 24px 16px;
+    position: sticky;
+    top: 84px;
+    height: fit-content;
+}
+.sidebar-logo {
+    font-size: 1.5rem;
+    font-weight: 800;
+    color: var(--text);
+    margin-bottom: 24px;
+    letter-spacing: -1px;
+}
+.sidebar-logo span { color: var(--primary); }
+.sidebar-section {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--text-muted);
+    margin: 20px 0 8px 8px;
+}
+.sidebar-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    border-radius: 10px;
+    color: var(--text-secondary);
+    font-weight: 500;
+    font-size: 14px;
+    transition: var(--transition);
+    margin-bottom: 2px;
+    cursor: pointer;
+    border: none;
+    background: none;
+    width: 100%;
+    text-align: left;
+    font-family: inherit;
+    text-decoration: none;
+}
+.sidebar-item:hover {
+    background: var(--primary-soft);
+    color: var(--primary);
+    text-decoration: none;
+}
+.sidebar-item.active {
+    background: var(--primary);
+    color: #fff;
+}
+.sidebar-item i { font-size: 1.1rem; width: 20px; text-align: center; }
+.sidebar-item.danger { color: var(--danger); }
+.sidebar-item.danger:hover { background: var(--danger-soft); color: var(--danger); }
+.section-view { display: none; }
+.section-view.active { display: block; }
+.solicitud-card { margin-bottom: 12px; }
+.solicitud-card:last-child { margin-bottom: 0; }
+.solicitud-card .card-body {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+    flex-wrap: wrap;
+}
+.solicitud-info { flex: 1; min-width: 200px; }
+.solicitud-info .cliente {
+    font-weight: 700;
+    color: var(--text);
+    font-size: 15px;
+}
+.solicitud-info .servicio {
+    color: var(--text-secondary);
+    font-size: 13px;
+    margin-top: 2px;
+}
+.solicitud-info .meta {
+    color: var(--text-muted);
+    font-size: 12px;
+    margin-top: 6px;
+}
+.solicitud-info .meta i { margin-right: 4px; }
+.solicitud-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+.section-title-page {
+    font-size: 1.6rem;
+    font-weight: 800;
+    color: var(--text);
+    margin: 0;
+}
+.welcome-text {
+    color: var(--text-secondary);
+    font-size: 14px;
+}
+.quick-access-title {
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--text);
+    margin: 28px 0 16px;
+}
+.page-layout-offset {
+    margin-top: 72px;
+}
+.calificacion-card {
+    margin-bottom: 12px;
+    border-left: 4px solid var(--star);
+}
+.calificacion-card:last-child { margin-bottom: 0; }
+.promedio-valor {
+    font-size: 2.5rem;
+    font-weight: 800;
+    color: var(--star);
+    line-height: 1;
+}
+.promedio-label {
+    font-size: 12px;
+    color: var(--text-muted);
+}
+.estrellas-grandes {
+    font-size: 1.6rem;
+    color: var(--star);
+    letter-spacing: 2px;
+}
+.estrellas {
+    color: var(--star);
+    font-size: 1.1rem;
+    letter-spacing: 1px;
+}
+.calificacion-fecha {
+    color: var(--text-muted);
+    font-size: 12px;
+}
+.calificacion-comentario {
+    color: var(--text-secondary);
+    font-size: 14px;
+    margin: 0;
+    font-style: italic;
+}
+.calificacion-sin-comentario {
+    color: var(--text-muted);
+    font-size: 14px;
+    margin: 0;
+    font-style: italic;
+}
+.filter-bar {
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+}
+.filtro-btn.active {
+    background: var(--primary) !important;
+    color: #fff !important;
+    border-color: var(--primary) !important;
+}
+.filtro-btn.active .badge {
+    background: rgba(255,255,255,0.2) !important;
+    color: #fff !important;
+}
+.clickable-card { cursor: pointer; }
+.worker-card p {
+    color: var(--text-secondary);
+    font-size: 13px;
+    margin: 8px 0;
+}
+.worker-card .badge { font-size: 11px; }
+.workers-grid .worker-card { display: flex; flex-direction: column; }
+.workers-grid .worker-card .worker-info { flex: 1; display: flex; flex-direction: column; }
+.workers-grid .worker-card .worker-footer { margin-top: auto; }
+
+@media (max-width: 768px) {
+    .solicitud-card .card-body { flex-direction: column; align-items: flex-start; }
+}

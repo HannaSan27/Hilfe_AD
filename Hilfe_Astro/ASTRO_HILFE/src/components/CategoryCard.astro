@@ -1,0 +1,30 @@
+---
+interface Props {
+	nombre: string;
+	descripcion: string;
+	gradient: string;
+	color: string;
+	delay: string;
+	serviciosCount?: number;
+}
+
+const {
+	nombre,
+	descripcion,
+	gradient,
+	color,
+	delay,
+	serviciosCount = 0,
+} = Astro.props;
+
+const iniciales = nombre.slice(0, 2).toUpperCase();
+---
+
+<a href="/categorias/" class="category-card" style={`animation-delay:${delay}s`}>
+	<div class="category-icon-wrap" style={`background: ${gradient}; color: ${color};`}>
+		<span>{iniciales}</span>
+	</div>
+	<h3>{nombre}</h3>
+	<p>{descripcion}</p>
+	<span class="category-count">{serviciosCount} servicios</span>
+</a>

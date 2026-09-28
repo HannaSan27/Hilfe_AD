@@ -1,0 +1,91 @@
+---
+interface Props {
+	id: number;
+	nombre: string;
+	titulo: string;
+	ubicacion: string;
+	categoria: string;
+	calificacion: number;
+	totalResenias: number;
+	precio: number;
+	verificado: boolean;
+	disponible: boolean;
+	inicial: string;
+}
+
+const {
+	id,
+	nombre,
+	titulo,
+	ubicacion,
+	categoria,
+	calificacion,
+	totalResenias,
+	precio,
+	verificado,
+	disponible,
+	inicial,
+} = Astro.props;
+
+const precioLbl = precio.toLocaleString('es-CO');
+const calificacionLbl = calificacion.toFixed(1);
+const nameLower = nombre.toLowerCase();
+const titleLower = titulo.toLowerCase();
+const catLower = categoria.toLowerCase();
+---
+
+<div
+	class="worker-card fade-in-up"
+	data-name={nameLower}
+	data-title={titleLower}
+	data-category={catLower}
+	data-price={String(precio)}
+	data-rating={String(calificacion)}
+	data-estado={disponible ? 'available' : 'unavailable'}
+>
+	<div class="worker-card-photo">
+		<div class="photo-placeholder">{inicial}</div>
+		{
+			verificado ? (
+				<span class="worker-card-badge">✓ Verificado</span>
+			) : (
+				<span class="worker-card-badge" style="background:rgba(239,68,68,0.12);color:#ef4444;">✗ Sin verificar</span>
+			)
+		}
+		<span class={`worker-card-status ${disponible ? 'available' : 'unavailable'}`}>
+			{disponible ? 'Disponible hoy' : 'No disponible'}
+		</span>
+	</div>
+	<div class="worker-card-body">
+		<div class="worker-card-top">
+			<div class="worker-card-name">{nombre}</div>
+			<div class="worker-card-rating">
+				{calificacionLbl} <small>({totalResenias})</small>
+			</div>
+		</div>
+		<div class="worker-card-service">{titulo}</div>
+		<div class="worker-card-meta">
+			<span>
+				<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+				{ubicacion}
+			</span>
+			<span>
+				<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+				{totalResenias} reseñas
+			</span>
+		</div>
+		<div class="worker-card-tags">
+			<span class="worker-tag">{categoria}</span>
+		</div>
+		<div class="worker-card-footer">
+			<div class="worker-card-price">
+				${precioLbl}
+				<small>/servicio</small>
+			</div>
+			<a href={`/trabajador/perfil/${id}`} class="worker-card-btn">
+				Ver perfil
+				<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+			</a>
+		</div>
+	</div>
+</div>
