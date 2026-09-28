@@ -1,0 +1,107 @@
+@baseUrl = http://localhost:8000
+
+@token = eyJhbGciOiJIUzUxMiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwicm9sIjoxfQ.BKNKaFiCyNhpwumMC_zgpZ2KkPofkUQpf3WpBCBslJbfBLXBUB-MmpbsXocUoc4xEu3h3CW2LRcpn6XAlRlNqg
+
+### Login (Admin)
+# @name loginAdmin
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+
+{
+  "correo": "admin@hilfe.com",
+  "contrasena": "Test1234"
+}
+
+### Login (Trabajador - Carlos)
+# @name loginCarlos
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+
+{
+  "correo": "carlos.trabajador@hilfe.com",
+  "contrasena": "Test1234"
+}
+
+### Login (Cliente - Ana)
+# @name loginAna
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+
+{
+  "correo": "ana.cliente@hilfe.com",
+  "contrasena": "Test1234"
+}
+
+### Obtener perfil de Carlos (trabajador, Id_Usuario = 2)
+GET {{baseUrl}}/api/usuarios/2
+
+### Editar perfil de Carlos (usa el token de su propio login)
+PUT {{baseUrl}}/api/usuarios/2
+Content-Type: application/json
+Authorization: Bearer {{loginCarlos.response.body.token}}
+
+{
+  "nombre": "Carlos Ramírez Actualizado",
+  "telefono": "3001111199",
+  "ubicacion": "Bogotá"
+}
+
+### Listar todos los trabajadores (deben salir Carlos, María y Jorge)
+GET {{baseUrl}}/api/trabajadores
+
+### Ver perfil público de un trabajador específico
+GET {{baseUrl}}/api/trabajadores/2
+
+### Registrar calificación (usa el token de Ana, la clienta)
+POST {{baseUrl}}/api/calificaciones
+Content-Type: application/json
+Authorization: Bearer {{loginAna.response.body.token}}
+
+{
+  "idSolicitud": 1,
+  "puntaje": 5,
+  "comentario": "Excelente trabajo, muy puntual"
+}
+
+### Ver calificaciones de un trabajador
+GET {{baseUrl}}/api/calificaciones/trabajador/2
+
+### Registro de usuario de prueba con correo real (necesario antes de probar recuperación)
+POST {{baseUrl}}/api/auth/registro
+Content-Type: application/json
+
+{
+  "idRol": 3,
+  "nombre": "Soporte Hilfe",
+  "correo": "soportehilfe2@gmail.com",
+  "contrasena": "123456",
+  "telefono": "3000000000",
+  "ubicacion": "Duitama"
+}
+
+### Solicitar recuperación de contraseña
+POST {{baseUrl}}/api/auth/recuperar/solicitar
+Content-Type: application/json
+
+{
+  "correo": "soportehilfe2@gmail.com"
+}
+
+### Verificar código (revisa el correo y pon el código real aquí)
+POST {{baseUrl}}/api/auth/recuperar/verificar
+Content-Type: application/json
+
+{
+  "correo": "soportehilfe2@gmail.com",
+  "codigo": ""
+}
+
+### Poner nueva contraseña
+POST {{baseUrl}}/api/auth/recuperar/nueva-contrasena
+Content-Type: application/json
+
+{
+  "correo": "soportehilfe2@gmail.com",
+  "codigo": "",
+  "nuevaContrasena": "NuevaClave123"
+}
