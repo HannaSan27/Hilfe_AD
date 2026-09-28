@@ -1,0 +1,221 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import '../../components/styles/admin.css';
+
+// ─────────────────────────────────────────────
+// DATOS: reemplaza estos valores por tu backend
+// (ej: const res = await fetch('http://localhost:PUERTO/api/admin/dashboard'))
+// ─────────────────────────────────────────────
+const stats = {
+  totalUsuarios: 128,
+  totalTrabajadores: 42,
+  citasMes: 67,
+  califPromedio: 4.6,
+};
+
+interface Cita {
+  cliente: string;
+  trabajador: string;
+  servicio: string;
+  fecha: string; // ISO: YYYY-MM-DD
+  estado: 'confirmada' | 'pendiente' | 'finalizada' | 'cancelada' | string;
+}
+
+const citas: Cita[] = [
+  { cliente: 'Laura Gómez', trabajador: 'Carlos Ruiz', servicio: 'Plomería', fecha: '2026-09-22', estado: 'confirmada' },
+  { cliente: 'Andrés Peña', trabajador: 'María Torres', servicio: 'Electricidad', fecha: '2026-09-21', estado: 'pendiente' },
+  { cliente: 'Sofía Rojas', trabajador: 'Juan Díaz', servicio: 'Pintura', fecha: '2026-09-19', estado: 'finalizada' },
+  { cliente: 'Camilo Ortiz', trabajador: 'Pedro León', servicio: 'Carpintería', fecha: '2026-09-18', estado: 'cancelada' },
+];
+
+const badgeClass = (estado: string) =>
+  ({
+    confirmada: 'badge-success',
+    pendiente: 'badge-warning',
+    finalizada: 'badge-info',
+    cancelada: 'badge-danger',
+  })[estado] ?? 'badge-neutral';
+
+const formatFecha = (iso: string) =>
+  new Date(iso + 'T00:00:00').toLocaleDateString('es-CO', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+  });
+
+const cards = [
+  { icon: 'users', color: 'primary', value: stats.totalUsuarios, label: 'Usuarios totales', trend: 'Clientes registrados', up: true },
+  { icon: 'hard-hat', color: 'success', value: stats.totalTrabajadores, label: 'Trabajadores activos', trend: 'Trabajadores registrados', up: true },
+  { icon: 'calendar-check', color: 'warning', value: stats.citasMes, label: 'Citas este mes', trend: 'Mes actual', up: true },
+  { icon: 'star', color: 'danger', value: stats.califPromedio, label: 'Calificación promedio', trend: 'Sin cambios', up: false },
+];
+---
+
+<Layout title="Dashboard">
+  <div class="admin-layout">
+    <!-- ====== SIDEBAR ====== -->
+    <aside class="sidebar">
+      <div class="sidebar-logo">
+        <div class="logo">
+          Hilf<span class="logo-accent">'e</span>
+        </div>
+        <small>"Conectamos soluciones contigo."</small>
+      </div>
+
+      <span class="sidebar-label">General</span>
+      <a href="/admin/admin" class="sidebar-item active">
+        <i data-lucide="layout-dashboard"></i> Dashboard
+      </a>
+      <a href="/admin/usuario" class="sidebar-item">
+        <i data-lucide="users"></i> Usuarios
+      </a>
+      <a href="/admin/trabajadores" class="sidebar-item">
+        <i data-lucide="hard-hat"></i> Trabajadores
+      </a>
+
+      <span class="sidebar-label">Plataforma</span>
+      <a href="/admin/citas" class="sidebar-item">
+        <i data-lucide="calendar-check"></i> Citas
+      </a>
+      <a href="/admin/categoria" class="sidebar-item">
+        <i data-lucide="tag"></i> Categorías
+      </a>
+
+      <span class="sidebar-label">Cuenta</span>
+      <a href="/" class="sidebar-item">
+        <i data-lucide="home"></i> Ver sitio
+      </a>
+      <a href="/login" class="sidebar-item sidebar-item-danger">
+        <i data-lucide="log-out"></i> Cerrar sesión
+      </a>
+    </aside>
+
+    <!-- ====== MAIN CONTENT ====== -->
+    <div class="admin-main">
+      <!-- ====== TOP NAVBAR ====== -->
+      <nav class="navbar-hilfe">
+        <div class="nav-inner">
+          <div class="logo">
+            Hilf<span class="logo-accent">'e</span>
+          </div>
+
+          <div class="nav-actions">
+            <button type="button" class="theme-toggle" id="themeToggle" aria-label="Cambiar tema">
+              <svg class="theme-icon-light" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+              <svg class="theme-icon-dark" style="display:none" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+            </button>
+
+            <!-- Reemplaza por tu menú de usuario (antes _YoMenu) -->
+            <div class="yo-menu">
+              <span class="yo-avatar">A</span>
+              Admin
+            </div>
+          </div>
+        </div>
+      </nav>
+
+      <div class="admin-content">
+        <!-- Page header -->
+        <div class="content-header">
+          <h1>Dashboard</h1>
+          <p>Resumen general de la plataforma</p>
+        </div>
+
+        <!-- ====== METRICS GRID ====== -->
+        <div class="stats-grid stagger">
+          {cards.map((c) => (
+            <div class="stat-card">
+              <div class={`stat-card-icon ${c.color}`}>
+                <i data-lucide={c.icon} style="width:22px;height:22px"></i>
+              </div>
+              <div class="stat-card-body">
+                <div class="stat-card-value">{c.value}</div>
+                <div class="stat-card-label">{c.label}</div>
+                <div class={`stat-card-trend ${c.up ? 'up' : ''}`}>{c.trend}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <!-- ====== RECENT CITAS TABLE ====== -->
+        <div class="admin-card">
+          <div class="admin-card-header">
+            <h3>
+              <i data-lucide="clipboard-list"></i>
+              Citas recientes
+            </h3>
+            <a href="/admin/citas" class="btn btn-secondary btn-sm">Ver todas →</a>
+          </div>
+          <div class="table-wrap">
+            <table class="table">
+              <thead>
+                <tr>
+                  <th>Cliente</th>
+                  <th>Trabajador</th>
+                  <th>Servicio</th>
+                  <th>Fecha</th>
+                  <th>Estado</th>
+                </tr>
+              </thead>
+              <tbody>
+                {citas.length > 0 ? (
+                  citas.map((c) => (
+                    <tr>
+                      <td><strong>{c.cliente}</strong></td>
+                      <td>{c.trabajador}</td>
+                      <td>{c.servicio}</td>
+                      <td>{formatFecha(c.fecha)}</td>
+                      <td><span class={`badge ${badgeClass(c.estado)}`}>{c.estado}</span></td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td colspan="5">
+                      <div class="empty-state">
+                        <div class="empty-state-icon">
+                          <i data-lucide="inbox" style="width:40px;height:40px"></i>
+                        </div>
+                        <h3>No hay citas</h3>
+                        <p>Aún no hay citas registradas en la plataforma.</p>
+                      </div>
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script is:inline src="https://unpkg.com/lucide@latest"></script>
+  <script is:inline>
+    // Iconos Lucide
+    if (window.lucide) lucide.createIcons();
+
+    // Tema claro / oscuro
+    (function () {
+      var root = document.documentElement;
+      var btn = document.getElementById('themeToggle');
+      var light = btn.querySelector('.theme-icon-light');
+      var dark = btn.querySelector('.theme-icon-dark');
+
+      function apply(theme) {
+        root.setAttribute('data-theme', theme);
+        light.style.display = theme === 'dark' ? 'none' : '';
+        dark.style.display = theme === 'dark' ? '' : 'none';
+      }
+
+      var saved = null;
+      try { saved = localStorage.getItem('theme'); } catch (e) {}
+      apply(saved || 'light');
+
+      btn.addEventListener('click', function () {
+        var next = root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+        apply(next);
+        try { localStorage.setItem('theme', next); } catch (e) {}
+      });
+    })();
+  </script>
+</Layout>
