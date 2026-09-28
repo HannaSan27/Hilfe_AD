@@ -1,0 +1,180 @@
+### Variables
+@baseUrl = http://localhost:8000
+
+### Obtener todas las categorías
+GET {{baseUrl}}/api/categorias
+
+### Obtener una categoría por ID
+GET {{baseUrl}}/api/categorias/7
+
+### Crear una categoría nueva
+POST {{baseUrl}}/api/categorias
+Content-Type: application/json
+
+{
+  "Nombre_Categoria": "Hogar y arreglos",
+  "Descripcion": "Reparaciones, mantenimiento y arreglos generales del hogar"
+}
+
+### Actualizar una categoría existente
+PUT {{baseUrl}}/api/categorias/17
+Content-Type: application/json
+
+{
+  "Nombre_Categoria": "Hogar ",
+  "Descripcion": "Descripción actualizada de prueba"
+}
+
+### Eliminar una categoría
+DELETE {{baseUrl}}/api/categorias/7
+
+### Listar servicios con filtros opcionales
+GET {{baseUrl}}/api/servicios
+
+### Listar servicios filtrados por categoría
+GET {{baseUrl}}/api/servicios?categoria=1
+
+### Buscar servicios por texto
+GET {{baseUrl}}/api/servicios?busqueda=limpieza
+
+### Obtener un servicio por ID
+GET {{baseUrl}}/api/servicios/1
+
+### Crear un servicio nuevo
+POST {{baseUrl}}/api/servicios
+Content-Type: application/json
+
+{
+  "Id_Trabajador": 2,
+  "Id_Categoria": 1,
+  "Titulo": "Reparación de fugas de agua",
+  "Descripcion": "Detección y reparación de fugas en tuberías",
+  "Precio": 80000,
+  "TipoServicio": "Único"
+}
+
+### Actualizar un servicio
+PUT {{baseUrl}}/api/servicios/1
+Content-Type: application/json
+
+{
+  "Id_Categoria": 1,
+  "Titulo": "Reparación de fugas de agua",
+  "Descripcion": "Descripción actualizada",
+  "Precio": 90000,
+  "TipoServicio": "Único"
+}
+
+### Eliminar un servicio
+DELETE {{baseUrl}}/api/servicios/1
+
+### Listar todas las solicitudes
+GET {{baseUrl}}/api/solicitudes
+
+### Filtrar solicitudes por cliente
+GET {{baseUrl}}/api/solicitudes?cliente=5
+
+### Filtrar solicitudes por estado
+GET {{baseUrl}}/api/solicitudes?estado=pendiente
+
+### Obtener una solicitud por ID
+GET {{baseUrl}}/api/solicitudes/3
+
+### Crear una solicitud nueva (cliente agenda un servicio)
+POST {{baseUrl}}/api/solicitudes
+Content-Type: application/json
+
+{
+  "Id_Cliente": 5,
+  "Id_Trabajador": 2,
+  "Id_Servicio": 1,
+  "Fecha_Servicio": "2026-10-15",
+  "Hora_Servicio": "10:00:00",
+  "Direccion": "Calle 10 #5-20, Bogotá",
+  "Telefono": "3004444444",
+  "Descripcion_Solicitud": "Prueba de solicitud nueva"
+}
+
+### Cambiar estado: pendiente -> aceptado (transición válida)
+PUT {{baseUrl}}/api/solicitudes/1/estado
+Content-Type: application/json
+
+{
+  "Estado_Solicitudes": "aceptado"
+}
+
+### Probar transición INVÁLIDA (aceptado -> finalizado, debería dar error 400)
+PUT {{baseUrl}}/api/solicitudes/1/estado
+Content-Type: application/json
+
+{
+  "Estado_Solicitudes": "finalizado"
+}
+
+### Eliminar una solicitud (solo funciona si está en pendiente, rechazado o cancelada)
+DELETE {{baseUrl}}/api/solicitudes/1
+
+### Listar toda la disponibilidad
+GET {{baseUrl}}/api/disponibilidad
+
+### Filtrar disponibilidad por servicio
+GET {{baseUrl}}/api/disponibilidad?servicio=1
+
+### Obtener una disponibilidad por ID
+GET {{baseUrl}}/api/disponibilidad/1
+
+### Crear una disponibilidad nueva
+POST {{baseUrl}}/api/disponibilidad
+Content-Type: application/json
+
+{
+  "Id_Servicio": 1,
+  "Dia_Semana": "Viernes",
+  "Hora_Inicio": "09:00:00",
+  "Hora_Fin": "17:00:00"
+}
+
+### Probar validación de horario inválido (debería dar error 400)
+POST {{baseUrl}}/api/disponibilidad
+Content-Type: application/json
+
+{
+  "Id_Servicio": 1,
+  "Dia_Semana": "Sábado",
+  "Hora_Inicio": "18:00:00",
+  "Hora_Fin": "10:00:00"
+}
+
+### Actualizar una disponibilidad
+PUT {{baseUrl}}/api/disponibilidad/1
+Content-Type: application/json
+
+{
+  "Dia_Semana": "Viernes",
+  "Hora_Inicio": "10:00:00",
+  "Hora_Fin": "18:00:00"
+}
+
+### Eliminar una disponibilidad
+DELETE {{baseUrl}}/api/disponibilidad/1
+
+### Listar todas las imagenes de trabajos
+GET {{baseUrl}}/api/imagenes-trabajos
+
+### Filtrar imagenes por servicio
+GET {{baseUrl}}/api/imagenes-trabajos?servicio=1
+
+### Obtener una imagen por ID
+GET {{baseUrl}}/api/imagenes-trabajos/1
+
+### Registrar una imagen nueva
+POST {{baseUrl}}/api/imagenes-trabajos
+Content-Type: application/json
+
+{
+  "Id_Servicio": 1,
+  "Ruta_Imagen": "/uploads/trabajos/prueba_1.jpg"
+}
+
+### Eliminar una imagen
+DELETE {{baseUrl}}/api/imagenes-trabajos/1
