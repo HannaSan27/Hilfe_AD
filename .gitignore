@@ -5,6 +5,7 @@ Hilfe_Astro/ASTRO_HILFE/.astro/
 
 # Deno
 Hilfe_Deno/SERVER_HILFE/.env
+Hilfe_Deno/SERVER_HILFE/node_modules/
 
 # Sistema operativo / editor
 .DS_Store
