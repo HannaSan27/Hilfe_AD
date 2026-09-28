@@ -1,11 +1,220 @@
 ---
-import Welcome from '../components/Welcome.astro';
 import Layout from '../layouts/Layout.astro';
+import HomeNav from '../components/HomeNav.astro';
+import Footer from '../components/Footer.astro';
+import InteractiveCube from '../components/InteractiveCube.astro';
+import CategoryCard from '../components/CategoryCard.astro';
+import HomeWorkerCard from '../components/HomeWorkerCard.astro';
 
-// Welcome to Astro! Wondering what to do next? Check out the Astro documentation at https://docs.astro.build
-// Don't want to use any of this? Delete everything in this file, the `assets`, `components`, and `layouts` directories, and start fresh.
+import '../components/styles/home.css';
+import '../components/styles/design-system.css';
+import '../components/styles/home-index.css';
+
+const catGradients = [
+	'linear-gradient(135deg,#dbeafe,#eff6ff)',
+	'linear-gradient(135deg,#d1fae5,#ecfdf5)',
+	'linear-gradient(135deg,#fce7f3,#fdf2f8)',
+	'linear-gradient(135deg,#fef3c7,#fffbeb)',
+	'linear-gradient(135deg,#ede9fe,#f5f3ff)',
+	'linear-gradient(135deg,#e0e7ff,#eef2ff)',
+	'linear-gradient(135deg,#cffafe,#ecfeff)',
+	'linear-gradient(135deg,#fce7f3,#fff1f2)',
+];
+
+const catColors = ['#2563eb', '#059669', '#db2777', '#d97706', '#7c3aed', '#4f46e5', '#0891b2', '#e11d48'];
+
+const categorias = [
+	{ id: 1, nombre: 'Plomería', descripcion: 'Reparaciones e instalaciones de tuberías y grifería.', count: 12 },
+	{ id: 2, nombre: 'Manicura', descripcion: 'Diseño y cuidado de uñas para cualquier ocasión.', count: 8 },
+	{ id: 3, nombre: 'Belleza', descripcion: 'Maquillaje, peinados y tratamientos de belleza.', count: 15 },
+	{ id: 4, nombre: 'Aseo', descripcion: 'Limpieza y organización para tu hogar u oficina.', count: 10 },
+	{ id: 5, nombre: 'Electricista', descripcion: 'Instalaciones y reparaciones eléctricas seguras.', count: 7 },
+	{ id: 6, nombre: 'Niñera', descripcion: 'Cuidado y acompañamiento para los más pequeños.', count: 6 },
+	{ id: 7, nombre: 'Jardinería', descripcion: 'Mantenimiento, poda y diseño de jardines.', count: 5 },
+	{ id: 8, nombre: 'Cocina', descripcion: 'Chefs y cocineros a domicilio para tus eventos.', count: 9 },
+];
+
+const tagCats = categorias.slice(0, 5);
+
+const servicios = [
+	{ id: 1, nombre: 'Carlos Pérez', titulo: 'Plomería general y reparaciones', precio: '45.000', ubicacion: 'Bogotá', verificado: true, inicial: 'C' },
+	{ id: 2, nombre: 'María Gómez', titulo: 'Manicura profesional en casa', precio: '30.000', ubicacion: 'Medellín', verificado: true, inicial: 'M' },
+	{ id: 3, nombre: 'Jorge Ramírez', titulo: 'Aseo general de hogares', precio: '25.000', ubicacion: 'Cali', verificado: false, inicial: 'J' },
+	{ id: 4, nombre: 'Luisa Fernández', titulo: 'Maquillaje y peinados para eventos', precio: '35.000', ubicacion: 'Bogotá', verificado: true, inicial: 'L' },
+	{ id: 5, nombre: 'Andrés Torres', titulo: 'Instalaciones eléctricas residenciales', precio: '50.000', ubicacion: 'Medellín', verificado: true, inicial: 'A' },
+	{ id: 6, nombre: 'Diana Morales', titulo: 'Niñera con experiencia en primera infancia', precio: '40.000', ubicacion: 'Cali', verificado: false, inicial: 'D' },
+];
+
+const workerGradient = (id: number) =>
+	id % 3 === 0 ? '#2563eb,#1d4ed8' : id % 3 === 1 ? '#7c3aed,#6d28d9' : '#059669,#047857';
+
+const totalServicios = categorias.reduce((acc, c) => acc + c.count, 0);
 ---
 
-<Layout>
-	<Welcome />
+<Layout title="Hilf'e — Encuentra ayuda fácil, rápida y confiable">
+	<HomeNav />
+
+	<section class="hero" id="hero">
+		<div class="hero-bg">
+			<div class="hero-blob blob-1"></div>
+			<div class="hero-blob blob-2"></div>
+		</div>
+		<div class="hero-content">
+			<div class="hero-text">
+				<span class="hero-badge">
+					<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+					Conectamos profesionales verificados
+				</span>
+				<h1>Encuentra al profesional <span class="text-gradient">perfecto</span> para cada necesidad</h1>
+				<p>Desde plomería hasta belleza, conectamos clientes con trabajadores independientes verificados. Sin intermediarios, sin complicaciones.</p>
+				<form class="hero-search" action="/categorias/" method="get">
+					<svg class="search-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+					<input type="text" name="search" placeholder="¿Qué servicio necesitas? Ej: plomero, manicurista..." />
+					<button type="submit">Buscar</button>
+				</form>
+				<div class="hero-tags">
+					{tagCats.map((cat) => (
+						<a href={`/categorias/?categoriaId=${cat.id}`}>{cat.nombre}</a>
+					))}
+				</div>
+			</div>
+			<div class="hero-visual" style="display:flex;flex-direction:column;align-items:center;justify-content:center;">
+				<InteractiveCube />
+			</div>
+		</div>
+		<div class="hero-stats">
+			<div class="stat-item">
+				<span class="stat-number" data-target="1200">+1.200</span>
+				<span class="stat-label">Trabajadores activos</span>
+			</div>
+			<div class="stat-divider"></div>
+			<div class="stat-item">
+				<span class="stat-number" data-target="8400">+8.400</span>
+				<span class="stat-label">Servicios realizados</span>
+			</div>
+			<div class="stat-divider"></div>
+			<div class="stat-item">
+				<span class="stat-number">4.9 ⭐</span>
+				<span class="stat-label">Calificación promedio</span>
+			</div>
+		</div>
+	</section>
+
+	<section class="section categories" id="categorias">
+		<div class="section-label">EXPLORAR</div>
+		<h2 class="section-title">Categorías de servicios</h2>
+		<p class="section-desc">Todo lo que necesitas en un solo lugar, organizado para que encuentres fácilmente.</p>
+		<div class="categories-grid">
+			{categorias.map((cat, i) => (
+				<CategoryCard
+					nombre={cat.nombre}
+					descripcion={cat.descripcion}
+					gradient={catGradients[i % catGradients.length]}
+					color={catColors[i % catColors.length]}
+					delay={`${(i * 0.08).toFixed(2)}s`}
+					serviciosCount={cat.count}
+				/>
+			))}
+			<a href="/categorias/" class="category-card category-card-all" style={`animation-delay:${(categorias.length * 0.08).toFixed(2)}s`}>
+				<div class="category-icon-wrap">
+					<span>→</span>
+				</div>
+				<h3>Ver todos</h3>
+				<p>Explora todos los servicios disponibles en nuestra plataforma.</p>
+				<span class="category-count">{totalServicios} servicios</span>
+			</a>
+		</div>
+	</section>
+
+	<section class="section workers" id="profesionales">
+		<div class="section-label">PROFESIONALES</div>
+		<h2 class="section-title">Conoce a nuestros profesionales</h2>
+		<p class="section-desc">Trabajadores verificados y calificados por nuestra comunidad. Elige al mejor para tu servicio.</p>
+		<div class="workers-grid profesionales-grid">
+			{servicios.map((sv) => (
+				<HomeWorkerCard
+					id={sv.id}
+					nombre={sv.nombre}
+					titulo={sv.titulo}
+					precio={sv.precio}
+					ubicacion={sv.ubicacion}
+					verificado={sv.verificado}
+					inicial={sv.inicial}
+					gradient={workerGradient(sv.id)}
+				/>
+			))}
+		</div>
+	</section>
+
+	<section class="section how-it-works" id="como-funciona">
+		<div class="how-bg"></div>
+		<div class="section-label light">SIMPLE Y RÁPIDO</div>
+		<h2 class="section-title light">¿Cómo funciona Hilf'e?</h2>
+		<p class="section-desc light">En tres sencillos pasos, conecta con el profesional ideal para tu necesidad.</p>
+		<div class="steps">
+			<div class="step">
+				<span class="step-number">01</span>
+				<div class="step-icon">
+					<svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+				</div>
+				<h4>Busca</h4>
+				<p>Explora categorías o busca directamente el servicio que necesitas. Filtra por precio, ubicación y calificación.</p>
+			</div>
+			<div class="step-arrow">→</div>
+			<div class="step">
+				<span class="step-number">02</span>
+				<div class="step-icon">
+					<svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+				</div>
+				<h4>Agenda</h4>
+				<p>Selecciona el trabajador de tu preferencia, elige fecha y hora. El profesional confirma en minutos.</p>
+			</div>
+			<div class="step-arrow">→</div>
+			<div class="step">
+				<span class="step-number">03</span>
+				<div class="step-icon">
+					<svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+				</div>
+				<h4>Recibe y califica</h4>
+				<p>Recibe el servicio en tu hogar o lugar de preferencia. Al finalizar, califica para ayudar a otros usuarios.</p>
+			</div>
+		</div>
+		<div class="how-cta">
+			<a href="/categorias/" class="btn-primary-lg">Explorar servicios</a>
+		</div>
+	</section>
+
+	<Footer />
+
+	<script is:inline>
+		(function () {
+			var observer = new IntersectionObserver(
+				function (entries) {
+					entries.forEach(function (entry) {
+						if (entry.isIntersecting) {
+							var el = entry.target;
+							var target = parseInt(el.getAttribute('data-target'));
+							if (target) {
+								var duration = 2000;
+								var start = 0;
+								var startTime = null;
+								function step(timestamp) {
+									if (!startTime) startTime = timestamp;
+									var progress = Math.min((timestamp - startTime) / duration, 1);
+									el.textContent = '+' + Math.floor(progress * target).toLocaleString();
+									if (progress < 1) requestAnimationFrame(step);
+								}
+								requestAnimationFrame(step);
+							}
+							observer.unobserve(el);
+						}
+					});
+				},
+				{ threshold: 0.5 }
+			);
+			document.querySelectorAll('.stat-number[data-target]').forEach(function (el) {
+				observer.observe(el);
+			});
+		})();
+	</script>
 </Layout>

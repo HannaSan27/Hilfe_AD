@@ -1,0 +1,604 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import '../../components/styles/design-system.css';
+import '../../components/styles/trabajador-index.css';
+
+const usuario = { nombre: 'Carlos Pérez', inicial: 'C', rol: 'Trabajador' };
+
+const servicios = [
+	{
+		id: 1,
+		titulo: 'Servicio de plomería general',
+		categoria: 'Plomería',
+		descripcion: 'Reparación de tuberías, desagües, grifería y todo tipo de instalaciones de agua.',
+		precio: 45000,
+		disponible: true,
+	},
+	{
+		id: 2,
+		titulo: 'Reparación de grifos y llaves',
+		categoria: 'Plomería',
+		descripcion: 'Cambio y reparación de grifos, llaves de paso y mezcladoras.',
+		precio: 25000,
+		disponible: true,
+	},
+	{
+		id: 3,
+		titulo: 'Instalación de lavamanos',
+		categoria: 'Plomería',
+		descripcion: 'Instalación profesional de lavamanos y accesorios de baño.',
+		precio: 60000,
+		disponible: false,
+	},
+];
+
+const solicitudes = [
+	{ id: 1, cliente: 'Ana Martínez', servicio: 'Servicio de plomería general', fecha: '25/09/2026', hora: '09:00', direccion: 'Av. El Dorado #74-25', estado: 'pendiente' },
+	{ id: 2, cliente: 'Pedro Sánchez', servicio: 'Reparación de grifos y llaves', fecha: '26/09/2026', hora: '11:30', direccion: 'Calle 93 #14-45', estado: 'aceptado' },
+	{ id: 3, cliente: 'Lucía Torres', servicio: 'Instalación de lavamanos', fecha: '27/09/2026', hora: '15:00', direccion: 'Cra. 7 #71-21', estado: 'en_proceso' },
+	{ id: 4, cliente: 'Jorge Díaz', servicio: 'Reparación de grifos y llaves', fecha: '20/09/2026', hora: '10:00', direccion: 'Calle 26 #4-78', estado: 'rumbo_a_ubicacion' },
+	{ id: 5, cliente: 'Camila Ríos', servicio: 'Servicio de plomería general', fecha: '18/09/2026', hora: '14:00', direccion: 'Av. Boyacá #122-10', estado: 'trabajo_realizado' },
+	{ id: 6, cliente: 'Andrés López', servicio: 'Instalación de lavamanos', fecha: '15/09/2026', hora: '08:30', direccion: 'Cra. 15 #100-33', estado: 'finalizado' },
+];
+
+const estadoInfo: Record<string, { clase: string; label: string; icono: string }> = {
+	pendiente: { clase: 'badge-warning', label: 'Pendiente', icono: 'clock' },
+	aceptado: { clase: 'badge-primary', label: 'Aceptado', icono: 'check-circle' },
+	en_proceso: { clase: 'badge-info', label: 'En proceso', icono: 'arrow-repeat' },
+	rumbo_a_ubicacion: { clase: 'badge-info', label: 'Rumbo a ubicación', icono: 'geo-alt' },
+	trabajo_realizado: { clase: 'badge-success', label: 'Trabajo realizado', icono: 'check2-circle' },
+	finalizado: { clase: 'badge-neutral', label: 'Finalizado', icono: 'check-all' },
+	rechazado: { clase: 'badge-danger', label: 'Rechazado', icono: 'x-circle' },
+};
+
+const calificaciones = [
+	{ puntaje: 5, fecha: '25/09/2026', comentario: 'Excelente trabajo, muy puntual y profesional.' },
+	{ puntaje: 4, fecha: '20/09/2026', comentario: 'Buen servicio, quedó todo funcionando perfectamente.' },
+	{ puntaje: 5, fecha: '15/09/2026', comentario: 'Muy atento y limpio. Volvería a contratarlo.' },
+];
+
+const promedio = 4.7;
+const estrellasLlenas = Math.round(promedio);
+const stars = (n: number) => '★'.repeat(n) + '☆'.repeat(5 - n);
+
+const conteos = {
+	pendiente: solicitudes.filter((s) => s.estado === 'pendiente').length,
+	aceptado: solicitudes.filter((s) => s.estado === 'aceptado').length,
+	en_proceso: solicitudes.filter((s) => s.estado === 'en_proceso').length,
+	rumbo_a_ubicacion: solicitudes.filter((s) => s.estado === 'rumbo_a_ubicacion').length,
+	trabajo_realizado: solicitudes.filter((s) => s.estado === 'trabajo_realizado').length,
+	finalizado: solicitudes.filter((s) => s.estado === 'finalizado').length,
+};
+const pendientes = conteos.pendiente;
+const nombre = usuario.nombre;
+---
+
+<Layout title="Panel Trabajador — Hilf'e">
+	<slot name="head" slot="head">
+		<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" />
+	</slot>
+
+	<nav class="navbar-hilfe" id="mainNav">
+		<div class="nav-inner">
+			<a href="/" class="logo">Hilf<span class="logo-accent">'e</span></a>
+			<div class="nav-actions">
+				<button class="theme-toggle" id="themeToggle" aria-label="Toggle theme">
+					<svg class="theme-icon-light" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+					<svg class="theme-icon-dark" style="display:none" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+				</button>
+				<div class="yo-dropdown" id="yoDropdown">
+					<button class="yo-btn" id="yoBtn" type="button" aria-haspopup="true" aria-expanded="false">
+						<div class="yo-avatar">
+							<span class="yo-avatar-placeholder">{usuario.inicial}</span>
+						</div>
+						<span>{usuario.nombre}</span>
+					</button>
+					<div class="yo-menu" role="menu">
+						<div class="yo-menu-header">
+							<div class="yo-avatar">
+								<span class="yo-avatar-placeholder">{usuario.inicial}</span>
+							</div>
+							<div>
+								<h4>{usuario.nombre}</h4>
+								<p><span class="badge badge-primary badge-sm">Trabajador</span></p>
+							</div>
+						</div>
+						<a href="/trabajador/" class="yo-menu-item" role="menuitem">
+							<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+							Mi panel
+						</a>
+						<a href="/trabajador/perfil/{usuario.nombre.toLowerCase().split(' ')[0]}-{usuario.nombre.toLowerCase().split(' ')[1]}" class="yo-menu-item" role="menuitem">
+							<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+							Mi perfil
+						</a>
+						<div class="yo-menu-divider"></div>
+						<a href="/account/login" class="yo-menu-item danger" role="menuitem">
+							<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+							Cerrar sesión
+						</a>
+					</div>
+				</div>
+			</div>
+		</div>
+	</nav>
+
+	<div class="page-layout page-layout-offset">
+		<aside class="sidebar">
+			<div class="sidebar-section">General</div>
+			<button class="sidebar-item active" id="nav-dashboard" onclick="showSection('dashboard')">
+				<i class="bi bi-grid-1x2-fill"></i> Dashboard
+			</button>
+
+			<div class="sidebar-section">Mis Servicios</div>
+			<button class="sidebar-item" id="nav-servicios" onclick="showSection('servicios')">
+				<i class="bi bi-briefcase-fill"></i> Mis Servicios
+			</button>
+			<a href="/trabajador/agregar-servicio" class="sidebar-item">
+				<i class="bi bi-plus-circle-fill"></i> Agregar Servicio
+			</a>
+
+			<div class="sidebar-section">Solicitudes</div>
+			<button class="sidebar-item" id="nav-solicitudes" onclick="showSection('solicitudes')">
+				<i class="bi bi-calendar-check-fill"></i> Solicitudes
+			</button>
+
+			<div class="sidebar-section">Calificaciones</div>
+			<button class="sidebar-item" id="nav-calificaciones" onclick="showSection('calificaciones')">
+				<i class="bi bi-star-fill"></i> Calificaciones
+			</button>
+
+			<div class="sidebar-section">Cuenta</div>
+			<a href="/trabajador/perfil" class="sidebar-item">
+				<i class="bi bi-person-fill"></i> Mi Perfil
+			</a>
+			<a href="/account/login" class="sidebar-item danger">
+				<i class="bi bi-box-arrow-right"></i> Cerrar sesión
+			</a>
+		</aside>
+		<main>
+
+			<div class="content-header">
+				<h2 id="page-title" class="section-title-page">Dashboard</h2>
+				<div class="welcome-text" style="margin-left: auto;">
+					Bienvenido, <strong>{nombre}</strong>
+				</div>
+			</div>
+			<div id="section-dashboard" class="section-view active">
+				<div class="stats-grid">
+					<div class="stat-card">
+						<div class="stat-card-icon primary">
+							<i class="bi bi-briefcase-fill"></i>
+						</div>
+						<div class="stat-card-body">
+							<div class="stat-card-value">{servicios.length}</div>
+							<div class="stat-card-label">Servicios registrados</div>
+							<div class="stat-card-trend up">Activos</div>
+						</div>
+					</div>
+					<div class="stat-card">
+						<div class="stat-card-icon success">
+							<i class="bi bi-calendar-check-fill"></i>
+						</div>
+						<div class="stat-card-body">
+							<div class="stat-card-value">{solicitudes.length}</div>
+							<div class="stat-card-label">Solicitudes recibidas</div>
+							<div class="stat-card-trend">Total</div>
+						</div>
+					</div>
+					<div class="stat-card">
+						<div class="stat-card-icon warning">
+							<i class="bi bi-star-fill"></i>
+						</div>
+						<div class="stat-card-body">
+							<div class="stat-card-value">{promedio}</div>
+							<div class="stat-card-label">Calificación promedio</div>
+							<div class="stat-card-trend">General</div>
+						</div>
+					</div>
+					<div class="stat-card">
+						<div class="stat-card-icon warning">
+							<i class="bi bi-clock-fill"></i>
+						</div>
+						<div class="stat-card-body">
+							<div class="stat-card-value">{pendientes}</div>
+							<div class="stat-card-label">Pendientes</div>
+							<div class="stat-card-trend">Requieren atención</div>
+						</div>
+					</div>
+				</div>
+
+				<h3 class="quick-access-title">Accesos Rápidos</h3>
+				<div class="stats-grid">
+					<div class="card clickable-card" onclick="showSection('servicios')">
+						<div class="card-body flex items-center gap-md">
+							<div class="stat-card-icon primary">
+								<i class="bi bi-briefcase-fill"></i>
+							</div>
+							<div>
+								<div class="font-bold" style="color: var(--text);">Mis Servicios</div>
+								<div class="text-secondary" style="font-size: 13px;">Gestiona tus servicios activos</div>
+							</div>
+						</div>
+					</div>
+					<div class="card clickable-card" onclick="showSection('solicitudes')">
+						<div class="card-body flex items-center gap-md">
+							<div class="stat-card-icon success">
+								<i class="bi bi-calendar-check-fill"></i>
+							</div>
+							<div>
+								<div class="font-bold" style="color: var(--text);">Solicitudes</div>
+								<div class="text-secondary" style="font-size: 13px;">Revisa tus solicitudes recibidas</div>
+							</div>
+						</div>
+					</div>
+					<div class="card clickable-card" onclick="showSection('calificaciones')">
+						<div class="card-body flex items-center gap-md">
+							<div class="stat-card-icon warning">
+								<i class="bi bi-star-fill"></i>
+							</div>
+							<div>
+								<div class="font-bold" style="color: var(--text);">Calificaciones</div>
+								<div class="text-secondary" style="font-size: 13px;">Ve lo que dicen tus clientes</div>
+							</div>
+						</div>
+					</div>
+				</div>
+
+				<h3 class="quick-access-title">Estado de Solicitudes</h3>
+				<div class="stats-grid">
+					<div class="stat-card">
+						<div class="stat-card-icon primary"><i class="bi bi-check-circle-fill"></i></div>
+						<div class="stat-card-body">
+							<div class="stat-card-value">{conteos.aceptado}</div>
+							<div class="stat-card-label">Aceptados</div>
+						</div>
+					</div>
+					<div class="stat-card">
+						<div class="stat-card-icon primary"><i class="bi bi-arrow-repeat"></i></div>
+						<div class="stat-card-body">
+							<div class="stat-card-value">{conteos.en_proceso}</div>
+							<div class="stat-card-label">En proceso</div>
+						</div>
+					</div>
+					<div class="stat-card">
+						<div class="stat-card-icon primary"><i class="bi bi-geo-alt-fill"></i></div>
+						<div class="stat-card-body">
+							<div class="stat-card-value">{conteos.rumbo_a_ubicacion}</div>
+							<div class="stat-card-label">Rumbo a ubicación</div>
+						</div>
+					</div>
+					<div class="stat-card">
+						<div class="stat-card-icon success"><i class="bi bi-check2-circle"></i></div>
+						<div class="stat-card-body">
+							<div class="stat-card-value">{conteos.trabajo_realizado}</div>
+							<div class="stat-card-label">Trabajo realizado</div>
+						</div>
+					</div>
+					<div class="stat-card">
+						<div class="stat-card-icon success"><i class="bi bi-check-all"></i></div>
+						<div class="stat-card-body">
+							<div class="stat-card-value">{conteos.finalizado}</div>
+							<div class="stat-card-label">Finalizados</div>
+						</div>
+					</div>
+				</div>
+			</div>
+			<div id="section-servicios" class="section-view">
+				<div class="workers-grid">
+					{servicios.map((s) => (
+						<div class="worker-card">
+							<div class="worker-banner" style="background: linear-gradient(135deg, var(--primary-soft), var(--primary-light));">
+								<div class="worker-avatar" style="background: var(--primary);">
+									<i class="bi bi-briefcase"></i>
+								</div>
+							</div>
+							<div class="worker-info">
+								<h4>{s.titulo}</h4>
+								<div class="worker-service">{s.categoria}</div>
+								<p>{s.descripcion}</p>
+								<div class="worker-footer">
+									<strong>$ {s.precio.toLocaleString('es-CO')}</strong>
+									{s.disponible ? (
+										<span class="badge badge-success">Disponible</span>
+									) : (
+										<span class="badge badge-neutral">No disponible</span>
+									)}
+								</div>
+								<div class="flex gap-sm" style="margin-top: 12px;">
+									<a href={`/trabajador/editar-servicio/${s.id}`} class="btn btn-sm btn-secondary"><i class="bi bi-pencil-fill"></i> Editar</a>
+									<a href={`/trabajador/subir-imagen/${s.id}`} class="btn btn-sm btn-secondary"><i class="bi bi-camera-fill"></i> Fotos</a>
+									<button type="button" class="btn btn-sm btn-outline-danger" onclick="mostrarToast('Eliminación disponible cuando el backend esté conectado (demo)')"><i class="bi bi-trash-fill"></i> Eliminar</button>
+								</div>
+							</div>
+						</div>
+					))}
+				</div>
+			</div>
+			<div id="section-solicitudes" class="section-view">
+				<div class="flex filter-bar gap-sm">
+					<button class="btn btn-sm btn-secondary filtro-btn active" onclick="filtrarSolicitudes('todos', this)">
+						Todos <span class="badge badge-neutral badge-sm">{solicitudes.length}</span>
+					</button>
+					<button class="btn btn-sm btn-secondary filtro-btn" onclick="filtrarSolicitudes('pendiente', this)">
+						Pendientes <span class="badge badge-warning badge-sm">{conteos.pendiente}</span>
+					</button>
+					<button class="btn btn-sm btn-secondary filtro-btn" onclick="filtrarSolicitudes('aceptado', this)">
+						Aceptados <span class="badge badge-primary badge-sm">{conteos.aceptado}</span>
+					</button>
+					<button class="btn btn-sm btn-secondary filtro-btn" onclick="filtrarSolicitudes('en_proceso', this)">
+						En proceso <span class="badge badge-info badge-sm">{conteos.en_proceso}</span>
+					</button>
+					<button class="btn btn-sm btn-secondary filtro-btn" onclick="filtrarSolicitudes('rumbo_a_ubicacion', this)">
+						Rumbo <span class="badge badge-info badge-sm">{conteos.rumbo_a_ubicacion}</span>
+					</button>
+					<button class="btn btn-sm btn-secondary filtro-btn" onclick="filtrarSolicitudes('trabajo_realizado', this)">
+						Realizado <span class="badge badge-success badge-sm">{conteos.trabajo_realizado}</span>
+					</button>
+					<button class="btn btn-sm btn-secondary filtro-btn" onclick="filtrarSolicitudes('finalizado', this)">
+						Finalizados <span class="badge badge-neutral badge-sm">{conteos.finalizado}</span>
+					</button>
+				</div>
+
+				<div id="lista-solicitudes">
+					{solicitudes.map((sol) => {
+						const info = estadoInfo[sol.estado];
+						return (
+							<div class="card solicitud-card" data-id={sol.id} data-estado={sol.estado}>
+								<div class="card-body">
+									<div class="solicitud-info">
+										<div class="cliente">
+											<i class="bi bi-person-fill"></i> {sol.cliente}
+										</div>
+										<div class="servicio">
+											<i class="bi bi-briefcase"></i> {sol.servicio}
+										</div>
+										<div class="meta">
+											<i class="bi bi-calendar3"></i> {sol.fecha}
+											› <i class="bi bi-clock"></i> {sol.hora}
+											{sol.direccion ? (
+												<span> › <i class="bi bi-geo-alt"></i> {sol.direccion}</span>
+											) : null}
+										</div>
+									</div>
+									<div class="solicitud-actions">
+										<span class="badge {info.clase} estado-badge">
+											<i class="bi bi-{info.icono}"></i> {info.label}
+										</span>
+										<div class="accion-celda">
+											{sol.estado === 'pendiente' ? (
+												<>
+													<button type="button" class="btn btn-sm btn-success" onclick="aceptarSolicitud({sol.id})"><i class="bi bi-check-lg"></i> Aceptar</button>
+													<button type="button" class="btn btn-sm btn-outline-danger" onclick="abrirModalRechazo({sol.id})"><i class="bi bi-x-lg"></i> Rechazar</button>
+												</>
+											) : sol.estado === 'aceptado' ? (
+												<button type="button" class="btn btn-sm btn-primary" onclick="avanzarSolicitud({sol.id})"><i class="bi bi-arrow-repeat"></i> En proceso</button>
+											) : sol.estado === 'en_proceso' ? (
+												<button type="button" class="btn btn-sm btn-primary" onclick="avanzarSolicitud({sol.id})"><i class="bi bi-geo-alt"></i> Rumbo a ubicación</button>
+											) : sol.estado === 'rumbo_a_ubicacion' ? (
+												<button type="button" class="btn btn-sm btn-success" onclick="avanzarSolicitud({sol.id})"><i class="bi bi-check2-circle"></i> Trabajo realizado</button>
+											) : sol.estado === 'trabajo_realizado' ? (
+												<button type="button" class="btn btn-sm btn-primary" onclick="avanzarSolicitud({sol.id})"><i class="bi bi-check-all"></i> Finalizar</button>
+											) : null}
+										</div>
+									</div>
+								</div>
+							</div>
+						);
+					})}
+				</div>
+			</div>
+			<div id="section-calificaciones" class="section-view">
+				<div class="card" style="margin-bottom: 20px;">
+					<div class="card-body flex items-center gap-lg" style="flex-wrap: wrap;">
+						<div class="text-center">
+							<div class="promedio-valor">{promedio}</div>
+							<div class="promedio-label">Promedio</div>
+						</div>
+						<div>
+							<div class="estrellas-grandes">{stars(estrellasLlenas)}</div>
+							<div class="text-secondary" style="font-size: 13px; margin-top: 4px;">
+								Basado en {calificaciones.length} calificación(es)
+							</div>
+						</div>
+					</div>
+				</div>
+
+				{calificaciones.map((c) => (
+					<div class="card calificacion-card">
+						<div class="card-body">
+							<div class="flex justify-between items-center" style="margin-bottom: 8px;">
+								<span class="estrellas">{stars(c.puntaje)}</span>
+								<span class="calificacion-fecha">
+									<i class="bi bi-calendar3"></i> {c.fecha}
+								</span>
+							</div>
+							{c.comentario ? (
+								<p class="calificacion-comentario">"{c.comentario}"</p>
+							) : (
+								<p class="calificacion-sin-comentario">Sin comentario</p>
+							)}
+						</div>
+					</div>
+				))}
+			</div>
+
+		</main>
+	</div>
+
+	<div class="modal-overlay" id="modalRechazo" style="display:none">
+		<div class="modal" style="max-width:460px">
+			<div class="modal-header">
+				<h3>Rechazar solicitud</h3>
+				<button type="button" class="btn-modal-close" onclick="cerrarModalRechazo()">&times;</button>
+			</div>
+			<form id="formRechazo" onsubmit="rechazar(event)">
+				<input type="hidden" name="rechazoId" id="rechazoId" value="" />
+				<div class="modal-body">
+					<p style="color:var(--text-secondary);font-size:14px;margin-bottom:16px">
+						Indica el motivo por el que rechazas esta solicitud. Se enviará un correo al cliente.
+					</p>
+					<textarea name="motivoRechazo" class="form-textarea" placeholder="Escribe el motivo del rechazo..." required maxlength="500" style="min-height:120px"></textarea>
+				</div>
+				<div class="modal-footer">
+					<button type="button" class="btn btn-secondary" onclick="cerrarModalRechazo()">Cancelar</button>
+					<button type="submit" class="btn btn-danger">Enviar y rechazar</button>
+				</div>
+			</form>
+		</div>
+	</div>
+
+	<script is:inline>
+		(function () {
+			function mostrarToast(msg) {
+				var existing = document.getElementById('panelToast');
+				if (existing) existing.remove();
+				var toast = document.createElement('div');
+				toast.id = 'panelToast';
+				toast.className = 'toast-notification toast-success';
+				toast.innerHTML =
+					'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>' +
+					'<span>' + msg + '</span>';
+				document.body.appendChild(toast);
+				setTimeout(function () {
+					toast.classList.add('hide');
+					setTimeout(function () { toast.remove(); }, 400);
+				}, 3500);
+			}
+			window.mostrarToast = mostrarToast;
+
+			var dd = document.getElementById('yoDropdown');
+			var yoBtn = document.getElementById('yoBtn');
+			if (dd && yoBtn) {
+				yoBtn.addEventListener('click', function (e) {
+					e.stopPropagation();
+					var open = dd.classList.toggle('open');
+					yoBtn.setAttribute('aria-expanded', open);
+				});
+				var menu = dd.querySelector('.yo-menu');
+				if (menu) menu.addEventListener('click', function (e) { e.stopPropagation(); });
+				document.addEventListener('click', function () {
+					dd.classList.remove('open');
+					yoBtn.setAttribute('aria-expanded', 'false');
+				});
+			}
+			})();
+
+		var titles = {
+			dashboard: 'Dashboard',
+			servicios: 'Mis Servicios',
+			solicitudes: 'Solicitudes',
+			calificaciones: 'Calificaciones'
+		};
+
+		function showSection(name) {
+			document.querySelectorAll('.section-view').forEach(function (s) { s.classList.remove('active'); });
+			document.querySelectorAll('.sidebar-item').forEach(function (s) { s.classList.remove('active'); });
+			var section = document.getElementById('section-' + name);
+			if (section) section.classList.add('active');
+			var navItem = document.getElementById('nav-' + name);
+			if (navItem) navItem.classList.add('active');
+			var title = document.getElementById('page-title');
+			if (title) title.textContent = titles[name] || name;
+		}
+
+		function filtrarSolicitudes(estado, btn) {
+			var cards = document.querySelectorAll('#lista-solicitudes .solicitud-card');
+			cards.forEach(function (card) {
+				card.style.display = (estado === 'todos' || card.dataset.estado === estado) ? '' : 'none';
+			});
+			document.querySelectorAll('.filtro-btn').forEach(function (b) { b.classList.remove('active'); });
+			if (btn) btn.classList.add('active');
+		}
+
+		var estadoInfo = {
+			aceptado: { clase: 'badge-primary', label: 'Aceptado', icono: 'check-circle' },
+			en_proceso: { clase: 'badge-info', label: 'En proceso', icono: 'arrow-repeat' },
+			rumbo_a_ubicacion: { clase: 'badge-info', label: 'Rumbo a ubicación', icono: 'geo-alt' },
+			trabajo_realizado: { clase: 'badge-success', label: 'Trabajo realizado', icono: 'check2-circle' },
+			finalizado: { clase: 'badge-neutral', label: 'Finalizado', icono: 'check-all' },
+			rechazado: { clase: 'badge-danger', label: 'Rechazado', icono: 'x-circle' }
+		};
+		var cadenaEstados = [
+			{ estado: 'aceptado', btnHtml: '<button type="button" class="btn btn-sm btn-primary" onclick="avanzarSolicitud({id})"><i class="bi bi-arrow-repeat"></i> En proceso</button>' },
+			{ estado: 'en_proceso', btnHtml: '<button type="button" class="btn btn-sm btn-primary" onclick="avanzarSolicitud({id})"><i class="bi bi-geo-alt"></i> Rumbo a ubicación</button>' },
+			{ estado: 'rumbo_a_ubicacion', btnHtml: '<button type="button" class="btn btn-sm btn-success" onclick="avanzarSolicitud({id})"><i class="bi bi-check2-circle"></i> Trabajo realizado</button>' },
+			{ estado: 'trabajo_realizado', btnHtml: '<button type="button" class="btn btn-sm btn-primary" onclick="avanzarSolicitud({id})"><i class="bi bi-check-all"></i> Finalizar</button>' },
+			{ estado: 'finalizado', btnHtml: '' }
+		];
+
+		function avanzarSolicitud(id) {
+			var card = document.querySelector('.solicitud-card[data-id="' + id + '"]');
+			if (!card) return;
+			var actual = card.dataset.estado;
+			var pos = cadenaEstados.map(function (c) { return c.estado; }).indexOf(actual);
+			if (pos < 0 || pos >= cadenaEstados.length - 1) return;
+			var next = cadenaEstados[pos + 1];
+			card.dataset.estado = next.estado;
+			var info = estadoInfo[next.estado];
+			var badge = card.querySelector('.estado-badge');
+			if (badge) {
+				badge.className = 'badge ' + info.clase + ' estado-badge';
+				badge.innerHTML = '<i class="bi bi-' + info.icono + '"></i> ' + info.label;
+			}
+			var celda = card.querySelector('.accion-celda');
+			if (celda) celda.innerHTML = next.btnHtml.replace(/\{id\}/g, id);
+			mostrarToast('Solicitud actualizada a "' + info.label + '" (demo)');
+		}
+
+		function aceptarSolicitud(id) {
+			var card = document.querySelector('.solicitud-card[data-id="' + id + '"]');
+			if (card) {
+				card.dataset.estado = 'aceptado';
+				var info = estadoInfo.aceptado;
+				var badge = card.querySelector('.estado-badge');
+				if (badge) {
+					badge.className = 'badge ' + info.clase + ' estado-badge';
+					badge.innerHTML = '<i class="bi bi-' + info.icono + '"></i> ' + info.label;
+				}
+				var celda = card.querySelector('.accion-celda');
+				if (celda) celda.innerHTML = cadenaEstados[0].btnHtml.replace(/\{id\}/g, id);
+			}
+			mostrarToast('Solicitud aceptada (demo)');
+		}
+
+		function abrirModalRechazo(id) {
+			document.getElementById('rechazoId').value = id;
+			var form = document.getElementById('formRechazo');
+			form.dataset.id = id;
+			document.getElementById('modalRechazo').style.display = 'flex';
+		}
+		function cerrarModalRechazo() {
+			document.getElementById('modalRechazo').style.display = 'none';
+		}
+		document.getElementById('modalRechazo').addEventListener('click', function (e) {
+			if (e.target === this) cerrarModalRechazo();
+		});
+
+		function rechazar(e) {
+			e.preventDefault();
+			var id = document.getElementById('formRechazo').dataset.id;
+			cerrarModalRechazo();
+			var card = document.querySelector('.solicitud-card[data-id="' + id + '"]');
+			if (card) {
+				card.dataset.estado = 'rechazado';
+				var info = estadoInfo.rechazado;
+				var badge = card.querySelector('.estado-badge');
+				if (badge) {
+					badge.className = 'badge ' + info.clase + ' estado-badge';
+					badge.innerHTML = '<i class="bi bi-' + info.icono + '"></i> ' + info.label;
+				}
+				var celda = card.querySelector('.accion-celda');
+				if (celda) celda.innerHTML = '';
+			}
+			mostrarToast('Solicitud rechazada (demo)');
+		}
+
+		(function () {
+			var params = new URLSearchParams(window.location.search);
+			var section = params.get('section');
+			if (section && ['dashboard', 'servicios', 'solicitudes', 'calificaciones'].indexOf(section) >= 0) {
+				showSection(section);
+			}
+		})();
+	</script>
+</Layout>

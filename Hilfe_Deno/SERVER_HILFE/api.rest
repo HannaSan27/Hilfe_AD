@@ -1,180 +1,107 @@
-### Variables
 @baseUrl = http://localhost:8000
 
-### Obtener todas las categorías
-GET {{baseUrl}}/api/categorias
+@token = eyJhbGciOiJIUzUxMiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwicm9sIjoxfQ.BKNKaFiCyNhpwumMC_zgpZ2KkPofkUQpf3WpBCBslJbfBLXBUB-MmpbsXocUoc4xEu3h3CW2LRcpn6XAlRlNqg
 
-### Obtener una categoría por ID
-GET {{baseUrl}}/api/categorias/7
-
-### Crear una categoría nueva
-POST {{baseUrl}}/api/categorias
+### Login (Admin)
+# @name loginAdmin
+POST {{baseUrl}}/api/auth/login
 Content-Type: application/json
 
 {
-  "Nombre_Categoria": "Hogar y arreglos",
-  "Descripcion": "Reparaciones, mantenimiento y arreglos generales del hogar"
+  "correo": "admin@hilfe.com",
+  "contrasena": "Test1234"
 }
 
-### Actualizar una categoría existente
-PUT {{baseUrl}}/api/categorias/17
+### Login (Trabajador - Carlos)
+# @name loginCarlos
+POST {{baseUrl}}/api/auth/login
 Content-Type: application/json
 
 {
-  "Nombre_Categoria": "Hogar ",
-  "Descripcion": "Descripción actualizada de prueba"
+  "correo": "carlos.trabajador@hilfe.com",
+  "contrasena": "Test1234"
 }
 
-### Eliminar una categoría
-DELETE {{baseUrl}}/api/categorias/7
-
-### Listar servicios con filtros opcionales
-GET {{baseUrl}}/api/servicios
-
-### Listar servicios filtrados por categoría
-GET {{baseUrl}}/api/servicios?categoria=1
-
-### Buscar servicios por texto
-GET {{baseUrl}}/api/servicios?busqueda=limpieza
-
-### Obtener un servicio por ID
-GET {{baseUrl}}/api/servicios/1
-
-### Crear un servicio nuevo
-POST {{baseUrl}}/api/servicios
+### Login (Cliente - Ana)
+# @name loginAna
+POST {{baseUrl}}/api/auth/login
 Content-Type: application/json
 
 {
-  "Id_Trabajador": 2,
-  "Id_Categoria": 1,
-  "Titulo": "Reparación de fugas de agua",
-  "Descripcion": "Detección y reparación de fugas en tuberías",
-  "Precio": 80000,
-  "TipoServicio": "Único"
+  "correo": "ana.cliente@hilfe.com",
+  "contrasena": "Test1234"
 }
 
-### Actualizar un servicio
-PUT {{baseUrl}}/api/servicios/1
+### Obtener perfil de Carlos (trabajador, Id_Usuario = 2)
+GET {{baseUrl}}/api/usuarios/2
+
+### Editar perfil de Carlos (usa el token de su propio login)
+PUT {{baseUrl}}/api/usuarios/2
+Content-Type: application/json
+Authorization: Bearer {{loginCarlos.response.body.token}}
+
+{
+  "nombre": "Carlos Ramírez Actualizado",
+  "telefono": "3001111199",
+  "ubicacion": "Bogotá"
+}
+
+### Listar todos los trabajadores (deben salir Carlos, María y Jorge)
+GET {{baseUrl}}/api/trabajadores
+
+### Ver perfil público de un trabajador específico
+GET {{baseUrl}}/api/trabajadores/2
+
+### Registrar calificación (usa el token de Ana, la clienta)
+POST {{baseUrl}}/api/calificaciones
+Content-Type: application/json
+Authorization: Bearer {{loginAna.response.body.token}}
+
+{
+  "idSolicitud": 1,
+  "puntaje": 5,
+  "comentario": "Excelente trabajo, muy puntual"
+}
+
+### Ver calificaciones de un trabajador
+GET {{baseUrl}}/api/calificaciones/trabajador/2
+
+### Registro de usuario de prueba con correo real (necesario antes de probar recuperación)
+POST {{baseUrl}}/api/auth/registro
 Content-Type: application/json
 
 {
-  "Id_Categoria": 1,
-  "Titulo": "Reparación de fugas de agua",
-  "Descripcion": "Descripción actualizada",
-  "Precio": 90000,
-  "TipoServicio": "Único"
+  "idRol": 3,
+  "nombre": "Soporte Hilfe",
+  "correo": "soportehilfe2@gmail.com",
+  "contrasena": "123456",
+  "telefono": "3000000000",
+  "ubicacion": "Duitama"
 }
 
-### Eliminar un servicio
-DELETE {{baseUrl}}/api/servicios/1
-
-### Listar todas las solicitudes
-GET {{baseUrl}}/api/solicitudes
-
-### Filtrar solicitudes por cliente
-GET {{baseUrl}}/api/solicitudes?cliente=5
-
-### Filtrar solicitudes por estado
-GET {{baseUrl}}/api/solicitudes?estado=pendiente
-
-### Obtener una solicitud por ID
-GET {{baseUrl}}/api/solicitudes/3
-
-### Crear una solicitud nueva (cliente agenda un servicio)
-POST {{baseUrl}}/api/solicitudes
+### Solicitar recuperación de contraseña
+POST {{baseUrl}}/api/auth/recuperar/solicitar
 Content-Type: application/json
 
 {
-  "Id_Cliente": 5,
-  "Id_Trabajador": 2,
-  "Id_Servicio": 1,
-  "Fecha_Servicio": "2026-10-15",
-  "Hora_Servicio": "10:00:00",
-  "Direccion": "Calle 10 #5-20, Bogotá",
-  "Telefono": "3004444444",
-  "Descripcion_Solicitud": "Prueba de solicitud nueva"
+  "correo": "soportehilfe2@gmail.com"
 }
 
-### Cambiar estado: pendiente -> aceptado (transición válida)
-PUT {{baseUrl}}/api/solicitudes/1/estado
+### Verificar código (revisa el correo y pon el código real aquí)
+POST {{baseUrl}}/api/auth/recuperar/verificar
 Content-Type: application/json
 
 {
-  "Estado_Solicitudes": "aceptado"
+  "correo": "soportehilfe2@gmail.com",
+  "codigo": ""
 }
 
-### Probar transición INVÁLIDA (aceptado -> finalizado, debería dar error 400)
-PUT {{baseUrl}}/api/solicitudes/1/estado
+### Poner nueva contraseña
+POST {{baseUrl}}/api/auth/recuperar/nueva-contrasena
 Content-Type: application/json
 
 {
-  "Estado_Solicitudes": "finalizado"
+  "correo": "soportehilfe2@gmail.com",
+  "codigo": "",
+  "nuevaContrasena": "NuevaClave123"
 }
-
-### Eliminar una solicitud (solo funciona si está en pendiente, rechazado o cancelada)
-DELETE {{baseUrl}}/api/solicitudes/1
-
-### Listar toda la disponibilidad
-GET {{baseUrl}}/api/disponibilidad
-
-### Filtrar disponibilidad por servicio
-GET {{baseUrl}}/api/disponibilidad?servicio=1
-
-### Obtener una disponibilidad por ID
-GET {{baseUrl}}/api/disponibilidad/1
-
-### Crear una disponibilidad nueva
-POST {{baseUrl}}/api/disponibilidad
-Content-Type: application/json
-
-{
-  "Id_Servicio": 1,
-  "Dia_Semana": "Viernes",
-  "Hora_Inicio": "09:00:00",
-  "Hora_Fin": "17:00:00"
-}
-
-### Probar validación de horario inválido (debería dar error 400)
-POST {{baseUrl}}/api/disponibilidad
-Content-Type: application/json
-
-{
-  "Id_Servicio": 1,
-  "Dia_Semana": "Sábado",
-  "Hora_Inicio": "18:00:00",
-  "Hora_Fin": "10:00:00"
-}
-
-### Actualizar una disponibilidad
-PUT {{baseUrl}}/api/disponibilidad/1
-Content-Type: application/json
-
-{
-  "Dia_Semana": "Viernes",
-  "Hora_Inicio": "10:00:00",
-  "Hora_Fin": "18:00:00"
-}
-
-### Eliminar una disponibilidad
-DELETE {{baseUrl}}/api/disponibilidad/1
-
-### Listar todas las imagenes de trabajos
-GET {{baseUrl}}/api/imagenes-trabajos
-
-### Filtrar imagenes por servicio
-GET {{baseUrl}}/api/imagenes-trabajos?servicio=1
-
-### Obtener una imagen por ID
-GET {{baseUrl}}/api/imagenes-trabajos/1
-
-### Registrar una imagen nueva
-POST {{baseUrl}}/api/imagenes-trabajos
-Content-Type: application/json
-
-{
-  "Id_Servicio": 1,
-  "Ruta_Imagen": "/uploads/trabajos/prueba_1.jpg"
-}
-
-### Eliminar una imagen
-DELETE {{baseUrl}}/api/imagenes-trabajos/1
