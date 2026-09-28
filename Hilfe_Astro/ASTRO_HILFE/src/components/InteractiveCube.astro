@@ -1,0 +1,140 @@
+<div class="cube-wrapper">
+	<div class="cube-scene" id="cubeScene">
+		<div class="cube" id="cube">
+			<div class="face face-front"><div class="tile"></div><div class="tile"></div><div class="tile"></div><div class="tile"></div></div>
+			<div class="face face-back"><div class="tile"></div><div class="tile"></div><div class="tile"></div><div class="tile"></div></div>
+			<div class="face face-left"><div class="tile"></div><div class="tile"></div><div class="tile"></div><div class="tile"></div></div>
+			<div class="face face-right"><div class="tile"></div><div class="tile"></div><div class="tile"></div><div class="tile"></div></div>
+			<div class="face face-top"><div class="tile"></div><div class="tile"></div><div class="tile"></div><div class="tile"></div></div>
+			<div class="face face-bottom"><div class="tile"></div><div class="tile"></div><div class="tile"></div><div class="tile"></div></div>
+		</div>
+	</div>
+</div>
+
+<script is:inline>
+	(function () {
+		var scene = document.getElementById('cubeScene');
+		var cube = document.getElementById('cube');
+		if (!scene || !cube) return;
+
+		var cX = -20,
+			cY = 0,
+			tX = -20,
+			tY = 0,
+			autoAngle = 0,
+			spd = 0.2,
+			curSpd = 0.2;
+		var mode = 'auto',
+			hover = false,
+			drag = false,
+			lX = 0,
+			lY = 0,
+			idleTmr = null;
+
+		function upd() {
+			if (mode === 'auto') {
+				curSpd += (spd - curSpd) * 0.01;
+				autoAngle += curSpd;
+				tX = -20;
+				tY = autoAngle;
+			} else if (mode === 'hover') {
+				curSpd += (0 - curSpd) * 0.03;
+				autoAngle += curSpd;
+			} else if (mode === 'drag') {
+				autoAngle = cY;
+			} else if (mode === 'resume') {
+				curSpd += (spd - curSpd) * 0.02;
+				autoAngle += curSpd;
+				tX = -20;
+				tY = autoAngle;
+				if (Math.abs(curSpd - spd) < 0.005) mode = 'auto';
+			}
+			cX += (tX - cX) * 0.08;
+			cY += (tY - cY) * 0.08;
+			cube.style.transform = 'rotateX(' + cX + 'deg) rotateY(' + cY + 'deg)';
+			requestAnimationFrame(upd);
+		}
+
+		function idleToResume() {
+			autoAngle = cY;
+			curSpd = 0;
+			mode = 'resume';
+		}
+
+		function um(e) {
+			var r = scene.getBoundingClientRect();
+			var dx = (e.clientX - (r.left + r.width / 2)) / (r.width / 2);
+			var dy = (e.clientY - (r.top + r.height / 2)) / (r.height / 2);
+			tX = -20 + -dy * 15;
+			tY = autoAngle + dx * 25;
+		}
+
+		scene.addEventListener('mouseenter', function (e) {
+			if (drag) return;
+			clearTimeout(idleTmr);
+			mode = 'hover';
+			hover = true;
+			um(e);
+		});
+		scene.addEventListener('mousemove', function (e) {
+			if (drag || !hover) return;
+			um(e);
+		});
+		scene.addEventListener('mouseleave', function () {
+			hover = false;
+			if (drag) return;
+			mode = 'idle';
+			clearTimeout(idleTmr);
+			idleTmr = setTimeout(idleToResume, 2000);
+		});
+
+		scene.addEventListener('mousedown', function (e) {
+			drag = true;
+			hover = false;
+			mode = 'drag';
+			lX = e.clientX;
+			lY = e.clientY;
+			clearTimeout(idleTmr);
+			e.preventDefault();
+		});
+		window.addEventListener('mousemove', function (e) {
+			if (!drag) return;
+			tY += (e.clientX - lX) * 0.5;
+			tX -= (e.clientY - lY) * 0.5;
+			lX = e.clientX;
+			lY = e.clientY;
+			autoAngle = tY;
+		});
+		window.addEventListener('mouseup', function () {
+			if (!drag) return;
+			drag = false;
+			mode = 'idle';
+			clearTimeout(idleTmr);
+			idleTmr = setTimeout(idleToResume, 2000);
+		});
+
+		scene.addEventListener('touchstart', function (e) {
+			drag = true;
+			mode = 'drag';
+			lX = e.touches[0].clientX;
+			lY = e.touches[0].clientY;
+			clearTimeout(idleTmr);
+		}, { passive: true });
+		window.addEventListener('touchmove', function (e) {
+			if (!drag) return;
+			tY += (e.touches[0].clientX - lX) * 0.5;
+			tX -= (e.touches[0].clientY - lY) * 0.5;
+			lX = e.touches[0].clientX;
+			lY = e.touches[0].clientY;
+			autoAngle = tY;
+		}, { passive: true });
+		window.addEventListener('touchend', function () {
+			drag = false;
+			mode = 'idle';
+			clearTimeout(idleTmr);
+			idleTmr = setTimeout(idleToResume, 2000);
+		});
+
+		requestAnimationFrame(upd);
+	})();
+</script>
