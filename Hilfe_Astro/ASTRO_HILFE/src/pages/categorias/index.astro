@@ -1,0 +1,320 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import HomeNav from '../../components/HomeNav.astro';
+import ServiceCard from '../../components/ServiceCard.astro';
+
+import '../../components/styles/categorias.css';
+import '../../components/styles/design-system.css';
+
+const categorias = [
+	{ id: 1, nombre: 'Plomería' },
+	{ id: 2, nombre: 'Manicura' },
+	{ id: 3, nombre: 'Belleza' },
+	{ id: 4, nombre: 'Aseo' },
+	{ id: 5, nombre: 'Electricista' },
+	{ id: 6, nombre: 'Niñera' },
+	{ id: 7, nombre: 'Jardinería' },
+	{ id: 8, nombre: 'Cocina' },
+];
+
+const catColors = [
+	['#dbeafe', '#eff6ff', '#2563eb'],
+	['#d1fae5', '#ecfdf5', '#059669'],
+	['#fce7f3', '#fff1f2', '#db2777'],
+	['#fef3c7', '#fffbeb', '#d97706'],
+	['#ede9fe', '#f5f3ff', '#7c3aed'],
+	['#dbeafe', '#f0f9ff', '#0284c7'],
+	['#fce7f3', '#fdf2f8', '#be185d'],
+	['#d1fae5', '#f0fdf4', '#16a34a'],
+];
+
+const servicios = [
+	{ id: 1, nombre: 'Carlos Pérez', titulo: 'Plomería general y reparaciones', ubicacion: 'Bogotá', categoria: 'Plomería', calificacion: 4.8, totalResenias: 32, precio: 45000, verificado: true, disponible: true, inicial: 'C' },
+	{ id: 2, nombre: 'María Gómez', titulo: 'Manicura profesional en casa', ubicacion: 'Medellín', categoria: 'Manicura', calificacion: 4.9, totalResenias: 27, precio: 30000, verificado: true, disponible: true, inicial: 'M' },
+	{ id: 3, nombre: 'Jorge Ramírez', titulo: 'Aseo general de hogares', ubicacion: 'Cali', categoria: 'Aseo', calificacion: 4.5, totalResenias: 18, precio: 25000, verificado: false, disponible: true, inicial: 'J' },
+	{ id: 4, nombre: 'Luisa Fernández', titulo: 'Maquillaje y peinados para eventos', ubicacion: 'Bogotá', categoria: 'Belleza', calificacion: 4.7, totalResenias: 41, precio: 35000, verificado: true, disponible: true, inicial: 'L' },
+	{ id: 5, nombre: 'Andrés Torres', titulo: 'Instalaciones eléctricas residenciales', ubicacion: 'Medellín', categoria: 'Electricista', calificacion: 4.6, totalResenias: 15, precio: 50000, verificado: true, disponible: false, inicial: 'A' },
+	{ id: 6, nombre: 'Diana Morales', titulo: 'Niñera con experiencia en primera infancia', ubicacion: 'Cali', categoria: 'Niñera', calificacion: 4.9, totalResenias: 22, precio: 40000, verificado: false, disponible: true, inicial: 'D' },
+];
+
+---
+
+<Layout title="Hilf'e — Todos los servicios">
+	<HomeNav />
+
+	<section class="cat-hero">
+		<h1>Todos los servicios</h1>
+		<p>Encuentra el profesional ideal para cada necesidad</p>
+	</section>
+
+	<section class="cat-grid-section">
+		<div class="cat-grid" id="catGrid">
+			<button type="button" class="cat-grid-item active" data-cat="" onclick="selectCat(this, '')">
+				<div class="cat-grid-icon" style="background: linear-gradient(135deg, #dbeafe, #eff6ff);">
+					<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+				</div>
+				<span>Todos</span>
+			</button>
+			{categorias.map((cat, i) => {
+				const c = catColors[i % catColors.length];
+				const iniciales = cat.nombre.slice(0, 2).toUpperCase();
+				return (
+					<button type="button" class="cat-grid-item" data-cat={cat.nombre.toLowerCase()} onclick={`selectCat(this, '${cat.nombre.toLowerCase()}')`}>
+						<div class="cat-grid-icon" style={`background: linear-gradient(135deg, ${c[0]}, ${c[1]});`}>
+							<span style="font-size:20px;">{iniciales}</span>
+						</div>
+						<span>{cat.nombre}</span>
+					</button>
+				);
+			})}
+		</div>
+	</section>
+
+	<div class="page-layout">
+		<aside class="filters-panel" id="filtersPanel">
+			<form id="filterForm" onsubmit="event.preventDefault(); aplicarFiltros();">
+				<div class="filters-header">
+					<h3>Filtros</h3>
+					<button type="button" onclick="limpiarFiltros()">Limpiar</button>
+				</div>
+
+				<div class="filter-group">
+					<div class="filter-label">Categoría</div>
+					<div class="cat-filter-list">
+						<button type="button" class="cat-filter-item active" data-cat="" onclick="selectCat(this, '')">
+							<span>Todos los servicios</span>
+							<span class="cat-filter-count">{servicios.length}</span>
+						</button>
+						{categorias.map((cat, i) => {
+							const count = servicios.filter((s) => s.categoria === cat.nombre).length;
+							return (
+								<button
+									type="button"
+									class="cat-filter-item"
+									data-cat={cat.nombre.toLowerCase()}
+									onclick={`selectCat(this, '${cat.nombre.toLowerCase()}')`}
+								>
+									<span>{cat.nombre}</span>
+									<span class="cat-filter-count">{count}</span>
+								</button>
+							);
+						})}
+					</div>
+				</div>
+
+				<div class="filter-group">
+					<div class="filter-label">Disponibilidad</div>
+					<label class="filter-check">
+						<input type="checkbox" name="soloDisponibles" value="true" id="soloDisponibles" onchange="aplicarFiltros()" />
+						Solo disponibles hoy
+					</label>
+				</div>
+
+				<div class="filter-group">
+					<div class="filter-label">Calificación mínima</div>
+					<div class="filter-slider-wrap">
+						<input type="range" class="filter-slider" name="calificacionMin" min="0" max="5" step="0.5" value="0" id="calSlider" />
+						<div class="filter-slider-value">
+							<span id="calVal">0 <span style="color:var(--star);">★</span></span>
+						</div>
+						<div class="filter-slider-range">
+							<span>Cualquiera</span>
+							<span>5 ★</span>
+						</div>
+					</div>
+				</div>
+
+				<div class="filter-group">
+					<div class="filter-label">Precio máximo</div>
+					<div class="filter-slider-wrap">
+						<input type="range" class="filter-slider" name="precioMax" min="10000" max="500000" step="5000" value="500000" id="priceSlider" />
+						<div class="filter-slider-value">
+							<span id="priceVal">$ 500.000</span>
+						</div>
+						<div class="filter-slider-range">
+							<span>$10.000</span>
+							<span>$500.000</span>
+						</div>
+					</div>
+				</div>
+
+				<input type="hidden" name="orden" id="ordenInput" value="calificacion" />
+
+				<div class="filter-actions">
+					<button type="submit" class="btn-apply">Aplicar filtros</button>
+					<button type="button" class="btn-clear" onclick="limpiarFiltros()">Limpiar filtros</button>
+				</div>
+			</form>
+		</aside>
+
+		<div>
+			<div class="content-header">
+				<div class="search-wrap">
+					<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+					<input type="text" class="search-input" id="searchInput" placeholder="Buscar por nombre o servicio..." onkeyup="aplicarFiltros()" />
+				</div>
+
+				<select class="sort-select" id="sortSelect" onchange="changeSort(this.value)">
+					<option value="calificacion" selected>Mejor calificados</option>
+					<option value="precio_asc">Menor precio</option>
+					<option value="precio_desc">Mayor precio</option>
+				</select>
+				<div class="view-toggle">
+					<button class="view-btn active" id="viewList" onclick="setView('list')" aria-label="Vista lista">
+						<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+					</button>
+					<button class="view-btn" id="viewGrid" onclick="setView('grid')" aria-label="Vista cuadrícula">
+						<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+					</button>
+				</div>
+			</div>
+
+			<div class="results-info">
+				<strong id="totalCount">{servicios.length}</strong> trabajadores encontrados
+			</div>
+
+			<div id="workersContainer" class="workers-list">
+				{servicios.map((sv) => (
+					<ServiceCard {...sv} />
+				))}
+			</div>
+		</div>
+	</div>
+
+	<script is:inline>
+		var catActual = '';
+		var orden = 'calificacion';
+
+		var cards = function () {
+			return Array.prototype.slice.call(document.querySelectorAll('#workersContainer .worker-card'));
+		};
+
+		function aplicarFiltros() {
+			var q = (document.getElementById('searchInput').value || '').toLowerCase();
+			var solo = document.getElementById('soloDisponibles').checked;
+			var minCal = parseFloat(document.getElementById('calSlider').value);
+			var maxPrecio = parseInt(document.getElementById('priceSlider').value);
+			var count = 0;
+
+			cards().forEach(function (card) {
+				var show = true;
+				if (catActual && card.dataset.category !== catActual) show = false;
+				if (show && q) {
+					show =
+						(card.dataset.name || '').indexOf(q) >= 0 ||
+						(card.dataset.title || '').indexOf(q) >= 0 ||
+						(card.dataset.category || '').indexOf(q) >= 0;
+				}
+				if (show && solo && card.dataset.estado !== 'available') show = false;
+				if (show && parseFloat(card.dataset.rating) < minCal) show = false;
+				if (show && parseInt(card.dataset.price) > maxPrecio) show = false;
+				card.style.display = show ? '' : 'none';
+				if (show) count++;
+			});
+
+			document.getElementById('totalCount').textContent = count;
+		}
+
+		function ordenar() {
+			var container = document.getElementById('workersContainer');
+			var list = cards();
+			list.sort(function (a, b) {
+				if (orden === 'precio_asc') return a.dataset.price - b.dataset.price;
+				if (orden === 'precio_desc') return b.dataset.price - a.dataset.price;
+				return b.dataset.rating - a.dataset.rating;
+			});
+			list.forEach(function (c) { container.appendChild(c); });
+			aplicarFiltros();
+		}
+
+		function changeSort(val) {
+			orden = val;
+			document.getElementById('ordenInput').value = val;
+			ordenar();
+		}
+
+		function selectCat(btn, cat) {
+			catActual = cat;
+			document.querySelectorAll('.cat-grid-item').forEach(function (b) { b.classList.remove('active'); });
+			document.querySelectorAll('.cat-filter-item').forEach(function (b) { b.classList.remove('active'); });
+			var gridBtn = document.querySelector('#catGrid .cat-grid-item[data-cat="' + cat + '"]');
+			var filterBtn = document.querySelector('.cat-filter-item[data-cat="' + cat + '"]');
+			if (gridBtn) gridBtn.classList.add('active');
+			if (filterBtn) filterBtn.classList.add('active');
+			aplicarFiltros();
+		}
+
+		function limpiarFiltros() {
+			catActual = '';
+			document.getElementById('searchInput').value = '';
+			document.getElementById('soloDisponibles').checked = false;
+			document.getElementById('calSlider').value = 0;
+			document.getElementById('priceSlider').value = 500000;
+			document.getElementById('calVal').innerHTML = '0 <span style="color:var(--star);">★</span>';
+			document.getElementById('priceVal').textContent = '$ 500.000';
+			document.querySelectorAll('.cat-grid-item').forEach(function (b) { b.classList.remove('active'); });
+			document.querySelectorAll('.cat-filter-item').forEach(function (b) { b.classList.remove('active'); });
+			var todos = document.querySelector('.cat-grid-item[data-cat=""]');
+			var todosF = document.querySelector('.cat-filter-item[data-cat=""]');
+			if (todos) todos.classList.add('active');
+			if (todosF) todosF.classList.add('active');
+			aplicarFiltros();
+		}
+
+		var priceSlider = document.getElementById('priceSlider');
+		var priceVal = document.getElementById('priceVal');
+		if (priceSlider && priceVal) {
+			priceSlider.addEventListener('input', function () {
+				priceVal.textContent = '$ ' + parseInt(priceSlider.value).toLocaleString('es-CO');
+			});
+		}
+		var calSlider = document.getElementById('calSlider');
+		var calVal = document.getElementById('calVal');
+		if (calSlider && calVal) {
+			calSlider.addEventListener('input', function () {
+				calVal.innerHTML = calSlider.value + ' <span style="color:var(--star);">★</span>';
+			});
+		}
+
+		function setView(mode) {
+			var container = document.getElementById('workersContainer');
+			var listBtn = document.getElementById('viewList');
+			var gridBtn = document.getElementById('viewGrid');
+			if (mode === 'grid') {
+				container.classList.remove('workers-list');
+				container.classList.add('workers-grid-view');
+				listBtn.classList.remove('active');
+				gridBtn.classList.add('active');
+			} else {
+				container.classList.remove('workers-grid-view');
+				container.classList.add('workers-list');
+				gridBtn.classList.remove('active');
+				listBtn.classList.add('active');
+			}
+			localStorage.setItem('viewMode', mode);
+		}
+		(function () {
+			var savedView = localStorage.getItem('viewMode');
+			if (savedView === 'grid') setView('grid');
+		})();
+
+		(function () {
+			var params = new URLSearchParams(window.location.search);
+			var catId = params.get('categoriaId');
+			var catNameById = {
+				'1': 'plomería', '2': 'manicura', '3': 'belleza', '4': 'aseo',
+				'5': 'electricista', '6': 'niñera', '7': 'jardinería', '8': 'cocina'
+			};
+			var search = params.get('search');
+			if (catId && catNameById[catId]) {
+				var cat = catNameById[catId];
+				var btn = document.querySelector('.cat-grid-item[data-cat="' + cat + '"]');
+				if (btn) selectCat(btn, cat);
+			}
+			if (search) {
+				document.getElementById('searchInput').value = search;
+				aplicarFiltros();
+			}
+		})();
+	</script>
+</Layout>
