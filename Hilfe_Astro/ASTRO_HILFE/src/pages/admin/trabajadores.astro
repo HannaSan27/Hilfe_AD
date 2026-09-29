@@ -1,5 +1,7 @@
 ---
 import Layout from '../../layouts/Layout.astro';
+import AdminSidebar from '../../components/adminsidebar.astro';
+import AdminTopbar from '../../components/admintopbar.astro';
 import '../../components/styles/admintrabajador.css';
 
 // Antes: @model List<TrabajadorAdminVm>. Reemplaza por tu backend.
@@ -42,59 +44,10 @@ const icons = {
 
 <Layout title="Trabajadores">
   <div class="admin-shell">
-    <aside class="admin-sidebar">
-      <div class="admin-sidebar-logo" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
-        <span class="logo" style="font-size:20px;font-weight:800">Hilf<span class="logo-accent" style="color:var(--primary)">'e</span></span>
-        <small style="width:100%">"Conectamos soluciones contigo."</small>
-      </div>
-      <span class="admin-nav-label">General</span>
-      <a href="/admin/admin" class="admin-nav-item">
-        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
-        Dashboard
-      </a>
-      <a href="/admin/usuario" class="admin-nav-item">
-        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-        Usuarios
-      </a>
-      <a href="/admin/trabajadores" class="admin-nav-item active">
-        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 18a1 1 0 0 1 1-1h18a1 1 0 0 1 1 1v2a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1v-2Z"/><path d="M10 10V5a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v5"/><path d="M4 15v-3a6 6 0 0 1 6-6h0"/><path d="M14 6a6 6 0 0 1 6 6v3"/></svg>
-        Trabajadores
-      </a>
-      <span class="admin-nav-label">Plataforma</span>
-      <a href="/admin/citas" class="admin-nav-item">
-        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><path d="m9 16 2 2 4-4"/></svg>
-        Citas
-      </a>
-      <a href="/admin/categoria" class="admin-nav-item">
-        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2H2v10l9.29 9.29c.94.94 2.48.94 3.42 0l6.58-6.58c.94-.94.94-2.48 0-3.42L12 2Z"/><path d="M7 7h.01"/></svg>
-        Categorías
-      </a>
-      <span class="admin-nav-label">Cuenta</span>
-      <a href="/" class="admin-nav-item">
-        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
-        Ver sitio
-      </a>
-      <a href="/login" class="admin-nav-item" style="color:var(--danger)">
-        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
-        Cerrar sesión
-      </a>
-    </aside>
+    <AdminSidebar active="trabajadores" />
 
     <div class="admin-main">
-      <div class="admin-topbar">
-        <div>
-          <h1>Trabajadores</h1>
-          <p>Administra y verifica los trabajadores de la plataforma</p>
-        </div>
-        <div class="admin-topbar-right">
-          <button class="theme-toggle" id="themeToggle" aria-label="Toggle theme" style="width:36px;height:36px;border-radius:50%;border:1.5px solid var(--border);background:var(--bg-card);cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0">
-            <svg class="theme-icon-light" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--text-secondary)" stroke-width="2"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
-            <svg class="theme-icon-dark" style="display:none" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--text-secondary)" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
-          </button>
-          <!-- Antes: <partial name="_YoMenu" /> -->
-          <div class="admin-avatar">A</div>
-        </div>
-      </div>
+      <AdminTopbar title="Trabajadores" subtitle="Administra y verifica los trabajadores de la plataforma" />
 
       <div class="admin-content">
         <div class="admin-card">
@@ -231,25 +184,6 @@ const icons = {
         document.getElementById('fila-' + id).remove();
         filtrar(input.value);
       };
-
-      // Tema claro / oscuro (quita este bloque si tu Layout.astro ya lo maneja)
-      var root = document.documentElement;
-      var btn = document.getElementById('themeToggle');
-      var light = btn.querySelector('.theme-icon-light');
-      var dark = btn.querySelector('.theme-icon-dark');
-      function aplicar(t) {
-        root.setAttribute('data-theme', t);
-        light.style.display = t === 'dark' ? 'none' : '';
-        dark.style.display = t === 'dark' ? '' : 'none';
-      }
-      var guardado = null;
-      try { guardado = localStorage.getItem('theme'); } catch (e) {}
-      aplicar(guardado || 'light');
-      btn.addEventListener('click', function () {
-        var next = root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
-        aplicar(next);
-        try { localStorage.setItem('theme', next); } catch (e) {}
-      });
     })();
   </script>
 </Layout>
