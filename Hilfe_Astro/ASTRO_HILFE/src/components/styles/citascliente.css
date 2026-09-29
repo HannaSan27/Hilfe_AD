@@ -1,0 +1,147 @@
+/* ocultar */
+#navbar.navbar-hilfe { 
+    display: none; 
+}
+
+/* variables */
+:root {
+    --sidebar-w: 240px;
+    --sidebar-bg: var(--bg-card, #fff);
+    --sidebar-border: var(--border, #e2e8f0);
+    --main-bg: var(--bg-body, #f0f4f8);
+}
+
+/* contenedor */
+.trabajador-shell {
+    display: flex;
+    min-height: 100vh;
+    background: var(--main-bg);
+}
+
+/* lateral */
+.trabajador-sidebar {
+    width: var(--sidebar-w);
+    background: var(--sidebar-bg);
+    border-right: 1px solid var(--sidebar-border);
+    display: flex;
+    flex-direction: column;
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    z-index: 100;
+}
+
+/* logo */
+.sidebar-logo {
+    padding: 24px 20px 20px;
+    font-size: 1.5rem;
+    font-weight: 800;
+    letter-spacing: -1px;
+    border-bottom: 1px solid var(--sidebar-border);
+}
+.sidebar-logo .a { color: var(--primary, #2563eb); }
+.sidebar-logo .b { color: var(--primary-dark, #1d4ed8); }
+
+/* enlaces */
+.sidebar-nav {
+    flex: 1;
+    padding: 16px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+.sidebar-link {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 14px;
+    border-radius: var(--radius-sm, 8px);
+    color: var(--text-secondary, #64748b);
+    font-size: 14px;
+    font-weight: 500;
+    transition: var(--transition, all .3s cubic-bezier(.4,0,.2,1));
+    text-decoration: none;
+}
+.sidebar-link:hover {
+    background: var(--primary-soft, #eff6ff);
+    color: var(--primary, #2563eb);
+}
+.sidebar-link.active {
+    background: var(--primary-soft, #eff6ff);
+    color: var(--primary, #2563eb);
+    font-weight: 600;
+}
+
+/* pie */
+.sidebar-footer {
+    padding: 12px;
+    border-top: 1px solid var(--sidebar-border);
+}
+
+/* principal */
+.trabajador-main {
+    flex: 1;
+    margin-left: var(--sidebar-w);
+    padding: 32px;
+    min-height: 100vh;
+}
+
+/* barra */
+.topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-bottom: 24px;
+}
+.topbar h1 {
+    font-size: 1.6rem;
+    font-weight: 800;
+    color: var(--text, #0f172a);
+    margin: 0;
+}
+.topbar p {
+    color: var(--text-secondary, #64748b);
+    font-size: 14px;
+    margin: 2px 0 0;
+}
+
+/* tarjeta */
+.content-card {
+    background: var(--bg-card, #fff);
+    border: 1px solid var(--border, #e2e8f0);
+    border-radius: var(--radius-lg, 20px);
+    overflow: hidden;
+}
+.card-header {
+    padding: 20px 24px;
+    border-bottom: 1px solid var(--border, #e2e8f0);
+}
+.card-header h3 {
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--text, #0f172a);
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+/*cuadro vacio de listar citas*/
+.empty-state {
+    text-align: center;
+    padding: 48px 24px;
+}
+.empty-state svg {
+    width: 48px;
+    height: 48px;
+    color: var(--text-muted, #94a3b8);
+    margin-bottom: 12px;
+}
+.empty-state p {
+    color: var(--text-secondary, #64748b);
+    font-size: 15px;
+    margin: 0;
+}

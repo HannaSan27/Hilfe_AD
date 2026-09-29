@@ -12,10 +12,12 @@
     "astro": "astro"
   },
   "dependencies": {
-    "ag-grid-enterprise": "^36.2.0",
-    "astro": "^7.3.3"
+    "ag-grid-enterprise": "^36.2.0"
   },
   "allowScripts": {
     "esbuild": true
+  },
+  "devDependencies": {
+    "astro": "^7.3.4"
   }
 }

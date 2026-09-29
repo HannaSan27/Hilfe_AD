@@ -1,0 +1,110 @@
+/* ===== VARIABLES PROPIAS =====
+   Definidas aquí para que esta vista se vea bien
+   aunque design-system.css no cargue o no exista todavía. */
+:root {
+    --bg-body: #eef1f6;
+    --bg-card: #ffffff;
+    --text: #111827;
+    --text-secondary: #4b5563;
+    --text-muted: #9ca3af;
+    --border: #e5e7eb;
+    --primary: #2563eb;
+    --primary-dark: #1d4ed8;
+    --primary-soft: #eff6ff;
+    --radius: 12px;
+    --radius-xl: 24px;
+    --shadow-lg: 0 20px 60px rgba(15, 23, 42, 0.12);
+    --transition-fast: 0.2s ease;
+}
+
+* { margin:0; padding:0; box-sizing:border-box; }
+
+body {
+    font-family: 'Inter', sans-serif;
+    background: var(--bg-body);
+    min-height: 100vh;
+}
+
+.roles-container {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    padding: 24px;
+}
+
+.roles-box {
+    width: 100%;
+    max-width: 700px;
+    background: var(--bg-card);
+    border-radius: var(--radius-xl);
+    box-shadow: var(--shadow-lg);
+    padding: 56px 48px;
+    text-align: center;
+}
+
+.roles-box h1 {
+    font-size: 40px;
+    font-weight: 800;
+    color: var(--primary);
+    letter-spacing: -0.5px;
+    margin-bottom: 12px;
+}
+
+.roles-box > p {
+    font-size: 16px;
+    color: var(--text-secondary);
+    font-weight: 500;
+    margin-bottom: 40px;
+}
+
+.roles-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+}
+
+.role-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    padding: 48px 24px;
+    background: var(--primary-soft);
+    border: 1.5px solid transparent;
+    border-radius: var(--radius);
+    text-decoration: none;
+    color: inherit;
+    transition: var(--transition-fast);
+}
+
+.role-card:hover {
+    border-color: var(--primary);
+    transform: translateY(-4px);
+    box-shadow: 0 12px 28px rgba(37,99,235,0.15);
+}
+
+.role-card i {
+    font-size: 40px;
+    color: var(--primary);
+    margin-bottom: 6px;
+}
+
+.role-card h3 {
+    font-size: 22px;
+    font-weight: 800;
+    color: var(--primary);
+}
+
+.role-card span {
+    font-size: 14px;
+    color: var(--text-secondary);
+    font-weight: 500;
+}
+
+@media (max-width: 640px) {
+    .roles-box { padding: 40px 24px; }
+    .roles-box h1 { font-size: 28px; }
+    .roles-grid { grid-template-columns: 1fr; }
+}

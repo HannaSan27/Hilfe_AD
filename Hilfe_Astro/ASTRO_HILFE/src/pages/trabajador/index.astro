@@ -151,7 +151,7 @@ const nombre = usuario.nombre;
 			<a href="/trabajador/perfil" class="sidebar-item">
 				<i class="bi bi-person-fill"></i> Mi Perfil
 			</a>
-			<a href="/account/login" class="sidebar-item danger">
+			<a href="/login/login" class="sidebar-item danger">
 				<i class="bi bi-box-arrow-right"></i> Cerrar sesión
 			</a>
 		</aside>
@@ -364,22 +364,22 @@ const nombre = usuario.nombre;
 										<span class="badge {info.clase} estado-badge">
 											<i class="bi bi-{info.icono}"></i> {info.label}
 										</span>
-										<div class="accion-celda">
-											{sol.estado === 'pendiente' ? (
-												<>
-													<button type="button" class="btn btn-sm btn-success" onclick="aceptarSolicitud({sol.id})"><i class="bi bi-check-lg"></i> Aceptar</button>
-													<button type="button" class="btn btn-sm btn-outline-danger" onclick="abrirModalRechazo({sol.id})"><i class="bi bi-x-lg"></i> Rechazar</button>
-												</>
-											) : sol.estado === 'aceptado' ? (
-												<button type="button" class="btn btn-sm btn-primary" onclick="avanzarSolicitud({sol.id})"><i class="bi bi-arrow-repeat"></i> En proceso</button>
-											) : sol.estado === 'en_proceso' ? (
-												<button type="button" class="btn btn-sm btn-primary" onclick="avanzarSolicitud({sol.id})"><i class="bi bi-geo-alt"></i> Rumbo a ubicación</button>
-											) : sol.estado === 'rumbo_a_ubicacion' ? (
-												<button type="button" class="btn btn-sm btn-success" onclick="avanzarSolicitud({sol.id})"><i class="bi bi-check2-circle"></i> Trabajo realizado</button>
-											) : sol.estado === 'trabajo_realizado' ? (
-												<button type="button" class="btn btn-sm btn-primary" onclick="avanzarSolicitud({sol.id})"><i class="bi bi-check-all"></i> Finalizar</button>
-											) : null}
-										</div>
+                                        <div class="accion-celda">
+									{sol.estado === 'pendiente' ? (
+									<>
+									<button type="button" class="btn btn-sm btn-success" onclick={`aceptarSolicitud(${sol.id})`}><i class="bi bi-check-lg"></i> Aceptar</button>
+									<button type="button" class="btn btn-sm btn-outline-danger" onclick={`abrirModalRechazo(${sol.id})`}><i class="bi bi-x-lg"></i> Rechazar</button>
+									</>
+									) : sol.estado === 'aceptado' ? (
+									<button type="button" class="btn btn-sm btn-primary" onclick={`avanzarSolicitud(${sol.id})`}><i class="bi bi-arrow-repeat"></i> En proceso</button>
+									) : sol.estado === 'en_proceso' ? (
+									<button type="button" class="btn btn-sm btn-primary" onclick={`avanzarSolicitud(${sol.id})`}><i class="bi bi-geo-alt"></i> Rumbo a ubicación</button>
+									) : sol.estado === 'rumbo_a_ubicacion' ? (
+									<button type="button" class="btn btn-sm btn-success" onclick={`avanzarSolicitud(${sol.id})`}><i class="bi bi-check2-circle"></i> Trabajo realizado</button>
+									) : sol.estado === 'trabajo_realizado' ? (
+									<button type="button" class="btn btn-sm btn-primary" onclick={`avanzarSolicitud(${sol.id})`}><i class="bi bi-check-all"></i> Finalizar</button>
+									) : null}
+									</div>
 									</div>
 								</div>
 							</div>

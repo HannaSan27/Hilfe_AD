@@ -1,0 +1,183 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import AdminSidebar from '../../components/adminsidebar.astro';
+import AdminTopbar from '../../components/admintopbar.astro';
+import '../../components/styles/admincategorias.css';
+
+interface Categoria {
+  Id_Categoria: number;
+  Nombre_Categoria: string;
+  Descripcion: string;
+}
+
+// Antes: @model List<Hilfe.Models.Categoria>. Reemplaza por tu backend.
+const categorias: Categoria[] = [
+  { Id_Categoria: 1, Nombre_Categoria: 'Hogar y arreglos', Descripcion: 'Plomería, electricidad y reparaciones' },
+  { Id_Categoria: 2, Nombre_Categoria: 'Pintura', Descripcion: 'Interiores, exteriores y acabados' },
+  { Id_Categoria: 3, Nombre_Categoria: 'Carpintería', Descripcion: 'Muebles y trabajos en madera' },
+];
+
+const svg = (paths: string, size: number) =>
+  `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${paths}</svg>`;
+
+const tag = '<path d="M12 2H2v10l9.29 9.29c.94.94 2.48.94 3.42 0l6.58-6.58c.94-.94.94-2.48 0-3.42L12 2Z"/><path d="M7 7h.01"/>';
+const pencil = '<path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/>';
+const trash = '<path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/>';
+const plus = '<line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>';
+
+const editar = (c: Categoria) =>
+  `abrirModalCategoria(${c.Id_Categoria},${JSON.stringify(c.Nombre_Categoria)},${JSON.stringify(c.Descripcion)})`;
+---
+
+<Layout title="Categorías">
+  <div class="admin-shell">
+    <AdminSidebar active="categoria" />
+
+    <div class="admin-main">
+      <AdminTopbar title="Categorías" subtitle="Gestiona las categorías de servicios" />
+
+      <div class="admin-content">
+        <div class="admin-card">
+          <div class="admin-card-header">
+            <h3>
+              <Fragment set:html={svg(tag, 18)} />
+              Todas las categorías
+            </h3>
+            <button class="btn btn-primary" onclick="abrirModalCategoria(0,'','')">
+              <Fragment set:html={svg(plus, 15)} />
+              Nueva categoría
+            </button>
+          </div>
+
+          <div class="cats-admin-grid" id="catsGrid">
+            {categorias.map((c) => (
+              <div class="cat-admin-card" id={`cat-${c.Id_Categoria}`}>
+                <div class="cat-emoji"><Fragment set:html={svg(tag, 32)} /></div>
+                <h4>{c.Nombre_Categoria}</h4>
+                <p>{c.Descripcion}</p>
+                <div class="cat-actions">
+                  <button class="btn btn-secondary btn-sm js-editar" onclick={editar(c)}>
+                    <Fragment set:html={svg(pencil, 12)} />
+                    Editar
+                  </button>
+                  <button class="btn-tbl js-eliminar" style="color:var(--danger)" onclick={`eliminarCategoria(${c.Id_Categoria})`}>
+                    <Fragment set:html={svg(trash, 15)} />
+                  </button>
+                </div>
+              </div>
+            ))}
+            <p id="catsVacio" hidden={categorias.length > 0} style="color:var(--text-muted);padding:1.5rem;grid-column:1/-1">
+              No hay categorías registradas aún.
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Molde para categorías nuevas -->
+  <template id="tplCat">
+    <div class="cat-admin-card">
+      <div class="cat-emoji"><Fragment set:html={svg(tag, 32)} /></div>
+      <h4></h4>
+      <p></p>
+      <div class="cat-actions">
+        <button class="btn btn-secondary btn-sm js-editar">
+          <Fragment set:html={svg(pencil, 12)} />
+          Editar
+        </button>
+        <button class="btn-tbl js-eliminar" style="color:var(--danger)">
+          <Fragment set:html={svg(trash, 15)} />
+        </button>
+      </div>
+    </div>
+  </template>
+
+  <div id="modalCat" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:var(--z-modal,2000);align-items:center;justify-content:center;backdrop-filter:blur(4px)">
+    <div style="background:var(--bg-card);border-radius:var(--radius-lg);padding:0;width:420px;box-shadow:var(--shadow-xl);max-height:90vh;display:flex;flex-direction:column">
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:20px 24px 0">
+        <h3 style="font-size:16px;font-weight:700;color:var(--text);margin:0" id="modalTitulo">Nueva categoría</h3>
+        <button onclick="cerrarModalCategoria()" style="width:32px;height:32px;border-radius:50%;border:none;background:var(--bg-card-alt);color:var(--text-secondary);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:18px">&times;</button>
+      </div>
+      <div style="padding:20px 24px">
+        <input type="hidden" id="catId" />
+        <label class="form-label">Nombre</label>
+        <input type="text" id="catNombre" class="form-input" style="margin-bottom:12px" placeholder="Ej: Hogar y arreglos" />
+        <label class="form-label">Descripción</label>
+        <input type="text" id="catDesc" class="form-input" style="margin-bottom:4px" placeholder="Descripción breve" />
+      </div>
+      <div style="display:flex;align-items:center;justify-content:flex-end;gap:8px;padding:16px 24px;border-top:1px solid var(--border)">
+        <button class="btn btn-secondary" onclick="cerrarModalCategoria()">Cancelar</button>
+        <button class="btn btn-primary" onclick="guardarCategoria()">Guardar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Reemplaza a ~/js/Admin.js (mismos nombres de función que usaba el HTML) -->
+  <script is:inline>
+    (function () {
+      var grid = document.getElementById('catsGrid');
+      var vacio = document.getElementById('catsVacio');
+      var modal = document.getElementById('modalCat');
+      var tpl = document.getElementById('tplCat');
+      var inId = document.getElementById('catId');
+      var inNombre = document.getElementById('catNombre');
+      var inDesc = document.getElementById('catDesc');
+
+      function refrescarVacio() {
+        vacio.hidden = grid.querySelectorAll('.cat-admin-card').length > 0;
+      }
+
+      function pintar(card, id, nombre, desc) {
+        card.id = 'cat-' + id;
+        card.querySelector('h4').textContent = nombre;
+        card.querySelector('p').textContent = desc;
+        card.querySelector('.js-editar').setAttribute('onclick',
+          'abrirModalCategoria(' + id + ',' + JSON.stringify(nombre) + ',' + JSON.stringify(desc) + ')');
+        card.querySelector('.js-eliminar').setAttribute('onclick', 'eliminarCategoria(' + id + ')');
+      }
+
+      window.abrirModalCategoria = function (id, nombre, desc) {
+        inId.value = id || '';
+        inNombre.value = nombre || '';
+        inDesc.value = desc || '';
+        document.getElementById('modalTitulo').textContent = id ? 'Editar categoría' : 'Nueva categoría';
+        modal.style.display = 'flex';
+        inNombre.focus();
+      };
+
+      window.cerrarModalCategoria = function () {
+        modal.style.display = 'none';
+      };
+
+      window.guardarCategoria = function () {
+        var id = Number(inId.value);
+        var nombre = inNombre.value.trim();
+        var desc = inDesc.value.trim();
+        if (!nombre) { inNombre.focus(); return; }
+
+        // TODO backend: aquí va el fetch (POST si !id, PUT si id) antes de tocar el DOM.
+        if (id) {
+          pintar(document.getElementById('cat-' + id), id, nombre, desc);
+        } else {
+          var ids = Array.prototype.map.call(grid.querySelectorAll('.cat-admin-card'), function (c) {
+            return Number(c.id.replace('cat-', ''));
+          });
+          var nuevo = Math.max.apply(null, [0].concat(ids)) + 1;
+          var card = tpl.content.firstElementChild.cloneNode(true);
+          pintar(card, nuevo, nombre, desc);
+          grid.insertBefore(card, vacio);
+        }
+        refrescarVacio();
+        window.cerrarModalCategoria();
+      };
+
+      window.eliminarCategoria = function (id) {
+        if (!confirm('¿Eliminar esta categoría?')) return;
+        // TODO backend: aquí va el fetch DELETE antes de quitar la tarjeta.
+        document.getElementById('cat-' + id).remove();
+        refrescarVacio();
+      };
+    })();
+  </script>
+</Layout>

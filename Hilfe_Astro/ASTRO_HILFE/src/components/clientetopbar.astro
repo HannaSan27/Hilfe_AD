@@ -1,0 +1,17 @@
+---
+import ThemeToggle from "../components/Themetoggle .astro";
+
+interface Props {
+  title: string;
+  subtitle?: string;
+}
+const { title, subtitle } = Astro.props;
+---
+
+<div class="topbar">
+  <div>
+    <h1>{title}</h1>
+    {subtitle && <p>{subtitle}</p>}
+  </div>
+  <ThemeToggle />
+</div>

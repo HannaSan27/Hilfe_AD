@@ -1,0 +1,189 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import AdminSidebar from '../../components/adminsidebar.astro';
+import AdminTopbar from '../../components/admintopbar.astro';
+import '../../components/styles/admintrabajador.css';
+
+// Antes: @model List<TrabajadorAdminVm>. Reemplaza por tu backend.
+interface TrabajadorAdminVm {
+  Usuario: { Id_Usuario: number; Nombre: string; Ubicacion: string };
+  Servicio: string;
+  Categoria: string;
+  Calificacion: number;
+  TotalReseñas: number;
+  Verificado: boolean;
+}
+
+const trabajadores: TrabajadorAdminVm[] = [
+  { Usuario: { Id_Usuario: 1, Nombre: 'Carlos Ruiz', Ubicacion: 'Bogotá' }, Servicio: 'Plomería residencial', Categoria: 'Hogar y arreglos', Calificacion: 4.8, TotalReseñas: 32, Verificado: true },
+  { Usuario: { Id_Usuario: 2, Nombre: 'María Torres', Ubicacion: 'Medellín' }, Servicio: 'Instalaciones eléctricas', Categoria: 'Hogar y arreglos', Calificacion: 4.5, TotalReseñas: 18, Verificado: false },
+  { Usuario: { Id_Usuario: 3, Nombre: 'Juan Díaz', Ubicacion: 'Cali' }, Servicio: 'Pintura de interiores', Categoria: 'Pintura', Calificacion: 4.9, TotalReseñas: 41, Verificado: true },
+  { Usuario: { Id_Usuario: 4, Nombre: 'Pedro León', Ubicacion: 'Bogotá' }, Servicio: 'Muebles a medida', Categoria: 'Carpintería', Calificacion: 4.2, TotalReseñas: 9, Verificado: false },
+];
+
+const svg = (paths: string, size: number, style = '') =>
+  `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"${style ? ` style="${style}"` : ''}>${paths}</svg>`;
+
+const shield = '<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>';
+const shieldOk = shield + '<path d="m9 12 2 2 4-4"/>';
+const shieldOff = shield + '<path d="M8 12h.01"/><path d="M12 12h.01"/><path d="M16 12h.01"/>';
+const shieldX = shield + '<path d="m9.5 9.5 5 5"/><path d="m14.5 9.5-5 5"/>';
+const hardHat = '<path d="M2 18a1 1 0 0 1 1-1h18a1 1 0 0 1 1 1v2a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1v-2Z"/><path d="M10 10V5a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v5"/><path d="M4 15v-3a6 6 0 0 1 6-6h0"/><path d="M14 6a6 6 0 0 1 6 6v3"/>';
+const star = '<polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>';
+const search = '<circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>';
+const trash = '<path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/>';
+
+// Iconos que el script necesita para cambiar entre "verificado" y "sin verificar"
+const icons = {
+  badgeOk: svg(shieldOk, 12),
+  badgeOff: svg(shieldOff, 12),
+  btnVerificar: svg(shieldOk, 15, 'color:var(--success)'),
+  btnQuitar: svg(shieldX, 15, 'color:var(--warning)'),
+};
+---
+
+<Layout title="Trabajadores">
+  <div class="admin-shell">
+    <AdminSidebar active="trabajadores" />
+
+    <div class="admin-main">
+      <AdminTopbar title="Trabajadores" subtitle="Administra y verifica los trabajadores de la plataforma" />
+
+      <div class="admin-content">
+        <div class="admin-card">
+          <div class="admin-card-header">
+            <h3>
+              <Fragment set:html={svg(hardHat, 18)} />
+              Trabajadores registrados
+            </h3>
+            <div class="search-wrap admin-search-input">
+              <Fragment set:html={svg(search, 16)} />
+              <input type="text" id="buscarInput" placeholder="Buscar trabajador..." class="search-input" onkeyup="buscarTrabajador(this.value)" />
+            </div>
+          </div>
+
+          <div class="table-wrap" style="border-radius:0;border-left:none;border-right:none;border-bottom:none">
+            <table class="table">
+              <thead>
+                <tr>
+                  <th>Nombre</th>
+                  <th>Servicio</th>
+                  <th>Categoría</th>
+                  <th>Ciudad</th>
+                  <th>Calificación</th>
+                  <th>Verificado</th>
+                  <th>Acciones</th>
+                </tr>
+              </thead>
+              <tbody id="trabBody">
+                {trabajadores.map((t) => (
+                  <tr id={`fila-${t.Usuario.Id_Usuario}`}>
+                    <td><strong style="color:var(--text)">{t.Usuario.Nombre}</strong></td>
+                    <td>{t.Servicio}</td>
+                    <td>{t.Categoria}</td>
+                    <td>{t.Usuario.Ubicacion}</td>
+                    <td>
+                      <Fragment set:html={svg(star, 13, 'color:var(--star);vertical-align:middle')} />
+                      {t.Calificacion}
+                      <span class="text-muted">({t.TotalReseñas})</span>
+                    </td>
+                    <td>
+                      {t.Verificado ? (
+                        <span class="badge badge-success" id={`vbadge-${t.Usuario.Id_Usuario}`}>
+                          <Fragment set:html={icons.badgeOk} />
+                          Verificado
+                        </span>
+                      ) : (
+                        <span class="badge badge-danger" id={`vbadge-${t.Usuario.Id_Usuario}`}>
+                          <Fragment set:html={icons.badgeOff} />
+                          Sin verificar
+                        </span>
+                      )}
+                    </td>
+                    <td id={`vactions-${t.Usuario.Id_Usuario}`}>
+                      {t.Verificado ? (
+                        <button class="btn-tbl js-verif" title="Quitar verificación" onclick={`quitarVerificarTrabajador(${t.Usuario.Id_Usuario})`}>
+                          <Fragment set:html={icons.btnQuitar} />
+                        </button>
+                      ) : (
+                        <button class="btn-tbl js-verif" title="Verificar" onclick={`verificarTrabajador(${t.Usuario.Id_Usuario})`}>
+                          <Fragment set:html={icons.btnVerificar} />
+                        </button>
+                      )}
+                      <button class="btn-tbl" title="Eliminar" onclick={`eliminarTrabajador(${t.Usuario.Id_Usuario})`} style="color:var(--danger)">
+                        <Fragment set:html={svg(trash, 15)} />
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+                <tr id="trabVacio" hidden={trabajadores.length > 0}>
+                  <td colspan="7" class="text-center text-muted" style="padding:2rem">
+                    No hay trabajadores registrados aún.
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="table-footer">
+            <span>Total: <span id="trabTotal">{trabajadores.length}</span> trabajadores</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Reemplaza a ~/js/Admin.js (mismos nombres de función que usaba el HTML) -->
+  <script is:inline define:vars={{ icons }}>
+    (function () {
+      var body = document.getElementById('trabBody');
+      var vacio = document.getElementById('trabVacio');
+      var total = document.getElementById('trabTotal');
+      var input = document.getElementById('buscarInput');
+
+      function normalizar(s) {
+        return String(s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+      }
+
+      // Muestra solo las filas que coinciden con el texto y actualiza el total.
+      function filtrar(texto) {
+        var q = normalizar(texto).trim();
+        var visibles = 0;
+        body.querySelectorAll('tr[id^="fila-"]').forEach(function (tr) {
+          var ok = !q || normalizar(tr.textContent).indexOf(q) !== -1;
+          tr.hidden = !ok;
+          if (ok) visibles++;
+        });
+        vacio.hidden = visibles > 0;
+        total.textContent = visibles;
+      }
+
+      window.buscarTrabajador = filtrar;
+
+      // Respeta enlaces antiguos tipo /admin/trabajadores?buscar=carlos
+      var inicial = new URLSearchParams(location.search).get('buscar');
+      if (inicial) { input.value = inicial; filtrar(inicial); }
+
+      function pintarVerificacion(id, verificado) {
+        var badge = document.getElementById('vbadge-' + id);
+        badge.className = 'badge ' + (verificado ? 'badge-success' : 'badge-danger');
+        badge.innerHTML = (verificado ? icons.badgeOk + ' Verificado' : icons.badgeOff + ' Sin verificar');
+
+        var btn = document.querySelector('#vactions-' + id + ' .js-verif');
+        btn.title = verificado ? 'Quitar verificación' : 'Verificar';
+        btn.setAttribute('onclick', (verificado ? 'quitarVerificarTrabajador(' : 'verificarTrabajador(') + id + ')');
+        btn.innerHTML = verificado ? icons.btnQuitar : icons.btnVerificar;
+      }
+
+      // TODO backend: en las 3 funciones siguientes haz el fetch antes de tocar el DOM.
+      window.verificarTrabajador = function (id) { pintarVerificacion(id, true); };
+      window.quitarVerificarTrabajador = function (id) { pintarVerificacion(id, false); };
+
+      window.eliminarTrabajador = function (id) {
+        if (!confirm('¿Eliminar este trabajador?')) return;
+        document.getElementById('fila-' + id).remove();
+        filtrar(input.value);
+      };
+    })();
+  </script>
+</Layout>

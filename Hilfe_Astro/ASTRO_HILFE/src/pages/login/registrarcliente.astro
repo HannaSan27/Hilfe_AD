@@ -1,0 +1,113 @@
+---
+import Layout from "../../layouts/Layout.astro";
+import "../../components/styles/registrarcliente.css";
+
+// TODO: cuando conectes tu backend, este vendrá de tu lógica real de registro
+// (por ahora se lee como query param, ej: /login/registrarcliente?error=Correo+ya+registrado)
+const error = Astro.url.searchParams.get("error");
+---
+
+<Layout title="Registro Cliente | Hilf'e">
+  <Fragment slot="head">
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="/css/design-system.css" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
+  </Fragment>
+
+  <div style="position:fixed;top:20px;right:24px;z-index:1000;">
+    <button class="theme-toggle" id="themeToggle" aria-label="Cambiar tema" style="width:36px;height:36px;border-radius:50%;border:1.5px solid var(--border);background:var(--bg-card, #fff);cursor:pointer;display:flex;align-items:center;justify-content:center;">
+      <svg class="theme-icon-light" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--text-secondary)" stroke-width="2"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+      <svg class="theme-icon-dark" style="display:none;" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--text-secondary)" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+    </button>
+  </div>
+
+  <div class="simple-form-container">
+    <div class="simple-form-box">
+
+      <!-- ICONO -->
+      <div class="register-icon">
+        <i class="bi bi-person-fill"></i>
+      </div>
+
+      <h2>Registro Cliente</h2>
+
+      <p class="register-subtitle">
+        Completa la información para crear tu cuenta
+      </p>
+
+      {error && (
+        <div class="error-message">
+          {error}
+        </div>
+      )}
+
+      <form method="post" action="/api/account/registrar-cliente" id="registerClienteForm">
+
+        <!-- NOMBRE -->
+        <div class="modern-input">
+          <i class="bi bi-person"></i>
+          <input type="text" name="nombre" placeholder="Nombre completo" required />
+        </div>
+
+        <!-- CORREO -->
+        <div class="modern-input" style="position:relative;">
+          <i class="bi bi-envelope"></i>
+          <input type="email" name="correo" id="correoInput" placeholder="Correo electrónico" required autocomplete="email" />
+          <span class="email-status" id="emailStatus" style="position:absolute;right:16px;top:50%;transform:translateY(-50%);font-size:18px;"></span>
+        </div>
+        <div class="email-feedback" id="emailFeedback" style="font-size:12px;font-weight:600;margin:-14px 0 18px 4px;min-height:16px;transition:color .2s;"></div>
+
+        <!-- CONTRASEÑA -->
+        <div class="modern-input password-box">
+          <i class="bi bi-lock"></i>
+          <input type="password" id="password" name="contrasena" placeholder="Contraseña" required />
+          <!-- OJITO -->
+          <i class="bi bi-eye-slash toggle-password" id="togglePassword"></i>
+        </div>
+
+        <!-- INDICADOR DE SEGURIDAD -->
+        <div class="ps-panel" id="psPanel">
+          <div class="ps-bar-track">
+            <div class="ps-bar" id="psBar"></div>
+          </div>
+          <div class="ps-label" id="psLabel">Muy débil</div>
+          <ul class="ps-reqs" id="psReqs">
+            <li id="req-len"><span class="ps-icon" id="icon-len"><i class="bi bi-circle"></i></span> 8 caracteres</li>
+            <li id="req-may"><span class="ps-icon" id="icon-may"><i class="bi bi-circle"></i></span> Una mayúscula</li>
+            <li id="req-min"><span class="ps-icon" id="icon-min"><i class="bi bi-circle"></i></span> Una minúscula</li>
+            <li id="req-num"><span class="ps-icon" id="icon-num"><i class="bi bi-circle"></i></span> Un número</li>
+            <li id="req-sym"><span class="ps-icon" id="icon-sym"><i class="bi bi-circle"></i></span> Un símbolo especial</li>
+          </ul>
+        </div>
+
+        <!-- TELEFONO -->
+        <div class="modern-input">
+          <i class="bi bi-telephone"></i>
+          <input type="text" name="telefono" placeholder="Teléfono" required />
+        </div>
+
+        <!-- BOTON -->
+        <button type="submit" class="btn-register" id="registerBtn" disabled>
+          <span class="btn-text">
+            <i class="bi bi-person-plus"></i>
+            Registrarse
+          </span>
+          <div class="btn-spinner" style="display:none;width:20px;height:20px;border:2px solid rgba(255,255,255,0.3);border-top-color:#fff;border-radius:50%;animation:spin .6s linear infinite;"></div>
+        </button>
+
+      </form>
+
+      <!-- LOGIN -->
+      <div class="login-redirect">
+        ¿Ya tienes cuenta?
+        <a href="/login/login">Inicia sesión</a>
+      </div>
+
+    </div>
+  </div>
+
+  <script is:inline src="/js/pages/register-cliente.js"></script>
+  <script is:inline src="/js/site.js"></script>
+</Layout>
