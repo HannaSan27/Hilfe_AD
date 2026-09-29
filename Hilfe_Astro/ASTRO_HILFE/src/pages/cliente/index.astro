@@ -1,0 +1,293 @@
+---
+import Layout from "../../layouts/Layout.astro";
+import "../../components/styles/indexcliente.css";
+
+interface Calificacion {
+  puntaje: number;
+}
+
+interface Solicitud {
+  idSolicitud: string | number;
+  servicioTitulo: string | null;
+  trabajadorNombre: string | null;
+  fechaServicio: string | Date;
+  horaServicio: string;
+  estado: "pendiente" | "confirmada" | "finalizado" | "cancelada" | string;
+  calificacion: Calificacion | null;
+}
+
+// TODO: reemplaza por tu lógica real (sesión/BD/API) cuando conectes tu backend
+const nombre = "Cliente";
+const solicitudes: Solicitud[] = [];
+
+function formatearFecha(fecha: string | Date) {
+  const d = typeof fecha === "string" ? new Date(fecha) : fecha;
+  const dd = String(d.getDate()).padStart(2, "0");
+  const mm = String(d.getMonth() + 1).padStart(2, "0");
+  const yyyy = d.getFullYear();
+  return `${dd}/${mm}/${yyyy}`;
+}
+
+function badgeClase(estado: string) {
+  switch (estado) {
+    case "pendiente": return "badge-warning";
+    case "confirmada": return "badge-primary";
+    case "finalizado": return "badge-success";
+    case "cancelada": return "badge-danger";
+    default: return "badge-neutral";
+  }
+}
+
+const pendientes = solicitudes.filter((s) => s.estado === "pendiente").length;
+const aceptadas = solicitudes.filter((s) => s.estado === "confirmada").length;
+const finalizadas = solicitudes.filter((s) => s.estado === "finalizado").length;
+const total = solicitudes.length;
+const porCalificar = solicitudes.filter((s) => s.estado === "finalizado" && s.calificacion == null).length;
+---
+
+<Layout>
+  <link rel="stylesheet" href="/css/design-system.css" />
+
+  <!-- Navbar -->
+  <nav class="navbar-hilfe" id="hilfeNavbar">
+    <div class="nav-inner">
+      <a href="/" class="logo">
+        Hilf<span class="logo-accent">'e</span>
+      </a>
+      <button class="nav-toggle" id="navToggle" aria-label="Toggle menu">
+        <span></span><span></span><span></span>
+      </button>
+      <div class="nav-links" id="navLinks">
+        <a href="/cliente" class="active">Mis solicitudes</a>
+        <a href="/cliente/citas">Mis citas</a>
+        <a href="/cliente/editarperfil">Mi perfil</a>
+        <a href="/" class="nav-back-link">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+          Volver al sitio
+        </a>
+      </div>
+      <div class="nav-actions">
+        <button class="theme-toggle" id="themeToggle" aria-label="Toggle theme">
+          <svg class="theme-icon-light" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+          <svg class="theme-icon-dark" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:none"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+        </button>
+        <!-- TODO YoMenu: reemplaza por tu componente Astro de menú de usuario -->
+      </div>
+    </div>
+  </nav>
+
+  <!-- Main Content -->
+  <div class="page-layout" style="padding-top: 100px;">
+    <main style="grid-column: 1 / -1">
+      <!-- Header -->
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;flex-wrap:wrap;gap:12px">
+        <div>
+          <h1 style="font-size:28px;font-weight:800;color:var(--text);margin:0">Mis solicitudes</h1>
+          <p style="color:var(--text-secondary);margin:4px 0 0">Bienvenido, <a href="/cliente/editarperfil" style="color:var(--primary);font-weight:700;text-decoration:none">{nombre}</a></p>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px">
+          {finalizadas > 0 && porCalificar > 0 && (
+            <button class="btn btn-secondary btn-sm" onclick="var b=document.querySelector('.btn-calificar');if(b){b.scrollIntoView({behavior:'smooth',block:'center'});b.click()}" style="position:relative;padding:8px 14px">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+              Calificar
+              <span style="position:absolute;top:-6px;right:-6px;background:var(--danger);color:#fff;font-size:11px;font-weight:700;width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center">{porCalificar}</span>
+            </button>
+          )}
+          <a href="/categoriaspublic" class="btn btn-primary">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            Nuevo servicio
+          </a>
+        </div>
+      </div>
+
+      <!-- Stats Grid -->
+      <div class="stats-grid stagger">
+        <div class="stat-card">
+          <div class="stat-card-icon warning">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+          </div>
+          <div class="stat-card-body">
+            <div class="stat-card-value">{pendientes}</div>
+            <div class="stat-card-label">Pendientes</div>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-card-icon primary">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+          </div>
+          <div class="stat-card-body">
+            <div class="stat-card-value">{aceptadas}</div>
+            <div class="stat-card-label">Aceptadas</div>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-card-icon success">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+          </div>
+          <div class="stat-card-body">
+            <div class="stat-card-value">{finalizadas}</div>
+            <div class="stat-card-label">Finalizadas</div>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-card-icon primary">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+          </div>
+          <div class="stat-card-body">
+            <div class="stat-card-value">{total}</div>
+            <div class="stat-card-label">Total</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Solicitudes List -->
+      <div class="card" style="margin-top:24px">
+        <div class="card-header">
+          <h3 style="font-size:16px;font-weight:700;color:var(--text);display:flex;align-items:center;gap:8px">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+            Historial de solicitudes
+          </h3>
+        </div>
+
+        {solicitudes.length > 0 ? (
+          <div class="table-wrap" style="border:none;border-radius:0">
+            <table class="table">
+              <thead>
+                <tr>
+                  <th>Servicio</th>
+                  <th>Trabajador</th>
+                  <th>Fecha</th>
+                  <th>Hora</th>
+                  <th>Estado</th>
+                  <th style="text-align:center">Acción</th>
+                </tr>
+              </thead>
+              <tbody>
+                {solicitudes.map((s) => {
+                  const necesitaCalificar = s.estado === "finalizado" && s.calificacion == null;
+                  return (
+                    <tr>
+                      <td><strong style="color:var(--text)">{s.servicioTitulo}</strong></td>
+                      <td style="color:var(--text-secondary)">{s.trabajadorNombre}</td>
+                      <td>{formatearFecha(s.fechaServicio)}</td>
+                      <td>{s.horaServicio}</td>
+                      <td><span class={`badge ${badgeClase(s.estado)}`}>{s.estado}</span></td>
+                      <td style="text-align:center">
+                        {necesitaCalificar ? (
+                          <button class="btn btn-primary btn-sm btn-calificar" data-id={s.idSolicitud} data-servicio={s.servicioTitulo}>
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                            Calificar
+                          </button>
+                        ) : s.calificacion != null ? (
+                          <span class="badge badge-neutral badge-sm" style="font-size:11px">
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                            {s.calificacion.puntaje}/5
+                          </span>
+                        ) : null}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <div class="card-body">
+            <div class="empty-state">
+              <div class="empty-state-icon">
+                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+              </div>
+              <h3>Aún no hay solicitudes</h3>
+              <p>No has realizado ninguna solicitud de servicio todavía.</p>
+              <a href="/categoriaspublic" class="btn btn-primary">Solicitar un servicio</a>
+            </div>
+          </div>
+        )}
+      </div>
+    </main>
+  </div>
+
+  <!-- Rating Modal -->
+  <div class="modal-overlay" id="modalCalificar">
+    <div class="modal">
+      <div class="modal-header">
+        <h3>Calificar servicio</h3>
+        <button class="btn-modal-close" id="modalClose" aria-label="Cerrar">&times;</button>
+      </div>
+      <form id="formCalificar" method="post" action="/api/cliente/calificar" enctype="multipart/form-data">
+        <div class="modal-body">
+          <input type="hidden" name="idSolicitud" id="inputIdSolicitud" value="" />
+          <p style="font-size:14px;color:var(--text-secondary);margin-bottom:16px">
+            ¿Cómo calificas el servicio de <strong id="modalServicio" style="color:var(--text)"></strong>?
+          </p>
+
+          <div style="text-align:center;font-size:13px;color:var(--text-muted);margin-bottom:8px;font-weight:500">Tu calificación</div>
+          <div style="display:flex;gap:6px;justify-content:center;margin-bottom:20px;font-size:32px;cursor:pointer" id="starRating">
+            <span class="star" data-value="1" style="color:#ddd;transition:color .2s ease">&#9733;</span>
+            <span class="star" data-value="2" style="color:#ddd;transition:color .2s ease">&#9733;</span>
+            <span class="star" data-value="3" style="color:#ddd;transition:color .2s ease">&#9733;</span>
+            <span class="star" data-value="4" style="color:#ddd;transition:color .2s ease">&#9733;</span>
+            <span class="star" data-value="5" style="color:#ddd;transition:color .2s ease">&#9733;</span>
+          </div>
+          <input type="hidden" name="puntaje" id="inputPuntaje" value="0" />
+
+          <div style="margin-bottom:16px">
+            <label class="form-label" for="comentario">Comentario <span style="color:var(--text-muted);font-weight:400">(opcional)</span></label>
+            <textarea class="form-textarea" id="comentario" name="comentario" placeholder="Cuéntanos tu experiencia con este servicio..." maxlength="500" style="min-height:80px"></textarea>
+            <div class="textarea-char-counter" id="charCounter">0/500</div>
+          </div>
+
+          <div style="margin-bottom:8px">
+            <label class="form-label">Fotos del trabajo realizado <span style="color:var(--text-muted);font-weight:400">(opcional, máx. 3)</span></label>
+            <div id="fotoList" style="display:flex;flex-direction:column;gap:8px"></div>
+            <button type="button" class="btn btn-secondary btn-sm" id="btnAgregarFoto" style="margin-top:8px">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+              Agregar foto
+            </button>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" id="modalCancel">Cancelar</button>
+          <button type="submit" class="btn btn-primary" id="btnSubmitCalificar">
+            Enviar calificación
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Toast Container -->
+  <div class="toast-container" id="toastContainer"></div>
+
+  <script>
+    const toggle = document.getElementById("themeToggle");
+    const lightIcon = document.querySelector(".theme-icon-light") as HTMLElement | null;
+    const darkIcon = document.querySelector(".theme-icon-dark") as HTMLElement | null;
+
+    function applyTheme(theme: string) {
+      document.documentElement.setAttribute("data-theme", theme);
+      if (lightIcon && darkIcon) {
+        lightIcon.style.display = theme === "dark" ? "none" : "block";
+        darkIcon.style.display = theme === "dark" ? "block" : "none";
+      }
+    }
+
+    const saved = localStorage.getItem("theme") || "light";
+    applyTheme(saved);
+
+    toggle?.addEventListener("click", () => {
+      const current = document.documentElement.getAttribute("data-theme") || "light";
+      const next = current === "dark" ? "light" : "dark";
+      localStorage.setItem("theme", next);
+      applyTheme(next);
+    });
+
+    const navToggle = document.getElementById("navToggle");
+    const navLinks = document.getElementById("navLinks");
+    navToggle?.addEventListener("click", () => {
+      navLinks?.classList.toggle("open");
+    });
+  </script>
+
+  <script is:inline src="/js/pages/cliente-index.js"></script>
+</Layout>

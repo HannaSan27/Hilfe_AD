@@ -1,0 +1,294 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import '../../components/styles/adminusuario.css';
+
+// Antes: @model List<Hilfe.Models.Usuario>. Reemplaza por tu backend.
+interface Usuario {
+  Id_Usuario: number;
+  Nombre: string;
+  Correo: string;
+  Id_Rol: number;
+  Rol: { Nombre_Rol: string } | null;
+  Ubicacion: string;
+  Activo: boolean;
+}
+
+const usuarios: Usuario[] = [
+  { Id_Usuario: 1, Nombre: 'Laura Gómez', Correo: 'laura@correo.com', Id_Rol: 2, Rol: { Nombre_Rol: 'Cliente' }, Ubicacion: 'Bogotá', Activo: true },
+  { Id_Usuario: 2, Nombre: 'Carlos Ruiz', Correo: 'carlos@correo.com', Id_Rol: 3, Rol: { Nombre_Rol: 'Trabajador' }, Ubicacion: 'Medellín', Activo: true },
+  { Id_Usuario: 3, Nombre: 'Andrés Peña', Correo: 'andres@correo.com', Id_Rol: 2, Rol: null, Ubicacion: 'Cali', Activo: false },
+  { Id_Usuario: 4, Nombre: 'María Torres', Correo: 'maria@correo.com', Id_Rol: 3, Rol: { Nombre_Rol: 'Trabajador' }, Ubicacion: 'Bogotá', Activo: true },
+];
+
+const svg = (paths: string, size: number) =>
+  `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${paths}</svg>`;
+
+const users = '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>';
+const search = '<circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>';
+const pencil = '<path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/>';
+const minusCircle = '<circle cx="12" cy="12" r="10"/><line x1="8" y1="12" x2="16" y2="12"/>';
+const plusCircle = minusCircle + '<line x1="12" y1="8" x2="12" y2="16"/>';
+const trash = '<path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/>';
+
+// Iconos que el script necesita para cambiar entre habilitar / deshabilitar
+const icons = {
+  deshabilitar: svg(minusCircle, 15),
+  habilitar: svg(plusCircle, 15),
+};
+---
+
+<Layout title="Usuarios">
+  <div class="admin-shell">
+    <aside class="admin-sidebar">
+      <div class="admin-sidebar-logo" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+        <span class="logo" style="font-size:20px;font-weight:800">Hilf<span class="logo-accent" style="color:var(--primary)">'e</span></span>
+        <small style="width:100%">"Conectamos soluciones contigo."</small>
+      </div>
+      <span class="admin-nav-label">General</span>
+      <a href="/admin/admin" class="admin-nav-item">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+        Dashboard
+      </a>
+      <a href="/admin/usuario" class="admin-nav-item active">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        Usuarios
+      </a>
+      <a href="/admin/trabajadores" class="admin-nav-item">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 18a1 1 0 0 1 1-1h18a1 1 0 0 1 1 1v2a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1v-2Z"/><path d="M10 10V5a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v5"/><path d="M4 15v-3a6 6 0 0 1 6-6h0"/><path d="M14 6a6 6 0 0 1 6 6v3"/></svg>
+        Trabajadores
+      </a>
+      <span class="admin-nav-label">Plataforma</span>
+      <a href="/admin/citas" class="admin-nav-item">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><path d="m9 16 2 2 4-4"/></svg>
+        Citas
+      </a>
+      <a href="/admin/categoria" class="admin-nav-item">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2H2v10l9.29 9.29c.94.94 2.48.94 3.42 0l6.58-6.58c.94-.94.94-2.48 0-3.42L12 2Z"/><path d="M7 7h.01"/></svg>
+        Categorías
+      </a>
+      <span class="admin-nav-label">Cuenta</span>
+      <a href="/" class="admin-nav-item">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+        Ver sitio
+      </a>
+      <a href="/login" class="admin-nav-item" style="color:var(--danger)">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+        Cerrar sesión
+      </a>
+    </aside>
+
+    <div class="admin-main">
+      <div class="admin-topbar">
+        <div>
+          <h1>Usuarios</h1>
+          <p>Gestión de todos los usuarios registrados</p>
+        </div>
+        <div class="admin-topbar-right">
+          <button class="theme-toggle" id="themeToggle" aria-label="Toggle theme" style="width:36px;height:36px;border-radius:50%;border:1.5px solid var(--border);background:var(--bg-card);cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0">
+            <svg class="theme-icon-light" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--text-secondary)" stroke-width="2"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+            <svg class="theme-icon-dark" style="display:none" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--text-secondary)" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+          </button>
+          <!-- Antes: <partial name="_YoMenu" /> -->
+          <div class="admin-avatar">A</div>
+        </div>
+      </div>
+
+      <div class="admin-content">
+        <div class="admin-card">
+          <div class="admin-card-header">
+            <h3>
+              <Fragment set:html={svg(users, 18)} />
+              Todos los usuarios
+            </h3>
+            <div class="search-wrap admin-search-input">
+              <Fragment set:html={svg(search, 16)} />
+              <input type="text" id="buscarInput" placeholder="Buscar usuario..." class="search-input" onkeyup="buscarUsuario(this.value)" />
+            </div>
+          </div>
+
+          <div class="table-wrap" style="border-radius:0;border-left:none;border-right:none;border-bottom:none">
+            <table class="table">
+              <thead>
+                <tr>
+                  <th>Nombre</th>
+                  <th>Correo</th>
+                  <th>Rol</th>
+                  <th>Ciudad</th>
+                  <th>Estado</th>
+                  <th>Acciones</th>
+                </tr>
+              </thead>
+              <tbody id="usrBody">
+                {usuarios.map((u) => (
+                  <tr id={`fila-${u.Id_Usuario}`}>
+                    <td class="js-nombre"><strong style="color:var(--text)">{u.Nombre}</strong></td>
+                    <td class="js-correo">{u.Correo}</td>
+                    <td><span class={`badge ${u.Id_Rol === 3 ? 'badge-warning' : 'badge-info'}`}>{u.Rol?.Nombre_Rol ?? 'Cliente'}</span></td>
+                    <td class="js-ubic">{u.Ubicacion}</td>
+                    <td class="js-estado"><span class={`badge ${u.Activo ? 'badge-success' : 'badge-danger'}`}>{u.Activo ? 'Activo' : 'Inactivo'}</span></td>
+                    <td>
+                      <button class="btn-tbl js-editar" title="Editar" onclick={`abrirEditarUsuario(${u.Id_Usuario},${JSON.stringify(u.Nombre)},${JSON.stringify(u.Correo)},${JSON.stringify(u.Ubicacion)})`}>
+                        <Fragment set:html={svg(pencil, 15)} />
+                      </button>
+                      {u.Activo ? (
+                        <button class="btn-tbl js-toggle" title="Deshabilitar" onclick={`toggleUsuario(${u.Id_Usuario}, this, false)`} style="color:var(--warning)">
+                          <Fragment set:html={icons.deshabilitar} />
+                        </button>
+                      ) : (
+                        <button class="btn-tbl js-toggle" title="Habilitar" onclick={`toggleUsuario(${u.Id_Usuario}, this, true)`} style="color:var(--success)">
+                          <Fragment set:html={icons.habilitar} />
+                        </button>
+                      )}
+                      <button class="btn-tbl btn-tbl-danger" title="Eliminar permanentemente" onclick={`eliminarUsuarioPermanente(${u.Id_Usuario}, this)`} style="color:var(--danger)">
+                        <Fragment set:html={svg(trash, 15)} />
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+                <tr id="usrVacio" hidden={usuarios.length > 0}>
+                  <td colspan="6" class="text-center text-muted" style="padding:2rem">
+                    No hay usuarios registrados aún.
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="table-footer">
+            <span>Total: <span id="usrTotal">{usuarios.length}</span> usuarios</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="modalEditar" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:var(--z-modal,2000);align-items:center;justify-content:center;backdrop-filter:blur(4px)">
+    <div style="background:var(--bg-card);border-radius:var(--radius-lg);padding:0;width:420px;box-shadow:var(--shadow-xl);max-height:90vh;display:flex;flex-direction:column">
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:20px 24px 0">
+        <h3 style="font-size:16px;font-weight:700;color:var(--text);margin:0">Editar usuario</h3>
+        <button onclick="cerrarModalUsuario()" style="width:32px;height:32px;border-radius:50%;border:none;background:var(--bg-card-alt);color:var(--text-secondary);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:18px">&times;</button>
+      </div>
+      <div style="padding:20px 24px">
+        <input type="hidden" id="editId" />
+        <label class="form-label">Nombre</label>
+        <input type="text" id="editNombre" class="form-input" style="margin-bottom:12px" />
+        <label class="form-label">Correo</label>
+        <input type="email" id="editCorreo" class="form-input" style="margin-bottom:12px" />
+        <label class="form-label">Ciudad</label>
+        <input type="text" id="editUbicacion" class="form-input" style="margin-bottom:4px" />
+      </div>
+      <div style="display:flex;align-items:center;justify-content:flex-end;gap:8px;padding:16px 24px;border-top:1px solid var(--border)">
+        <button class="btn btn-secondary" onclick="cerrarModalUsuario()">Cancelar</button>
+        <button class="btn btn-primary" onclick="guardarUsuario()">Guardar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Reemplaza a ~/js/Admin.js (mismos nombres de función que usaba el HTML) -->
+  <script is:inline define:vars={{ icons }}>
+    (function () {
+      var body = document.getElementById('usrBody');
+      var vacio = document.getElementById('usrVacio');
+      var total = document.getElementById('usrTotal');
+      var input = document.getElementById('buscarInput');
+      var modal = document.getElementById('modalEditar');
+
+      function normalizar(s) {
+        return String(s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+      }
+
+      // Muestra solo las filas que coinciden con el texto y actualiza el total.
+      function filtrar(texto) {
+        var q = normalizar(texto).trim();
+        var visibles = 0;
+        body.querySelectorAll('tr[id^="fila-"]').forEach(function (tr) {
+          var ok = !q || normalizar(tr.textContent).indexOf(q) !== -1;
+          tr.hidden = !ok;
+          if (ok) visibles++;
+        });
+        vacio.hidden = visibles > 0;
+        total.textContent = visibles;
+      }
+
+      window.buscarUsuario = filtrar;
+
+      // Respeta enlaces antiguos tipo /admin/usuario?buscar=laura
+      var inicial = new URLSearchParams(location.search).get('buscar');
+      if (inicial) { input.value = inicial; filtrar(inicial); }
+
+      // ── Editar ──
+      window.abrirEditarUsuario = function (id, nombre, correo, ubicacion) {
+        document.getElementById('editId').value = id;
+        document.getElementById('editNombre').value = nombre;
+        document.getElementById('editCorreo').value = correo;
+        document.getElementById('editUbicacion').value = ubicacion;
+        modal.style.display = 'flex';
+        document.getElementById('editNombre').focus();
+      };
+
+      window.cerrarModalUsuario = function () {
+        modal.style.display = 'none';
+      };
+
+      // TODO backend: en guardarUsuario, toggleUsuario y eliminarUsuarioPermanente
+      // haz el fetch antes de tocar el DOM.
+      window.guardarUsuario = function () {
+        var id = document.getElementById('editId').value;
+        var nombre = document.getElementById('editNombre').value.trim();
+        var correo = document.getElementById('editCorreo').value.trim();
+        var ubicacion = document.getElementById('editUbicacion').value.trim();
+        if (!nombre) { document.getElementById('editNombre').focus(); return; }
+
+        var fila = document.getElementById('fila-' + id);
+        fila.querySelector('.js-nombre strong').textContent = nombre;
+        fila.querySelector('.js-correo').textContent = correo;
+        fila.querySelector('.js-ubic').textContent = ubicacion;
+        fila.querySelector('.js-editar').setAttribute('onclick',
+          'abrirEditarUsuario(' + id + ',' + JSON.stringify(nombre) + ',' + JSON.stringify(correo) + ',' + JSON.stringify(ubicacion) + ')');
+        window.cerrarModalUsuario();
+      };
+
+      // ── Habilitar / deshabilitar (activo = nuevo estado) ──
+      window.toggleUsuario = function (id, btn, activo) {
+        var badge = document.querySelector('#fila-' + id + ' .js-estado .badge');
+        badge.className = 'badge ' + (activo ? 'badge-success' : 'badge-danger');
+        badge.textContent = activo ? 'Activo' : 'Inactivo';
+
+        btn.title = activo ? 'Deshabilitar' : 'Habilitar';
+        btn.style.color = activo ? 'var(--warning)' : 'var(--success)';
+        btn.innerHTML = activo ? icons.deshabilitar : icons.habilitar;
+        btn.setAttribute('onclick', 'toggleUsuario(' + id + ', this, ' + (!activo) + ')');
+      };
+
+      // ── Eliminar ──
+      window.eliminarUsuarioPermanente = function (id, btn) {
+        if (!confirm('¿Eliminar este usuario permanentemente? Esta acción no se puede deshacer.')) return;
+        btn.closest('tr').remove();
+        filtrar(input.value);
+      };
+
+      document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape') window.cerrarModalUsuario();
+      });
+
+      // Tema claro / oscuro (quita este bloque si tu Layout.astro ya lo maneja)
+      var root = document.documentElement;
+      var btnTema = document.getElementById('themeToggle');
+      var light = btnTema.querySelector('.theme-icon-light');
+      var dark = btnTema.querySelector('.theme-icon-dark');
+      function aplicar(t) {
+        root.setAttribute('data-theme', t);
+        light.style.display = t === 'dark' ? 'none' : '';
+        dark.style.display = t === 'dark' ? '' : 'none';
+      }
+      var guardado = null;
+      try { guardado = localStorage.getItem('theme'); } catch (e) {}
+      aplicar(guardado || 'light');
+      btnTema.addEventListener('click', function () {
+        var next = root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+        aplicar(next);
+        try { localStorage.setItem('theme', next); } catch (e) {}
+      });
+    })();
+  </script>
+</Layout>
