@@ -45,10 +45,8 @@ const total = solicitudes.length;
 const porCalificar = solicitudes.filter((s) => s.estado === "finalizado" && s.calificacion == null).length;
 ---
 
-<Layout title="Mi Panel">
- <Fragment slot="head">
+<Layout>
   <link rel="stylesheet" href="/css/design-system.css" />
-</Fragment>
 
   <!-- Navbar -->
   <nav class="navbar-hilfe" id="hilfeNavbar">
