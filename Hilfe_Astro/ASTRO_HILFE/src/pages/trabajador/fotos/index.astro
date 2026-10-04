@@ -1,0 +1,156 @@
+---
+import Layout from '../../../layouts/Layout.astro';
+import HomeNav from '../../../components/HomeNav.astro';
+import '../../../components/styles/design-system.css';
+---
+
+<Layout title="Fotos del servicio — Hilf'e">
+	<HomeNav />
+
+	<main class="container" style="padding-top: 40px; padding-bottom: 48px;">
+		<section class="card">
+			<div class="card-header">
+				<h1>Fotos del servicio</h1>
+			</div>
+			<div class="card-body">
+				<p id="servicioNombre">Cargando servicio...</p>
+				<p id="fotosMensaje" role="status" hidden></p>
+				<form id="subirFotoForm">
+					<div class="form-group">
+						<label for="fotoServicio">Selecciona una foto (JPG, PNG o WEBP; máximo 8 MB)</label>
+						<input class="form-control" id="fotoServicio" name="foto" type="file" accept="image/jpeg,image/png,image/webp" required />
+					</div>
+					<button class="btn-primary" id="subirFotoBtn" type="submit">Subir foto</button>
+				</form>
+			</div>
+		</section>
+
+		<section class="card" aria-labelledby="fotosTitulo">
+			<div class="card-header"><h2 id="fotosTitulo">Fotos guardadas</h2></div>
+			<div class="card-body">
+				<div id="listaFotos"></div>
+			</div>
+		</section>
+
+		<a class="btn-secondary" href="/trabajador/?section=servicios">Volver a mis servicios</a>
+	</main>
+
+	<script is:inline>
+		(function () {
+			var api = 'http://127.0.0.1:8000/api';
+			var servicioId = new URLSearchParams(window.location.search).get('servicioId');
+			var nombreServicio = document.getElementById('servicioNombre');
+			var mensaje = document.getElementById('fotosMensaje');
+			var formulario = document.getElementById('subirFotoForm');
+			var botonSubir = document.getElementById('subirFotoBtn');
+			var selectorFoto = document.getElementById('fotoServicio');
+			var listaFotos = document.getElementById('listaFotos');
+			var usuario;
+
+			function mostrarMensaje(texto) {
+				mensaje.textContent = texto;
+				mensaje.hidden = false;
+			}
+
+			async function leerRespuesta(respuesta) {
+				var datos = await respuesta.json().catch(function () { return {}; });
+				if (!respuesta.ok) throw new Error(datos.mensaje || datos.error || 'No fue posible completar la operación.');
+				return datos;
+			}
+
+			function crearFoto(imagen) {
+				var tarjeta = document.createElement('article');
+				tarjeta.className = 'card';
+				var cuerpo = document.createElement('div');
+				cuerpo.className = 'card-body';
+				var vista = document.createElement('img');
+				vista.alt = 'Foto del servicio ' + (nombreServicio.textContent || '');
+				vista.src = api + '/imagenes-trabajos/' + encodeURIComponent(imagen.Id_Imagen) + '/archivo';
+				vista.addEventListener('error', function () {
+					vista.remove();
+					var aviso = document.createElement('p');
+					aviso.textContent = 'Esta foto antigua está registrada, pero su archivo no está disponible en el servidor.';
+					cuerpo.insertBefore(aviso, botonEliminar);
+				}, { once: true });
+				var botonEliminar = document.createElement('button');
+				botonEliminar.type = 'button';
+				botonEliminar.className = 'btn-secondary';
+				botonEliminar.textContent = 'Eliminar foto';
+				botonEliminar.addEventListener('click', async function () {
+					if (!window.confirm('¿Eliminar esta foto?')) return;
+					botonEliminar.disabled = true;
+					try {
+						await leerRespuesta(await fetch(api + '/imagenes-trabajos/' + encodeURIComponent(imagen.Id_Imagen), { method: 'DELETE' }));
+						tarjeta.remove();
+						mostrarMensaje('Foto eliminada correctamente.');
+					} catch (error) {
+						mostrarMensaje(error.message || 'No fue posible eliminar la foto.');
+						botonEliminar.disabled = false;
+					}
+				});
+				cuerpo.appendChild(vista);
+				cuerpo.appendChild(botonEliminar);
+				tarjeta.appendChild(cuerpo);
+				listaFotos.appendChild(tarjeta);
+			}
+
+			async function cargarFotos() {
+				listaFotos.replaceChildren();
+				var fotos = await leerRespuesta(await fetch(api + '/imagenes-trabajos?servicio=' + encodeURIComponent(servicioId)));
+				if (!Array.isArray(fotos) || fotos.length === 0) {
+					var vacio = document.createElement('p');
+					vacio.textContent = 'Este servicio aún no tiene fotos.';
+					listaFotos.appendChild(vacio);
+					return;
+				}
+				fotos.forEach(crearFoto);
+			}
+
+			async function iniciar() {
+				try {
+					usuario = JSON.parse(localStorage.getItem('usuario') || 'null');
+					if (!usuario || Number(usuario.rol) !== 2 || !usuario.id) throw new Error('Inicia sesión como trabajador para administrar fotos.');
+					if (!servicioId) throw new Error('No se indicó el servicio para administrar sus fotos.');
+
+					var servicios = await leerRespuesta(await fetch(api + '/servicios'));
+					var servicio = servicios.find(function (elemento) { return String(elemento.Id_Servicio) === String(servicioId); });
+					if (!servicio || Number(servicio.Id_Trabajador) !== Number(usuario.id)) {
+						throw new Error('No se encontró un servicio tuyo con ese identificador.');
+					}
+					nombreServicio.textContent = servicio.Titulo || 'Servicio';
+					await cargarFotos();
+				} catch (error) {
+					mostrarMensaje(error.message || 'No fue posible cargar las fotos.');
+					formulario.hidden = true;
+				}
+			}
+
+			formulario.addEventListener('submit', async function (evento) {
+				evento.preventDefault();
+				var archivo = selectorFoto.files && selectorFoto.files[0];
+				if (!archivo) return;
+				if (archivo.size > 8 * 1024 * 1024) {
+					mostrarMensaje('La foto debe pesar como máximo 8 MB.');
+					return;
+				}
+
+				var datos = new FormData();
+				datos.append('Id_Servicio', servicioId);
+				datos.append('foto', archivo);
+				botonSubir.disabled = true;
+				try {
+					var resultado = await leerRespuesta(await fetch(api + '/imagenes-trabajos', { method: 'POST', body: datos }));
+					selectorFoto.value = '';
+					mostrarMensaje(resultado.mensaje || 'Foto subida correctamente.');
+					await cargarFotos();
+				} catch (error) {
+					mostrarMensaje(error.message || 'No fue posible subir la foto.');
+				} finally {
+					botonSubir.disabled = false;
+				}
+			});
+
+			iniciar();
+		})();
+	</script>
+</Layout>

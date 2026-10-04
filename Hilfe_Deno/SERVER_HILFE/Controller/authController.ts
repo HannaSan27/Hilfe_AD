@@ -48,7 +48,20 @@ export async function login(ctx: Context) {
     return;
   }
 
-  const contrasenaValida = await verificarContrasena(contrasena, usuario.Contrasena);
+  let contrasenaValida = false;
+  const contrasenaAlmacenada = usuario.Contrasena;
+  const hashBcryptValido =
+    typeof contrasenaAlmacenada === "string" &&
+    /^\$2[aby]\$(0[4-9]|[12]\d|3[01])\$[./A-Za-z0-9]{53}$/.test(contrasenaAlmacenada);
+
+  if (hashBcryptValido) {
+    contrasenaValida = await verificarContrasena(contrasena, contrasenaAlmacenada);
+  } else if (contrasenaAlmacenada === contrasena) {
+    const contrasenaEncriptada = await hash(contrasena);
+    await actualizarContrasena(correo, contrasenaEncriptada);
+    contrasenaValida = true;
+  }
+
   if (!contrasenaValida) {
     ctx.response.status = 401;
     ctx.response.body = { mensaje: "Correo o contraseña incorrectos" };

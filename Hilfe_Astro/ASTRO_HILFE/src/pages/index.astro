@@ -23,16 +23,7 @@ const catGradients = [
 
 const catColors = ['#2563eb', '#059669', '#db2777', '#d97706', '#7c3aed', '#4f46e5', '#0891b2', '#e11d48'];
 
-const categorias = [
-	{ id: 1, nombre: 'Plomería', descripcion: 'Reparaciones e instalaciones de tuberías y grifería.', count: 12 },
-	{ id: 2, nombre: 'Manicura', descripcion: 'Diseño y cuidado de uñas para cualquier ocasión.', count: 8 },
-	{ id: 3, nombre: 'Belleza', descripcion: 'Maquillaje, peinados y tratamientos de belleza.', count: 15 },
-	{ id: 4, nombre: 'Aseo', descripcion: 'Limpieza y organización para tu hogar u oficina.', count: 10 },
-	{ id: 5, nombre: 'Electricista', descripcion: 'Instalaciones y reparaciones eléctricas seguras.', count: 7 },
-	{ id: 6, nombre: 'Niñera', descripcion: 'Cuidado y acompañamiento para los más pequeños.', count: 6 },
-	{ id: 7, nombre: 'Jardinería', descripcion: 'Mantenimiento, poda y diseño de jardines.', count: 5 },
-	{ id: 8, nombre: 'Cocina', descripcion: 'Chefs y cocineros a domicilio para tus eventos.', count: 9 },
-];
+const categorias: { id: number; nombre: string; descripcion: string; count: number }[] = [];
 
 const tagCats = categorias.slice(0, 5);
 
@@ -72,7 +63,7 @@ const totalServicios = categorias.reduce((acc, c) => acc + c.count, 0);
 					<input type="text" name="search" placeholder="¿Qué servicio necesitas? Ej: plomero, manicurista..." />
 					<button type="submit">Buscar</button>
 				</form>
-				<div class="hero-tags">
+				<div class="hero-tags" id="homeCategoryTags">
 					{tagCats.map((cat) => (
 						<a href={`/categorias/?categoriaId=${cat.id}`}>{cat.nombre}</a>
 					))}
@@ -104,7 +95,7 @@ const totalServicios = categorias.reduce((acc, c) => acc + c.count, 0);
 		<div class="section-label">EXPLORAR</div>
 		<h2 class="section-title">Categorías de servicios</h2>
 		<p class="section-desc">Todo lo que necesitas en un solo lugar, organizado para que encuentres fácilmente.</p>
-		<div class="categories-grid">
+		<div class="categories-grid" id="homeCategoryGrid">
 			{categorias.map((cat, i) => (
 				<CategoryCard
 					nombre={cat.nombre}
@@ -124,6 +115,9 @@ const totalServicios = categorias.reduce((acc, c) => acc + c.count, 0);
 				<span class="category-count">{totalServicios} servicios</span>
 			</a>
 		</div>
+		<template id="plantillaCategoriaInicio">
+			<CategoryCard nombre="" descripcion="" gradient="#dbeafe,#eff6ff" color="#2563eb" delay="0" serviciosCount={0} />
+		</template>
 	</section>
 
 	<section class="section workers" id="profesionales">
@@ -144,6 +138,18 @@ const totalServicios = categorias.reduce((acc, c) => acc + c.count, 0);
 				/>
 			))}
 		</div>
+		<template id="plantillaProfesionalInicio">
+			<HomeWorkerCard
+				id={0}
+				nombre=""
+				titulo=""
+				precio=""
+				ubicacion=""
+				verificado={false}
+				inicial=""
+				gradient="#2563eb,#1d4ed8"
+			/>
+		</template>
 	</section>
 
 	<section class="section how-it-works" id="como-funciona">
@@ -187,6 +193,126 @@ const totalServicios = categorias.reduce((acc, c) => acc + c.count, 0);
 	<Footer />
 
 	<script is:inline>
+		(function conectarCategoriasInicio() {
+			var api = 'http://127.0.0.1:8000/api';
+			var grid = document.getElementById('homeCategoryGrid');
+			var plantilla = document.getElementById('plantillaCategoriaInicio');
+			var tags = document.getElementById('homeCategoryTags');
+			var gradientes = [
+				['#dbeafe', '#eff6ff', '#2563eb'], ['#d1fae5', '#ecfdf5', '#059669'],
+				['#fce7f3', '#fdf2f8', '#db2777'], ['#fef3c7', '#fffbeb', '#d97706'],
+				['#ede9fe', '#f5f3ff', '#7c3aed'], ['#e0e7ff', '#eef2ff', '#4f46e5'],
+				['#cffafe', '#ecfeff', '#0891b2'], ['#fff1f2', '#fce7f3', '#e11d48']
+			];
+
+			async function leerRespuesta(respuesta) {
+				var datos = await respuesta.json().catch(function () { return []; });
+				if (!respuesta.ok) throw new Error(datos.mensaje || datos.error || 'No fue posible cargar las categorías.');
+				return datos;
+			}
+
+			(async function cargar() {
+				try {
+					var respuestas = await Promise.all([fetch(api + '/categorias'), fetch(api + '/servicios')]);
+					var datos = await Promise.all(respuestas.map(leerRespuesta));
+					var categorias = datos[0];
+					var servicios = datos[1];
+					if (!Array.isArray(categorias) || !Array.isArray(servicios)) throw new Error('El servidor devolvió datos de categorías inválidos.');
+
+					var conteos = Object.create(null);
+					servicios.forEach(function (servicio) {
+						var id = String(servicio.Id_Categoria);
+						conteos[id] = (conteos[id] || 0) + 1;
+					});
+
+					var verTodos = grid.querySelector('.category-card-all');
+					grid.replaceChildren();
+					categorias.forEach(function (categoria, indice) {
+						var tarjeta = plantilla.content.firstElementChild.cloneNode(true);
+						var colores = gradientes[indice % gradientes.length];
+						var nombre = categoria.Nombre_Categoria || '';
+						tarjeta.href = '/categorias/?categoriaId=' + encodeURIComponent(categoria.Id_Categoria);
+						tarjeta.querySelector('.category-icon-wrap').style.background = 'linear-gradient(135deg, ' + colores[0] + ', ' + colores[1] + ')';
+						tarjeta.querySelector('.category-icon-wrap').style.color = colores[2];
+						tarjeta.querySelector('.category-icon-wrap span').textContent = nombre.slice(0, 2).toUpperCase();
+						tarjeta.querySelector('h3').textContent = nombre;
+						tarjeta.querySelector('p').textContent = categoria.Descripcion || '';
+						tarjeta.querySelector('.category-count').textContent = (conteos[String(categoria.Id_Categoria)] || 0) + ' servicios';
+						tarjeta.style.animationDelay = (indice * 0.08).toFixed(2) + 's';
+						grid.appendChild(tarjeta);
+					});
+					if (verTodos) {
+						verTodos.style.animationDelay = (categorias.length * 0.08).toFixed(2) + 's';
+						var contadorTotal = verTodos.querySelector('.category-count');
+						if (contadorTotal) contadorTotal.textContent = servicios.length + ' servicios';
+						grid.appendChild(verTodos);
+					}
+
+					tags.replaceChildren();
+					categorias.slice(0, 5).forEach(function (categoria) {
+						var enlace = document.createElement('a');
+						enlace.href = '/categorias/?categoriaId=' + encodeURIComponent(categoria.Id_Categoria);
+						enlace.textContent = categoria.Nombre_Categoria || '';
+						tags.appendChild(enlace);
+					});
+				} catch (error) {
+					console.error('No fue posible cargar las categorías de la landing page.', error);
+				}
+			})();
+		})();
+
+		(function conectarProfesionalesInicio() {
+			var api = 'http://127.0.0.1:8000/api';
+			var grid = document.querySelector('.profesionales-grid');
+			var plantilla = document.getElementById('plantillaProfesionalInicio');
+
+			async function leerRespuesta(respuesta) {
+				var datos = await respuesta.json().catch(function () { return []; });
+				if (!respuesta.ok) throw new Error(datos.mensaje || datos.error || 'No fue posible cargar los profesionales.');
+				return datos;
+			}
+
+			(async function cargar() {
+				try {
+					var resultados = await Promise.all([
+						fetch(api + '/servicios'),
+						fetch(api + '/trabajadores')
+					]);
+					var datos = await Promise.all(resultados.map(leerRespuesta));
+					var trabajadoresActivos = new Set(datos[1].map(function (trabajador) { return String(trabajador.Id_Usuario); }));
+					var serviciosActivos = datos[0].filter(function (servicio) {
+						return trabajadoresActivos.has(String(servicio.Id_Trabajador));
+					});
+					grid.replaceChildren();
+
+					if (serviciosActivos.length === 0) {
+						var vacio = document.createElement('p');
+						vacio.textContent = 'No hay servicios publicados por trabajadores activos.';
+						grid.appendChild(vacio);
+						return;
+					}
+
+					serviciosActivos.forEach(function (servicio, indice) {
+						var tarjeta = plantilla.content.firstElementChild.cloneNode(true);
+						var nombre = servicio.Nombre_Trabajador || 'Trabajador';
+						tarjeta.querySelector('.worker-info h4').textContent = nombre;
+						tarjeta.querySelector('.worker-service').textContent = servicio.Titulo || '';
+						tarjeta.querySelector('.worker-meta span').textContent = servicio.Ubicacion || '';
+						tarjeta.querySelector('.worker-footer strong').textContent = '$' + Number(servicio.Precio || 0).toLocaleString('es-CO');
+						tarjeta.querySelector('.worker-avatar').textContent = nombre.charAt(0).toUpperCase();
+						tarjeta.querySelector('.worker-btn').href = '/trabajador/perfil/?id=' + encodeURIComponent(servicio.Id_Trabajador) + '&servicioId=' + encodeURIComponent(servicio.Id_Servicio);
+						tarjeta.style.animationDelay = ((indice % 6) * 0.1).toFixed(1) + 's';
+						grid.appendChild(tarjeta);
+					});
+				} catch (error) {
+					grid.replaceChildren();
+					var aviso = document.createElement('p');
+					aviso.textContent = error.message || 'No fue posible cargar los profesionales.';
+					grid.appendChild(aviso);
+				}
+			})();
+		})();
+
 		(function () {
 			var observer = new IntersectionObserver(
 				function (entries) {

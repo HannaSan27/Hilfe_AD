@@ -1,4 +1,4 @@
-import { Context } from "../Dependencies/dependencies.ts";
+import { Context, RouterContext } from "../Dependencies/dependencies.ts";
 import client from "../Models/conexion.ts";
 import type { Disponibilidad } from "../Models/disponibilidadModel.ts";
 
@@ -26,7 +26,7 @@ export const getDisponibilidad = async (ctx: Context) => {
   }
 };
 
-export const getDisponibilidadPorId = async (ctx: Context) => {
+export const getDisponibilidadPorId = async (ctx: RouterContext<string>) => {
   const { id } = ctx.params as { id: string };
   try {
     const result = await client.query(
@@ -78,7 +78,7 @@ export const crearDisponibilidad = async (ctx: Context) => {
   }
 };
 
-export const actualizarDisponibilidad = async (ctx: Context) => {
+export const actualizarDisponibilidad = async (ctx: RouterContext<string>) => {
   const { id } = ctx.params as { id: string };
   try {
     const body: Partial<Disponibilidad> = await ctx.request.body.json();
@@ -103,7 +103,7 @@ export const actualizarDisponibilidad = async (ctx: Context) => {
   }
 };
 
-export const eliminarDisponibilidad = async (ctx: Context) => {
+export const eliminarDisponibilidad = async (ctx: RouterContext<string>) => {
   const { id } = ctx.params as { id: string };
   try {
     await client.execute("DELETE FROM disponibilidad WHERE Id_Disponibilidad = ?", [id]);

@@ -85,7 +85,7 @@ const cards = [
       <a href="/" class="sidebar-item">
         <i data-lucide="home"></i> Ver sitio
       </a>
-      <a href="/login/login" class="sidebar-item sidebar-item-danger">
+      <a href="/" class="sidebar-item sidebar-item-danger" id="cerrarSesionAdmin">
         <i data-lucide="log-out"></i> Cerrar sesión
       </a>
     </aside>
@@ -193,6 +193,11 @@ const cards = [
   <script is:inline>
     // Iconos Lucide
     if (window.lucide) lucide.createIcons();
+
+    document.getElementById('cerrarSesionAdmin')?.addEventListener('click', function () {
+      localStorage.removeItem('token');
+      localStorage.removeItem('usuario');
+    });
 
     // Tema claro / oscuro
     (function () {

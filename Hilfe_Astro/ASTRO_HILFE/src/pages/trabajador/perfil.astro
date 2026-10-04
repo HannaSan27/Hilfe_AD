@@ -1,0 +1,362 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import HomeNav from '../../components/HomeNav.astro';
+import '../../components/styles/design-system.css';
+---
+
+<Layout title="Perfil del trabajador — Hilf'e">
+	<HomeNav />
+
+	<main class="profile-page">
+		<div id="perfilError" class="profile-error" role="alert" hidden><span id="perfilErrorTexto"></span></div>
+		<div class="profile-layout" id="perfilContenido" hidden>
+			<div class="profile-main">
+				<section class="profile-card worker-summary">
+					<div class="worker-avatar"><div class="photo-placeholder" id="trabajadorInicial"></div><img id="trabajadorFoto" alt="Foto del trabajador" hidden /></div>
+					<div class="summary-copy"><h1 id="trabajadorNombre"></h1><p id="trabajadorUbicacion"></p><strong id="servicioResumen"></strong><div class="summary-tags"><span id="trabajadorCategoria"></span><span id="totalResenas"></span><span id="promedioResumen"></span></div></div>
+				</section>
+				<section class="profile-card"><h2>Descripción profesional</h2><h3 id="servicioTitulo"></h3><p id="servicioDescripcion"></p><div class="summary-tags"><span id="categoriaDescripcion"></span><span id="disponibilidadResumen"></span></div></section>
+				<section class="profile-card"><h2>Trabajos realizados</h2><div class="work-gallery" id="galeriaTrabajos"><p>Cargando fotos...</p></div></section>
+				<section class="profile-card"><h2 id="calificacionesTitulo">Calificaciones</h2><div class="rating-summary"><strong id="promedioCalificaciones">0.0</strong><span id="estrellasResumen">☆☆☆☆☆</span><small id="cantidadCalificaciones">0 reseñas</small></div><div id="listaCalificaciones"></div></section>
+			</div>
+			<aside class="profile-card booking-card">
+				<div class="booking-price"><strong id="precioServicio"></strong><small id="tipoServicio"></small><div><span id="estrellasLateral">☆☆☆☆☆</span><small id="calificacionLateral"></small></div></div>
+				<div class="booking-details"><p><b>Ubicación</b><span id="ubicacionLateral"></span></p><p><b>Contacto</b><span id="telefonoLateral"></span></p><p><b>Disponibilidad</b><span id="horariosLateral"></span></p></div>
+				<button type="button" class="booking-open" id="abrirAgendamiento">▣ Agendar servicio</button>
+				<p class="booking-note">Servicio disponible en tu zona</p>
+			</aside>
+		</div>
+	</main>
+	<div class="booking-overlay" id="modalAgendamiento" hidden>
+		<section class="booking-modal" role="dialog" aria-modal="true" aria-labelledby="tituloAgendamiento">
+			<header><h2 id="tituloAgendamiento">Agendar servicio</h2><button type="button" id="cerrarAgendamiento" aria-label="Cerrar">×</button></header>
+			<div class="booking-modal-content">
+				<div class="selected-worker"><span class="modal-avatar" id="modalInicial"></span><div><strong id="modalNombre"></strong><small id="modalServicio"></small></div><b id="modalPrecio"></b></div>
+				<div class="modal-availability"><strong>Disponibilidad</strong><div id="modalHorarios"></div></div>
+				<div id="solicitudMensaje" class="form-message" role="status" hidden></div>
+				<p id="iniciarSesionAviso" class="form-message" hidden><a href="/login/login">Inicia sesión como cliente para agendar este servicio.</a></p>
+				<form id="solicitudForm">
+					<label class="modal-field full-field" for="servicioId">Servicio<select id="servicioId" required></select></label>
+					<label class="modal-field full-field" for="descripcion">¿Qué necesitas?<textarea id="descripcion" rows="3" maxlength="500" placeholder="Describe lo que necesitas..."></textarea></label>
+					<div class="suggestions"><span>Sugerencias:</span><button type="button" data-sugerencia="Reparación">Reparación</button><button type="button" data-sugerencia="Instalación">Instalación</button><button type="button" data-sugerencia="Diagnóstico">Diagnóstico</button><button type="button" data-sugerencia="Limpieza">Limpieza</button></div>
+					<label class="modal-field" for="fechaServicio">Fecha<input id="fechaServicio" type="date" required /></label>
+					<label class="modal-field" for="horaServicio">Hora<input id="horaServicio" type="time" required /></label>
+					<label class="modal-field" for="direccion">Dirección<input id="direccion" type="text" placeholder="Calle, número..." /></label>
+					<label class="modal-field" for="telefono">Teléfono<input id="telefono" type="tel" placeholder="Tu número" /></label>
+					<footer><button type="button" class="booking-cancel" id="cancelarAgendamiento">Cancelar</button><button class="booking-confirm" id="solicitarBtn" type="submit">Confirmar agendamiento</button></footer>
+				</form>
+			</div>
+		</section>
+	</div>
+	<script is:inline>
+		(function () {
+			var api = 'http://127.0.0.1:8000/api';
+			var params = new URLSearchParams(window.location.search);
+			var trabajadorId = params.get('id');
+			var servicioInicial = params.get('servicioId');
+			var trabajador;
+			var servicios = [];
+			var calificaciones = [];
+			var servicioActual;
+			var modal = document.getElementById('modalAgendamiento');
+			var form = document.getElementById('solicitudForm');
+			var mensaje = document.getElementById('solicitudMensaje');
+			var errorBox = document.getElementById('perfilError');
+			var errorTexto = document.getElementById('perfilErrorTexto');
+			var selector = document.getElementById('servicioId');
+
+			function listaDe(respuesta) {
+				if (Array.isArray(respuesta)) return respuesta;
+				return respuesta && Array.isArray(respuesta.value) ? respuesta.value : [];
+			}
+			function mensajeDe(datos, respaldo) {
+				return datos && (datos.mensaje || datos.error) ? (datos.mensaje || datos.error) : respaldo;
+			}
+			function mostrarError(texto) {
+				errorTexto.textContent = texto;
+				errorBox.hidden = false;
+			}
+			function estrellas(valor) {
+				var redondeado = Math.round(Number(valor) || 0);
+				return '★'.repeat(redondeado) + '☆'.repeat(5 - redondeado);
+			}
+			function precioDe(servicio) {
+				return '$' + (Number(servicio.Precio) || 0).toLocaleString('es-CO');
+			}
+			function horariosTexto(items) {
+				if (!items.length) return 'Horario no publicado';
+				return items.map(function (d) {
+					return d.Dia_Semana + ' ' + String(d.Hora_Inicio || '').slice(0, 5) + ' - ' + String(d.Hora_Fin || '').slice(0, 5);
+				}).join(' · ');
+			}
+			function horariosDe(servicioId) {
+				return fetch(api + '/disponibilidad?servicio=' + encodeURIComponent(servicioId))
+					.then(function (r) { if (!r.ok) throw new Error('No fue posible cargar la disponibilidad.'); return r.json(); })
+					.then(listaDe);
+			}
+			function cargarGaleria(servicio) {
+				var galeria = document.getElementById('galeriaTrabajos');
+				galeria.replaceChildren();
+				var carga = document.createElement('p');
+				carga.textContent = 'Cargando fotos...';
+				galeria.appendChild(carga);
+				return fetch(api + '/imagenes-trabajos?servicio=' + encodeURIComponent(servicio.Id_Servicio))
+					.then(function (r) { if (!r.ok) throw new Error('No fue posible cargar las fotos.'); return r.json(); })
+					.then(function (data) {
+						var imagenes = listaDe(data);
+						galeria.replaceChildren();
+						if (!imagenes.length) { var vacia = document.createElement('p'); vacia.textContent = 'Este trabajador aún no ha publicado fotos de este servicio.'; galeria.appendChild(vacia); return; }
+						var cargadas = 0;
+						imagenes.forEach(function (imagen) {
+							var foto = document.createElement('img');
+							foto.alt = 'Trabajo realizado: ' + (servicio.Titulo || 'servicio');
+							foto.src = api + '/imagenes-trabajos/' + encodeURIComponent(imagen.Id_Imagen) + '/archivo';
+							foto.addEventListener('load', function () { cargadas++; }, { once: true });
+							foto.addEventListener('error', function () {
+								foto.remove();
+								if (!galeria.querySelector('img')) { var aviso = document.createElement('p'); aviso.textContent = 'Las fotos están registradas, pero sus archivos no están disponibles en el servidor.'; galeria.appendChild(aviso); }
+							}, { once: true });
+							galeria.appendChild(foto);
+						});
+					});
+			}
+			function dibujarCalificaciones() {
+				var promedio = calificaciones.length ? calificaciones.reduce(function (suma, c) { return suma + (Number(c.Puntaje) || 0); }, 0) / calificaciones.length : 0;
+				document.getElementById('promedioCalificaciones').textContent = promedio.toFixed(1);
+				document.getElementById('estrellasResumen').textContent = estrellas(promedio);
+				document.getElementById('cantidadCalificaciones').textContent = calificaciones.length + (calificaciones.length === 1 ? ' reseña' : ' reseñas');
+				document.getElementById('totalResenas').textContent = calificaciones.length + (calificaciones.length === 1 ? ' reseña' : ' reseñas');
+				document.getElementById('promedioResumen').textContent = promedio.toFixed(1) + ' ★';
+				document.getElementById('estrellasLateral').textContent = estrellas(promedio);
+				document.getElementById('calificacionLateral').textContent = promedio.toFixed(1) + ' (' + calificaciones.length + ')';
+				var lista = document.getElementById('listaCalificaciones');
+				lista.replaceChildren();
+				if (!calificaciones.length) { var vacia = document.createElement('p'); vacia.textContent = 'Este trabajador aún no tiene calificaciones.'; lista.appendChild(vacia); return; }
+				calificaciones.forEach(function (calificacion) {
+					var item = document.createElement('article'); item.className = 'review-item';
+					var estrellasEl = document.createElement('strong'); estrellasEl.textContent = estrellas(calificacion.Puntaje);
+					var fecha = document.createElement('span'); fecha.className = 'review-date';
+					fecha.textContent = calificacion.Fecha_Calificacion ? new Date(calificacion.Fecha_Calificacion).toLocaleDateString('es-CO') : '';
+					var comentario = document.createElement('p'); comentario.textContent = calificacion.Comentario || 'Sin comentario.';
+					item.append(estrellasEl, document.createTextNode('  '), fecha, comentario); lista.appendChild(item);
+				});
+			}
+			function actualizarServicio(servicio) {
+				servicioActual = servicio;
+				var categoria = servicio.Nombre_Categoria || 'Categoría no especificada';
+				var titulo = servicio.Titulo || 'Servicio';
+				document.getElementById('servicioResumen').textContent = titulo;
+				document.getElementById('trabajadorCategoria').textContent = categoria;
+				document.getElementById('servicioTitulo').textContent = titulo;
+				document.getElementById('servicioDescripcion').textContent = servicio.Descripcion || 'Sin descripción disponible.';
+				document.getElementById('categoriaDescripcion').textContent = categoria;
+				document.getElementById('precioServicio').textContent = precioDe(servicio);
+				document.getElementById('tipoServicio').textContent = servicio.TipoServicio || 'Por servicio';
+				document.getElementById('modalServicio').textContent = titulo;
+				document.getElementById('modalPrecio').textContent = 'Desde ' + precioDe(servicio);
+				document.getElementById('ubicacionLateral').textContent = trabajador.Ubicacion || 'No especificada';
+				document.getElementById('telefonoLateral').textContent = trabajador.Telefono || 'No publicado';
+				return horariosDe(servicio.Id_Servicio).then(function (horarios) {
+					var texto = horariosTexto(horarios);
+					document.getElementById('horariosLateral').textContent = texto;
+					document.getElementById('modalHorarios').replaceChildren();
+					document.getElementById('disponibilidadResumen').textContent = horarios.length ? 'Disponible' : 'Horario no publicado';
+					if (!horarios.length) { var sin = document.createElement('span'); sin.textContent = texto; document.getElementById('modalHorarios').appendChild(sin); }
+					horarios.forEach(function (h) { var chip = document.createElement('span'); chip.textContent = h.Dia_Semana + ' ' + String(h.Hora_Inicio).slice(0,5) + ' - ' + String(h.Hora_Fin).slice(0,5); document.getElementById('modalHorarios').appendChild(chip); });
+				}).catch(function () {
+					document.getElementById('horariosLateral').textContent = 'No disponibles';
+					document.getElementById('disponibilidadResumen').textContent = 'Horario no disponible';
+					document.getElementById('modalHorarios').textContent = 'No fue posible cargar los horarios.';
+				}).then(function () { return cargarGaleria(servicio); });
+			}
+			function abrirModal() {
+				var sesion = null;
+				try { sesion = JSON.parse(localStorage.getItem('usuario') || 'null'); } catch { sesion = null; }
+				var esCliente = sesion && Number(sesion.rol) === 3 && sesion.id;
+				form.hidden = !esCliente;
+				document.getElementById('iniciarSesionAviso').hidden = !!esCliente;
+				mensaje.hidden = true;
+				modal.hidden = false;
+				document.body.style.overflow = 'hidden';
+				if (esCliente) document.getElementById('fechaServicio').focus();
+			}
+			function cerrarModal() { modal.hidden = true; document.body.style.overflow = ''; }
+
+			document.getElementById('abrirAgendamiento').addEventListener('click', abrirModal);
+			document.getElementById('cerrarAgendamiento').addEventListener('click', cerrarModal);
+			document.getElementById('cancelarAgendamiento').addEventListener('click', cerrarModal);
+			modal.addEventListener('click', function (event) { if (event.target === modal) cerrarModal(); });
+			document.addEventListener('keydown', function (event) { if (event.key === 'Escape' && !modal.hidden) cerrarModal(); });
+			document.querySelectorAll('[data-sugerencia]').forEach(function (boton) {
+				boton.addEventListener('click', function () {
+					var campo = document.getElementById('descripcion');
+					campo.value = campo.value ? campo.value + ' ' + boton.dataset.sugerencia : boton.dataset.sugerencia;
+					campo.focus();
+				});
+			});
+			selector.addEventListener('change', function () {
+				var seleccionado = servicios.find(function (s) { return String(s.Id_Servicio) === selector.value; });
+				if (seleccionado) actualizarServicio(seleccionado);
+			});
+
+			async function iniciar() {
+				if (!trabajadorId) { mostrarError('No se indicó el identificador del trabajador.'); return; }
+				try {
+					var respuestas = await Promise.all([
+						fetch(api + '/trabajadores/' + encodeURIComponent(trabajadorId)),
+						fetch(api + '/servicios'),
+						fetch(api + '/calificaciones/trabajador/' + encodeURIComponent(trabajadorId))
+					]);
+					var datosTrabajador = await respuestas[0].json();
+					var datosServicios = await respuestas[1].json();
+					var datosCalificaciones = await respuestas[2].json();
+					if (!respuestas[0].ok) throw new Error(mensajeDe(datosTrabajador, 'No fue posible cargar el trabajador.'));
+					if (!respuestas[1].ok) throw new Error(mensajeDe(datosServicios, 'No fue posible cargar los servicios.'));
+					trabajador = datosTrabajador;
+					servicios = listaDe(datosServicios).filter(function (s) { return String(s.Id_Trabajador) === String(trabajadorId); });
+					calificaciones = respuestas[2].ok ? listaDe(datosCalificaciones) : [];
+					if (!servicios.length) throw new Error('Este trabajador no tiene servicios disponibles.');
+					var nombre = trabajador.Nombre || 'Trabajador';
+					document.getElementById('trabajadorNombre').textContent = nombre;
+					document.getElementById('trabajadorInicial').textContent = nombre.charAt(0).toUpperCase();
+					document.getElementById('modalInicial').textContent = nombre.charAt(0).toUpperCase();
+					document.getElementById('modalNombre').textContent = nombre;
+					document.getElementById('trabajadorUbicacion').textContent = trabajador.Ubicacion || 'Ubicación no especificada';
+					document.getElementById('ubicacionLateral').textContent = trabajador.Ubicacion || 'No especificada';
+					document.getElementById('telefonoLateral').textContent = trabajador.Telefono || 'No publicado';
+					if (trabajador.Foto_Perfil) {
+						var foto = document.getElementById('trabajadorFoto');
+						foto.src = api + '/usuarios/' + encodeURIComponent(trabajadorId) + '/foto-perfil';
+						foto.hidden = false; document.getElementById('trabajadorInicial').hidden = true;
+						foto.addEventListener('error', function () { foto.hidden = true; document.getElementById('trabajadorInicial').hidden = false; }, {once:true});
+					}
+					servicios.forEach(function (s) { var opcion = document.createElement('option'); opcion.value = s.Id_Servicio; opcion.textContent = (s.Titulo || 'Servicio') + ' · ' + precioDe(s); selector.appendChild(opcion); });
+					var inicial = servicios.find(function (s) { return String(s.Id_Servicio) === String(servicioInicial); }) || servicios[0];
+					selector.value = String(inicial.Id_Servicio);
+					if (calificaciones.length) {
+						var prom = calificaciones.reduce(function (suma, c) { return suma + (Number(c.Puntaje) || 0); }, 0) / calificaciones.length;
+						document.getElementById('promedioResumen').textContent = prom.toFixed(1) + ' ★';
+					}
+					dibujarCalificaciones();
+					var minFecha = new Date(); minFecha.setMinutes(minFecha.getMinutes() - minFecha.getTimezoneOffset());
+					document.getElementById('fechaServicio').min = minFecha.toISOString().slice(0,10);
+					document.getElementById('perfilContenido').hidden = false;
+					await actualizarServicio(inicial);
+				} catch (error) { mostrarError(error.message || 'No fue posible cargar el perfil.'); }
+			}
+
+			form.addEventListener('submit', async function (evento) {
+				evento.preventDefault();
+				if (form.dataset.solicitudEnviada === 'true') return;
+				var sesion;
+				try { sesion = JSON.parse(localStorage.getItem('usuario') || 'null'); } catch { sesion = null; }
+				if (!sesion || Number(sesion.rol) !== 3 || !sesion.id) { form.hidden = true; document.getElementById('iniciarSesionAviso').hidden = false; return; }
+				var boton = document.getElementById('solicitarBtn'); boton.disabled = true; mensaje.hidden = true;
+				try {
+					var respuesta = await fetch(api + '/solicitudes', {
+						method: 'POST', headers: {'Content-Type':'application/json'},
+						body: JSON.stringify({
+							Id_Cliente: sesion.id, Id_Trabajador: trabajador.Id_Usuario, Id_Servicio: selector.value,
+							Fecha_Servicio: document.getElementById('fechaServicio').value,
+							Hora_Servicio: document.getElementById('horaServicio').value,
+							Direccion: document.getElementById('direccion').value || null,
+							Telefono: document.getElementById('telefono').value || null,
+							Descripcion_Solicitud: document.getElementById('descripcion').value || null
+						})
+					});
+					var resultado = await respuesta.json().catch(function () { return {}; });
+					if (!respuesta.ok) throw new Error(mensajeDe(resultado, 'No fue posible enviar la solicitud.'));
+					form.dataset.solicitudEnviada = 'true';
+					mensaje.textContent = mensajeDe(resultado, 'Solicitud enviada correctamente. ');
+					var enlaceSolicitudes = document.createElement('a'); enlaceSolicitudes.href = '/cliente/'; enlaceSolicitudes.textContent = ' Ver mis solicitudes';
+					mensaje.appendChild(enlaceSolicitudes); mensaje.hidden = false;
+				} catch (error) { mensaje.textContent = error.message || 'No fue posible enviar la solicitud.'; mensaje.hidden = false; }
+				finally { boton.disabled = false; }
+			});
+			form.addEventListener('input', function () { delete form.dataset.solicitudEnviada; });
+			iniciar();
+		})();
+	</script>
+	<style>
+		.profile-page{max-width:1060px;margin:0 auto;padding:28px 20px 56px;color:#172033}.profile-layout{display:grid;grid-template-columns:minmax(0,2fr) minmax(270px,.95fr);gap:16px;align-items:start}.profile-main{display:grid;gap:14px}.profile-card{background:#fff;border:1px solid #e4eaf2;border-radius:14px;box-shadow:0 2px 8px rgba(15,35,65,.04);padding:18px}.profile-card h2{font-size:16px;margin:0 0 14px;color:#1c2a40}.profile-card h3{font-size:15px;margin:0 0 8px}.profile-card p{color:#65748b;line-height:1.55;margin:0 0 12px;font-size:14px}.worker-summary{display:flex;align-items:center;gap:16px}.worker-avatar{width:64px;height:64px;border-radius:50%;overflow:hidden;flex:none;background:#635bdb;display:grid;place-items:center}.worker-avatar .photo-placeholder{color:#fff;font-size:26px;font-weight:700}.worker-avatar img{width:100%;height:100%;object-fit:cover}.summary-copy h1{font-size:23px;margin:0 0 3px}.summary-copy p{font-size:12px;margin:0 0 5px}.summary-copy>strong{font-size:13px;color:#2563eb}.summary-tags{display:flex;gap:7px;flex-wrap:wrap;margin-top:8px}.summary-tags span{background:#eff5ff;border-radius:20px;color:#3269bd;padding:4px 9px;font-size:11px}.work-gallery{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}.work-gallery img{width:100%;height:130px;object-fit:cover;border-radius:8px}.work-gallery p{grid-column:1/-1}.rating-summary{display:flex;align-items:center;gap:10px;background:#f7f8fa;padding:12px;border-radius:8px;margin-bottom:12px}.rating-summary strong{font-size:28px;color:#f4aa00}.rating-summary span,.booking-price div span{color:#f2ac00;letter-spacing:2px}.rating-summary small{color:#718096}.review-item{padding:12px 0;border-bottom:1px solid #e8edf3}.review-item:last-child{border:0}.review-item strong{color:#f3ad00}.review-item p{margin:5px 0 0}.review-date{font-size:11px;color:#8793a5}.booking-card{padding:0;overflow:hidden;position:sticky;top:20px}.booking-price{background:linear-gradient(120deg,#2563eb,#1450a5);color:white;text-align:center;padding:18px 12px}.booking-price>strong{display:block;font-size:30px}.booking-price>small{display:block;font-size:11px;margin:1px 0 8px}.booking-price div{display:flex;justify-content:center;align-items:center;gap:6px}.booking-price div span{color:#ffca28}.booking-price div small{font-size:10px;color:#fff}.booking-details{padding:12px}.booking-details p{background:#f6f8fb;border-radius:7px;padding:9px 10px;margin:0 0 7px;display:grid;gap:3px;font-size:11px}.booking-details b{font-size:9px;color:#8793a5;text-transform:uppercase}.booking-details span{color:#3b4960}.booking-open,.booking-confirm{border:0;border-radius:24px;background:#2563eb;color:#fff;font-weight:700;padding:12px 18px;cursor:pointer}.booking-open{display:block;width:calc(100% - 24px);margin:0 12px;box-shadow:0 4px 12px #2563eb40}.booking-note{text-align:center;font-size:10px!important;margin:8px!important}.booking-overlay{position:fixed;inset:0;z-index:2000;background:rgba(18,24,33,.56);backdrop-filter:blur(5px);display:grid;place-items:center;padding:16px}.booking-overlay[hidden]{display:none}.booking-modal{background:#fff;width:min(100%,520px);max-height:min(92vh,720px);border-radius:14px;overflow:hidden;box-shadow:0 20px 70px #0b122040;display:flex;flex-direction:column}.booking-modal>header{display:flex;align-items:center;justify-content:space-between;padding:15px 19px;border-bottom:1px solid #e7ecf2}.booking-modal>header h2{font-size:16px;margin:0}.booking-modal>header button{width:30px;height:30px;border:0;border-radius:50%;background:#f1f4f8;color:#607085;font-size:22px;cursor:pointer}.booking-modal-content{padding:16px 19px;overflow:auto}.selected-worker{display:flex;align-items:center;gap:10px;background:#f7f9fc;border:1px solid #e0e7f0;border-radius:10px;padding:10px 12px;margin-bottom:12px}.modal-avatar{width:34px;height:34px;border-radius:50%;background:#2866ec;color:#fff;display:grid;place-items:center;font-weight:700}.selected-worker div{display:grid;gap:3px;flex:1}.selected-worker strong{font-size:12px}.selected-worker small{font-size:10px;color:#7a879a}.selected-worker>b{color:#2563eb;font-size:14px}.modal-availability{background:#f7f9fc;border:1px solid #e0e7f0;border-radius:10px;padding:11px 13px;margin-bottom:13px}.modal-availability strong{display:block;font-size:11px;color:#718096;margin-bottom:7px;text-transform:uppercase}.modal-availability span{display:inline-block;border:1px solid #dbe5f3;border-radius:20px;padding:5px 8px;margin:2px;font-size:10px;color:#48648d}.modal-field{display:flex;flex-direction:column;gap:6px;font-size:12px;color:#53627a}.modal-field input,.modal-field textarea,.modal-field select{width:100%;border:1px solid #dce4ef;border-radius:8px;padding:10px 11px;font:inherit;color:#27364c;background:#fff}.modal-field textarea{resize:vertical;min-height:74px}.modal-field input:focus,.modal-field textarea:focus,.modal-field select:focus{outline:2px solid #c9dbff;border-color:#7fa8ff}.profile-layout[hidden],.profile-error[hidden],.booking-modal form[hidden],.form-message[hidden]{display:none!important}.booking-modal form{display:grid;grid-template-columns:1fr 1fr;gap:12px}.full-field,.suggestions,.booking-modal form footer{grid-column:1/-1}.suggestions{display:flex;gap:6px;align-items:center;flex-wrap:wrap;font-size:10px;color:#8190a6}.suggestions button{border:1px solid #dce4ef;border-radius:18px;background:#fff;padding:5px 9px;color:#667891;font-size:10px;cursor:pointer}.booking-modal form footer{position:sticky;bottom:-16px;background:#fff;border-top:1px solid #e3e9f0;margin:2px -19px -16px;padding:12px 19px;display:flex;justify-content:flex-end;gap:8px}.booking-cancel{border:1px solid #dce4ef;background:#fff;color:#53627a;border-radius:8px;padding:10px 16px;cursor:pointer}.booking-confirm{border-radius:8px;padding:10px 16px}.booking-confirm:disabled{opacity:.6;cursor:wait}.form-message{padding:10px;background:#f0f6ff;border-radius:8px;color:#355b91;font-size:13px;margin:0 0 12px}.profile-error{max-width:1060px;margin:24px auto;padding:14px;background:#fff2f2;color:#a33;border-radius:10px}@media(max-width:760px){.profile-layout{grid-template-columns:1fr}.booking-card{position:static;grid-row:1}.profile-page{padding:18px 12px 40px}.work-gallery{grid-template-columns:repeat(2,minmax(0,1fr))}.work-gallery img{height:120px}.booking-modal{max-height:94vh}.booking-modal-content{padding:14px}}
+	</style>
+	<style>
+		.profile-page {
+			width: min(calc(100% - 48px), 1240px);
+			max-width: none;
+			padding: clamp(26px, 4vw, 48px) 0 72px;
+			box-sizing: border-box;
+		}
+		.profile-layout {
+			grid-template-columns: minmax(0, 1fr) minmax(320px, 380px);
+			gap: clamp(22px, 3vw, 34px);
+		}
+		.profile-main { gap: 22px; }
+		.profile-main, .profile-card, .summary-copy { min-width: 0; }
+		.profile-card {
+			padding: clamp(22px, 2.4vw, 30px);
+			border-radius: 20px;
+			box-shadow: 0 8px 24px rgba(24, 45, 78, .055);
+			overflow-wrap: anywhere;
+		}
+		.profile-card h2 { font-size: 20px; margin-bottom: 18px; }
+		.profile-card h3 { font-size: 17px; margin-bottom: 10px; }
+		.profile-card p { font-size: 15px; line-height: 1.75; }
+		.worker-summary { min-height: 142px; gap: clamp(20px, 3vw, 30px); }
+		.worker-avatar { width: 92px; height: 92px; }
+		.worker-avatar .photo-placeholder { font-size: 34px; }
+		.summary-copy h1 { font-size: clamp(25px, 3vw, 32px); line-height: 1.15; margin-bottom: 7px; }
+		.summary-copy p { font-size: 14px; margin-bottom: 8px; }
+		.summary-copy > strong { display: inline-block; font-size: 15px; line-height: 1.5; }
+		.summary-tags { gap: 8px; margin-top: 12px; }
+		.summary-tags span { padding: 6px 11px; font-size: 12px; }
+		.work-gallery { grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 14px; align-items: start; }
+		.work-gallery img { height: auto; aspect-ratio: 4 / 3; max-height: 250px; border-radius: 14px; }
+		.work-gallery img:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(24, 45, 78, .14); }
+		.rating-summary { flex-wrap: wrap; gap: 12px 18px; padding: 16px 18px; border-radius: 12px; }
+		.rating-summary strong { font-size: 36px; }
+		.review-item { padding: 18px 2px; }
+		.review-item p { margin-top: 8px; }
+		.booking-card { padding: 0; top: 96px; border-radius: 20px; }
+		.booking-price { padding: 26px 18px; }
+		.booking-price > strong { font-size: clamp(32px, 3vw, 40px); }
+		.booking-details { padding: 18px; }
+		.booking-details p { padding: 12px 14px; gap: 5px; font-size: 13px; border-radius: 10px; }
+		.booking-details b { font-size: 10px; letter-spacing: .04em; }
+		.booking-open { width: calc(100% - 36px); min-height: 48px; margin: 0 18px; }
+		.booking-note { margin: 12px 18px 16px !important; font-size: 11px !important; }
+		@media (max-width: 900px) {
+			.profile-layout { grid-template-columns: minmax(0, 1fr); }
+			.booking-card { position: static; grid-row: 1; }
+		}
+		@media (max-width: 600px) {
+			.profile-page { width: min(calc(100% - 28px), 100%); padding-top: 20px; }
+			.profile-main { gap: 16px; }
+			.profile-card { padding: 20px; border-radius: 16px; }
+			.profile-card h2 { font-size: 18px; margin-bottom: 14px; }
+			.worker-summary { align-items: center; gap: 15px; min-height: 0; }
+			.worker-avatar { width: 68px; height: 68px; }
+			.worker-avatar .photo-placeholder { font-size: 27px; }
+			.summary-copy h1 { font-size: 21px; overflow-wrap: anywhere; }
+			.summary-copy p { font-size: 12px; }
+			.summary-copy > strong { font-size: 13px; }
+			.summary-tags { gap: 6px; margin-top: 9px; }
+			.summary-tags span { padding: 5px 9px; font-size: 11px; }
+			.work-gallery { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 9px; }
+			.work-gallery img { border-radius: 10px; }
+			.booking-modal { max-height: 94vh; }
+			.booking-modal-content { padding: 16px; }
+			.booking-modal form { grid-template-columns: minmax(0, 1fr); }
+			.full-field, .suggestions, .booking-modal form footer { grid-column: 1; }
+			.booking-modal form footer { flex-wrap: wrap; }
+		}
+		@media (max-width: 380px) {
+			.profile-page { width: calc(100% - 20px); }
+			.profile-card { padding: 16px; }
+			.worker-avatar { width: 58px; height: 58px; }
+			.summary-copy h1 { font-size: 19px; }
+			.work-gallery { grid-template-columns: minmax(0, 1fr); }
+			.booking-open { width: calc(100% - 28px); margin-inline: 14px; }
+		}
+	</style>
+</Layout>

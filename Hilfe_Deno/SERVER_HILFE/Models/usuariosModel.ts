@@ -46,6 +46,14 @@ export async function actualizarUsuario(
   return resultado;
 }
 
+export async function actualizarFotoPerfil(id: number, fotoPerfil: string) {
+  const resultado = await client.execute(
+    "UPDATE usuarios SET Foto_Perfil = ? WHERE Id_Usuario = ?",
+    [fotoPerfil, id]
+  );
+  return resultado;
+}
+
 export async function actualizarContrasena(correo: string, contrasenaEncriptada: string) {
   const resultado = await client.execute(
     "UPDATE usuarios SET Contrasena = ? WHERE Correo = ?",

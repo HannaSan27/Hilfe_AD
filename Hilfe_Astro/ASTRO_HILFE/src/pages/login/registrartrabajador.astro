@@ -2,9 +2,6 @@
 import Layout from "../../layouts/Layout.astro";
 import "../../components/styles/registrartrabajador.css";
 
-// TODO: cuando conectes tu backend, este vendrá de tu lógica real de registro
-// (por ahora se lee como query param, ej: /login/registrartrabajador?error=Correo+ya+registrado)
-const error = Astro.url.searchParams.get("error");
 ---
 
 <Layout title="Registro Trabajador | Hilf'e">
@@ -37,14 +34,10 @@ const error = Astro.url.searchParams.get("error");
         Completa tu perfil profesional para comenzar
       </p>
 
-      {error && (
-        <div class="error-message">
-          {error}
-        </div>
-      )}
+      <div class="error-message" id="registerError" role="alert" hidden></div>
 
       <!-- FORM -->
-      <form method="post" action="/api/account/registrar-trabajador" enctype="multipart/form-data" id="registerTrabajadorForm">
+      <form method="post" action="http://127.0.0.1:8000/api/auth/registro" enctype="multipart/form-data" id="registerTrabajadorForm">
 
         <!-- NOMBRE -->
         <div class="modern-input">
@@ -110,7 +103,7 @@ const error = Astro.url.searchParams.get("error");
           </label>
 
           <!-- INPUT FILE -->
-          <input type="file" id="fotoPerfil" name="foto_Perfil" accept=".jpg,.jpeg,.png" style="display:none;" />
+          <input type="file" id="fotoPerfil" name="foto_Perfil" accept=".jpg,.jpeg,.png" required style="display:none;" />
 
           <!-- TEXTO -->
           <p id="nombreImagen" class="photo-filename"></p>
@@ -142,7 +135,151 @@ const error = Astro.url.searchParams.get("error");
     </div>
   </div>
 
+  <script is:inline>
+    (function () {
+      const form = document.getElementById("registerTrabajadorForm");
+      const password = document.getElementById("password");
+      const photo = document.getElementById("fotoPerfil");
+      const button = document.getElementById("registerBtn");
+      const errorBox = document.getElementById("registerError");
+      const errorPrevio = new URLSearchParams(window.location.search).get("error");
+      let cuentaRegistrada = false;
+      let tokenSesion = null;
+      let usuarioSesion = null;
+      let enviando = false;
+
+      const mostrarError = (message) => {
+        errorBox.textContent = message;
+        errorBox.hidden = false;
+      };
+      const ocultarError = () => { errorBox.hidden = true; errorBox.textContent = ""; };
+      if (errorPrevio) mostrarError(errorPrevio);
+
+      const requisitos = [
+        { id: "req-len", test: (value) => value.length >= 8 },
+        { id: "req-may", test: (value) => /[A-Z]/.test(value) },
+        { id: "req-min", test: (value) => /[a-z]/.test(value) },
+        { id: "req-num", test: (value) => /\d/.test(value) },
+        { id: "req-sym", test: (value) => /[^A-Za-z0-9]/.test(value) },
+      ];
+      const actualizarBoton = () => {
+        button.disabled = enviando || !form.checkValidity();
+      };
+      const actualizarSeguridad = () => {
+        const value = password.value;
+        const cumplidos = requisitos.filter((item) => item.test(value)).length;
+        document.getElementById("psPanel").classList.toggle("active", value.length > 0);
+        document.getElementById("psBar").className = "ps-bar ps-" + cumplidos;
+        const etiqueta = document.getElementById("psLabel");
+        etiqueta.textContent = ["Muy débil", "Muy débil", "Débil", "Regular", "Fuerte", "Muy fuerte"][cumplidos];
+        requisitos.forEach((item) => {
+          const fila = document.getElementById(item.id);
+          const icono = fila.querySelector(".ps-icon i");
+          const logrado = item.test(value);
+          fila.classList.toggle("met", logrado);
+          if (icono) icono.className = logrado ? "bi bi-check-circle-fill" : "bi bi-circle";
+        });
+        actualizarBoton();
+      };
+
+      form.addEventListener("input", () => { ocultarError(); actualizarBoton(); });
+      form.addEventListener("change", () => { ocultarError(); actualizarBoton(); });
+      password.addEventListener("input", () => { ocultarError(); actualizarSeguridad(); });
+      photo.addEventListener("change", () => {
+        const archivo = photo.files && photo.files[0];
+        document.getElementById("nombreImagen").textContent = archivo ? archivo.name : "";
+        ocultarError();
+        actualizarBoton();
+      });
+      document.getElementById("togglePassword").addEventListener("click", function () {
+        const mostrar = password.type === "password";
+        password.type = mostrar ? "text" : "password";
+        this.classList.toggle("bi-eye", mostrar);
+        this.classList.toggle("bi-eye-slash", !mostrar);
+      });
+      const themeButton = document.getElementById("themeToggle");
+      const theme = localStorage.getItem("theme") || "light";
+      document.documentElement.setAttribute("data-theme", theme);
+      themeButton.addEventListener("click", function () {
+        const next = document.documentElement.getAttribute("data-theme") === "dark" ? "light" : "dark";
+        document.documentElement.setAttribute("data-theme", next);
+        localStorage.setItem("theme", next);
+        this.querySelector(".theme-icon-light").style.display = next === "dark" ? "none" : "";
+        this.querySelector(".theme-icon-dark").style.display = next === "dark" ? "" : "none";
+      });
+      themeButton.querySelector(".theme-icon-light").style.display = theme === "dark" ? "none" : "";
+      themeButton.querySelector(".theme-icon-dark").style.display = theme === "dark" ? "" : "none";
+      actualizarSeguridad();
+
+      const leerRespuesta = async (response) => response.json().catch(() => ({}));
+      form.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        if (enviando || !form.checkValidity()) { form.reportValidity(); return; }
+        enviando = true;
+        button.classList.add("loading");
+        actualizarBoton();
+        ocultarError();
+        const formData = new FormData(form);
+        const correo = formData.get("correo");
+        const contrasena = formData.get("contrasena");
+        try {
+          if (!cuentaRegistrada) {
+            const registroResponse = await fetch("http://127.0.0.1:8000/api/auth/registro", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                idRol: 2,
+                nombre: formData.get("nombre"),
+                correo,
+                contrasena,
+                telefono: formData.get("telefono"),
+                ubicacion: formData.get("ubicacion"),
+              }),
+            });
+            const registroData = await leerRespuesta(registroResponse);
+            if (!registroResponse.ok) throw new Error(registroData.mensaje || registroData.error || "No fue posible crear la cuenta.");
+            cuentaRegistrada = true;
+          }
+
+          if (!tokenSesion || !usuarioSesion) {
+            const loginResponse = await fetch("http://127.0.0.1:8000/api/auth/login", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ correo, contrasena }),
+            });
+            const loginData = await leerRespuesta(loginResponse);
+            if (!loginResponse.ok || !loginData.token || !loginData.usuario?.id) {
+              throw new Error(loginData.mensaje || "La cuenta ya se creó, pero no se pudo iniciar sesión. Vuelve a intentar.");
+            }
+            tokenSesion = loginData.token;
+            usuarioSesion = loginData.usuario;
+          }
+
+          const fotoFormData = new FormData();
+          fotoFormData.append("foto_Perfil", photo.files[0]);
+          const fotoResponse = await fetch(`http://127.0.0.1:8000/api/usuarios/${usuarioSesion.id}/foto-perfil`, {
+            method: "POST",
+            headers: { Authorization: `Bearer ${tokenSesion}` },
+            body: fotoFormData,
+          });
+          const fotoData = await leerRespuesta(fotoResponse);
+          if (!fotoResponse.ok) {
+            throw new Error(fotoData.mensaje || "La cuenta ya se creó, pero no se pudo guardar la foto. Selecciona la imagen e inténtalo otra vez.");
+          }
+
+          localStorage.setItem("token", tokenSesion);
+          localStorage.setItem("usuario", JSON.stringify(usuarioSesion));
+          window.location.assign("/trabajador");
+        } catch (error) {
+          mostrarError(error.message || "No se pudo completar el registro. Revisa la conexión con el servidor.");
+        } finally {
+          enviando = false;
+          button.classList.remove("loading");
+          actualizarBoton();
+        }
+      });
+    })();
+  </script>
+
   <!-- SCRIPT -->
-  <script is:inline src="/js/pages/register-trabajador.js"></script>
-  <script is:inline src="/js/site.js"></script>
 </Layout>

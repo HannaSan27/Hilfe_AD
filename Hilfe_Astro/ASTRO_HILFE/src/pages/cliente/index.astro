@@ -84,14 +84,12 @@ const porCalificar = solicitudes.filter((s) => s.estado === "finalizado" && s.ca
           <p style="color:var(--text-secondary);margin:4px 0 0">Bienvenido, <a href="/cliente/editarperfil" style="color:var(--primary);font-weight:700;text-decoration:none">{nombre}</a></p>
         </div>
         <div style="display:flex;align-items:center;gap:10px">
-          {finalizadas > 0 && porCalificar > 0 && (
-            <button class="btn btn-secondary btn-sm" onclick="var b=document.querySelector('.btn-calificar');if(b){b.scrollIntoView({behavior:'smooth',block:'center'});b.click()}" style="position:relative;padding:8px 14px">
+          <button id="calificacionesPendientes" class="btn btn-secondary btn-sm" hidden={porCalificar === 0} onclick="var b=document.querySelector('.btn-calificar');if(b){b.scrollIntoView({behavior:'smooth',block:'center'});b.click()}" style="position:relative;padding:8px 14px">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
               Calificar
-              <span style="position:absolute;top:-6px;right:-6px;background:var(--danger);color:#fff;font-size:11px;font-weight:700;width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center">{porCalificar}</span>
-            </button>
-          )}
-          <a href="/categoriaspublic" class="btn btn-primary">
+              <span id="contadorCalificaciones" style="position:absolute;top:-6px;right:-6px;background:var(--danger);color:#fff;font-size:11px;font-weight:700;width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center">{porCalificar}</span>
+          </button>
+          <a href="/categorias/" class="btn btn-primary">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
             Nuevo servicio
           </a>
@@ -105,7 +103,7 @@ const porCalificar = solicitudes.filter((s) => s.estado === "finalizado" && s.ca
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
           </div>
           <div class="stat-card-body">
-            <div class="stat-card-value">{pendientes}</div>
+          <div class="stat-card-value" id="statPendientes">{pendientes}</div>
             <div class="stat-card-label">Pendientes</div>
           </div>
         </div>
@@ -114,7 +112,7 @@ const porCalificar = solicitudes.filter((s) => s.estado === "finalizado" && s.ca
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
           </div>
           <div class="stat-card-body">
-            <div class="stat-card-value">{aceptadas}</div>
+          <div class="stat-card-value" id="statAceptadas">{aceptadas}</div>
             <div class="stat-card-label">Aceptadas</div>
           </div>
         </div>
@@ -123,7 +121,7 @@ const porCalificar = solicitudes.filter((s) => s.estado === "finalizado" && s.ca
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
           </div>
           <div class="stat-card-body">
-            <div class="stat-card-value">{finalizadas}</div>
+          <div class="stat-card-value" id="statFinalizadas">{finalizadas}</div>
             <div class="stat-card-label">Finalizadas</div>
           </div>
         </div>
@@ -132,7 +130,7 @@ const porCalificar = solicitudes.filter((s) => s.estado === "finalizado" && s.ca
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
           </div>
           <div class="stat-card-body">
-            <div class="stat-card-value">{total}</div>
+          <div class="stat-card-value" id="statTotal">{total}</div>
             <div class="stat-card-label">Total</div>
           </div>
         </div>
@@ -148,7 +146,7 @@ const porCalificar = solicitudes.filter((s) => s.estado === "finalizado" && s.ca
         </div>
 
         {solicitudes.length > 0 ? (
-          <div class="table-wrap" style="border:none;border-radius:0">
+          <div class="table-wrap" id="solicitudesTable" style="border:none;border-radius:0">
             <table class="table">
               <thead>
                 <tr>
@@ -160,7 +158,7 @@ const porCalificar = solicitudes.filter((s) => s.estado === "finalizado" && s.ca
                   <th style="text-align:center">Acción</th>
                 </tr>
               </thead>
-              <tbody>
+              <tbody id="solicitudesBody">
                 {solicitudes.map((s) => {
                   const necesitaCalificar = s.estado === "finalizado" && s.calificacion == null;
                   return (
@@ -190,14 +188,20 @@ const porCalificar = solicitudes.filter((s) => s.estado === "finalizado" && s.ca
             </table>
           </div>
         ) : (
-          <div class="card-body">
+          <div class="table-wrap" id="solicitudesTable" hidden style="border:none;border-radius:0">
+            <table class="table">
+              <thead><tr><th>Servicio</th><th>Trabajador</th><th>Fecha</th><th>Hora</th><th>Estado</th><th style="text-align:center">Acción</th></tr></thead>
+              <tbody id="solicitudesBody"></tbody>
+            </table>
+          </div>
+          <div class="card-body" id="solicitudesEmpty">
             <div class="empty-state">
               <div class="empty-state-icon">
                 <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
               </div>
               <h3>Aún no hay solicitudes</h3>
               <p>No has realizado ninguna solicitud de servicio todavía.</p>
-              <a href="/categoriaspublic" class="btn btn-primary">Solicitar un servicio</a>
+              <a href="/categorias/" class="btn btn-primary">Solicitar un servicio</a>
             </div>
           </div>
         )}
@@ -212,7 +216,7 @@ const porCalificar = solicitudes.filter((s) => s.estado === "finalizado" && s.ca
         <h3>Calificar servicio</h3>
         <button class="btn-modal-close" id="modalClose" aria-label="Cerrar">&times;</button>
       </div>
-      <form id="formCalificar" method="post" action="/api/cliente/calificar" enctype="multipart/form-data">
+      <form id="formCalificar">
         <div class="modal-body">
           <input type="hidden" name="idSolicitud" id="inputIdSolicitud" value="" />
           <p style="font-size:14px;color:var(--text-secondary);margin-bottom:16px">
@@ -265,5 +269,129 @@ const porCalificar = solicitudes.filter((s) => s.estado === "finalizado" && s.ca
     });
   </script>
 
-  <script is:inline src="/js/pages/cliente-index.js"></script>
+  <script is:inline>
+    const apiCliente = "http://127.0.0.1:8000";
+    const leerArregloCliente = (data) => Array.isArray(data) ? data : Array.isArray(data?.value) ? data.value : [];
+    const textoSeguroCliente = (value) => String(value ?? "");
+    const estadoCliente = (estado) => ({ aceptado: "Aceptada", en_proceso: "En proceso", rumbo_a_ubicacion: "En camino", trabajo_realizado: "Trabajo realizado", finalizado: "Finalizada", cancelada: "Cancelada", rechazado: "Rechazada", pendiente: "Pendiente" }[estado] || estado || "Pendiente");
+    const claseEstadoCliente = (estado) => ({ pendiente: "badge-warning", aceptado: "badge-primary", en_proceso: "badge-primary", rumbo_a_ubicacion: "badge-primary", trabajo_realizado: "badge-success", finalizado: "badge-success", cancelada: "badge-danger", rechazado: "badge-danger" }[estado] || "badge-neutral");
+    const mostrarErrorCliente = (mensaje) => window.alert(mensaje);
+    const fechaCliente = (value) => {
+      if (!value) return "—";
+      const date = new Date(value);
+      return Number.isNaN(date.getTime()) ? textoSeguroCliente(value) : date.toLocaleDateString("es-CO");
+    };
+    const cargarSolicitudesCliente = async (silencioso = false) => {
+      let usuario;
+      try { usuario = JSON.parse(localStorage.getItem("usuario") || "null"); } catch { usuario = null; }
+      const token = localStorage.getItem("token");
+      if (!usuario?.id) {
+        if (!silencioso) mostrarErrorCliente("Inicia sesión para consultar tus solicitudes.");
+        return;
+      }
+      try {
+        const response = await fetch(`${apiCliente}/api/solicitudes?cliente=${encodeURIComponent(usuario.id)}`, {
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+        });
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(data.mensaje || "No se pudieron cargar tus solicitudes.");
+        const solicitudes = leerArregloCliente(data);
+        const body = document.getElementById("solicitudesBody");
+        const empty = document.getElementById("solicitudesEmpty");
+        if (!body) return;
+        body.replaceChildren();
+      if (empty) empty.hidden = solicitudes.length > 0;
+        const main = document.getElementById("solicitudesTable");
+        if (main) main.hidden = solicitudes.length === 0;
+        let pendientes = 0, aceptadas = 0, finalizadas = 0;
+        for (const solicitud of solicitudes) {
+          const estado = String(solicitud.Estado_Solicitudes || "pendiente").toLowerCase();
+          if (estado === "pendiente") pendientes++;
+          if (["aceptado", "en_proceso", "rumbo_a_ubicacion", "trabajo_realizado"].includes(estado)) aceptadas++;
+          if (estado === "finalizado") finalizadas++;
+          const tr = document.createElement("tr");
+          const servicio = document.createElement("td");
+          const strong = document.createElement("strong");
+          strong.style.color = "var(--text)";
+          strong.textContent = solicitud.Titulo_Servicio || "Servicio";
+          servicio.appendChild(strong);
+          const trabajador = document.createElement("td"); trabajador.style.color = "var(--text-secondary)"; trabajador.textContent = solicitud.Nombre_Trabajador || "—";
+          const fecha = document.createElement("td"); fecha.textContent = fechaCliente(solicitud.Fecha_Servicio);
+          const hora = document.createElement("td"); hora.textContent = textoSeguroCliente(solicitud.Hora_Servicio) || "—";
+          const estadoTd = document.createElement("td");
+          const badge = document.createElement("span"); badge.className = `badge ${claseEstadoCliente(estado)}`; badge.textContent = estadoCliente(estado); estadoTd.appendChild(badge);
+          const acciones = document.createElement("td"); acciones.style.textAlign = "center";
+          if (estado === "finalizado") {
+            const button = document.createElement("button"); button.type = "button"; button.className = "btn btn-primary btn-sm btn-calificar";
+            button.dataset.id = solicitud.Id_Solicitud; button.dataset.servicio = solicitud.Titulo_Servicio || "Servicio"; button.textContent = "Calificar"; acciones.appendChild(button);
+          }
+          tr.append(servicio, trabajador, fecha, hora, estadoTd, acciones); body.appendChild(tr);
+        }
+        document.getElementById("statPendientes").textContent = String(pendientes);
+        document.getElementById("statAceptadas").textContent = String(aceptadas);
+        document.getElementById("statFinalizadas").textContent = String(finalizadas);
+        document.getElementById("statTotal").textContent = String(solicitudes.length);
+        const pendientesDeCalificar = document.getElementById("calificacionesPendientes");
+        const contadorCalificaciones = document.getElementById("contadorCalificaciones");
+        if (pendientesDeCalificar) pendientesDeCalificar.hidden = finalizadas === 0;
+        if (contadorCalificaciones) contadorCalificaciones.textContent = String(finalizadas);
+        const nombre = usuario.nombre || "Cliente";
+        const bienvenida = document.querySelector("main p a[href='/cliente/editarperfil']");
+        if (bienvenida) bienvenida.textContent = nombre;
+      } catch (error) {
+        if (!silencioso) mostrarErrorCliente(error instanceof Error ? error.message : "No se pudieron cargar tus solicitudes.");
+      }
+    };
+    cargarSolicitudesCliente();
+    window.setInterval(() => cargarSolicitudesCliente(true), 12000);
+    window.addEventListener("focus", () => cargarSolicitudesCliente(true));
+    const modalCalificar = document.getElementById("modalCalificar");
+    const cerrarModalCalificar = () => modalCalificar?.classList.remove("active");
+    document.addEventListener("click", (event) => {
+      const target = event.target;
+      if (!(target instanceof Element)) return;
+      const boton = target.closest(".btn-calificar");
+      if (boton) {
+        document.getElementById("inputIdSolicitud").value = boton.dataset.id || "";
+        document.getElementById("modalServicio").textContent = boton.dataset.servicio || "";
+        document.getElementById("inputPuntaje").value = "0";
+        document.querySelectorAll("#starRating .star").forEach((estrella) => estrella.style.color = "#ddd");
+        modalCalificar?.classList.add("active");
+      }
+      if (target.closest("#modalClose, #modalCancel")) cerrarModalCalificar();
+      if (target === modalCalificar) cerrarModalCalificar();
+      const estrella = target.closest("#starRating .star");
+      if (estrella) {
+        const puntaje = Number(estrella.dataset.value);
+        document.getElementById("inputPuntaje").value = String(puntaje);
+        document.querySelectorAll("#starRating .star").forEach((item) => item.style.color = Number(item.dataset.value) <= puntaje ? "#f59e0b" : "#ddd");
+      }
+    });
+    document.getElementById("comentario")?.addEventListener("input", (event) => {
+      document.getElementById("charCounter").textContent = `${event.target.value.length}/500`;
+    });
+    const formCalificar = document.getElementById("formCalificar");
+    formCalificar?.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const usuario = JSON.parse(localStorage.getItem("usuario") || "null");
+      const token = localStorage.getItem("token");
+      const idSolicitud = document.getElementById("inputIdSolicitud").value;
+      const puntaje = Number(document.getElementById("inputPuntaje").value);
+      if (!token || !usuario?.id) return mostrarErrorCliente("Inicia sesión para enviar una calificación.");
+      if (!puntaje) return mostrarErrorCliente("Selecciona una calificación de 1 a 5 estrellas.");
+      try {
+        const response = await fetch(`${apiCliente}/api/calificaciones`, {
+          method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+          body: JSON.stringify({ idSolicitud, puntaje, comentario: document.getElementById("comentario").value.trim() }),
+        });
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(data.mensaje || "No se pudo enviar la calificación.");
+        cerrarModalCalificar();
+        window.alert(data.mensaje || "Calificación enviada correctamente.");
+        await cargarSolicitudesCliente();
+      } catch (error) {
+        window.alert(error instanceof Error ? error.message : "No se pudo enviar la calificación.");
+      }
+    });
+  </script>
 </Layout>

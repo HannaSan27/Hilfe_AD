@@ -37,13 +37,9 @@ const error = Astro.url.searchParams.get("error");
         Completa la información para crear tu cuenta
       </p>
 
-      {error && (
-        <div class="error-message">
-          {error}
-        </div>
-      )}
+      <div class="error-message" id="registerError" role="alert" hidden></div>
 
-      <form method="post" action="/api/account/registrar-cliente" id="registerClienteForm">
+      <form method="post" action="http://127.0.0.1:8000/api/auth/registro" id="registerClienteForm">
 
         <!-- NOMBRE -->
         <div class="modern-input">
@@ -108,6 +104,100 @@ const error = Astro.url.searchParams.get("error");
     </div>
   </div>
 
-  <script is:inline src="/js/pages/register-cliente.js"></script>
-  <script is:inline src="/js/site.js"></script>
+  <script is:inline>
+    (function () {
+      const form = document.getElementById("registerClienteForm");
+      const password = document.getElementById("password");
+      const button = document.getElementById("registerBtn");
+      const errorBox = document.getElementById("registerError");
+      let enviando = false;
+      const mostrarError = (message) => { errorBox.textContent = message; errorBox.hidden = false; };
+      const ocultarError = () => { errorBox.textContent = ""; errorBox.hidden = true; };
+      const errorPrevio = new URLSearchParams(window.location.search).get("error");
+      if (errorPrevio) mostrarError(errorPrevio);
+
+      const requisitos = [
+        {id:"req-len", test:(value) => value.length >= 8},
+        {id:"req-may", test:(value) => /[A-Z]/.test(value)},
+        {id:"req-min", test:(value) => /[a-z]/.test(value)},
+        {id:"req-num", test:(value) => /\d/.test(value)},
+        {id:"req-sym", test:(value) => /[^A-Za-z0-9]/.test(value)},
+      ];
+      const actualizarBoton = () => { button.disabled = enviando || !form.checkValidity(); };
+      const actualizarSeguridad = () => {
+        const value = password.value;
+        const cumplidos = requisitos.filter((item) => item.test(value)).length;
+        document.getElementById("psPanel").classList.toggle("active", value.length > 0);
+        document.getElementById("psBar").className = "ps-bar ps-" + cumplidos;
+        document.getElementById("psLabel").textContent = ["Muy débil", "Muy débil", "Débil", "Regular", "Fuerte", "Muy fuerte"][cumplidos];
+        requisitos.forEach((item) => {
+          const fila = document.getElementById(item.id);
+          const icono = fila.querySelector(".ps-icon i");
+          const logrado = item.test(value);
+          fila.classList.toggle("met", logrado);
+          if (icono) icono.className = logrado ? "bi bi-check-circle-fill" : "bi bi-circle";
+        });
+        actualizarBoton();
+      };
+      form.addEventListener("input", (event) => {
+        ocultarError();
+        if (event.target === password) actualizarSeguridad(); else actualizarBoton();
+      });
+      form.addEventListener("change", () => { ocultarError(); actualizarBoton(); });
+      document.getElementById("togglePassword").addEventListener("click", function () {
+        const mostrar = password.type === "password";
+        password.type = mostrar ? "text" : "password";
+        this.classList.toggle("bi-eye", mostrar);
+        this.classList.toggle("bi-eye-slash", !mostrar);
+      });
+      const theme = localStorage.getItem("theme") || "light";
+      document.documentElement.setAttribute("data-theme", theme);
+      const themeButton = document.getElementById("themeToggle");
+      const actualizarIconosTema = (valor) => {
+        themeButton.querySelector(".theme-icon-light").style.display = valor === "dark" ? "none" : "";
+        themeButton.querySelector(".theme-icon-dark").style.display = valor === "dark" ? "" : "none";
+      };
+      actualizarIconosTema(theme);
+      themeButton.addEventListener("click", () => {
+        const siguiente = document.documentElement.getAttribute("data-theme") === "dark" ? "light" : "dark";
+        document.documentElement.setAttribute("data-theme", siguiente);
+        localStorage.setItem("theme", siguiente);
+        actualizarIconosTema(siguiente);
+      });
+      actualizarSeguridad();
+
+      form.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        if (enviando || !form.checkValidity()) { form.reportValidity(); return; }
+        enviando = true;
+        button.classList.add("loading");
+        actualizarBoton();
+        ocultarError();
+        const formData = new FormData(form);
+        try {
+          const response = await fetch("http://127.0.0.1:8000/api/auth/registro", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              idRol: 3,
+              nombre: formData.get("nombre"),
+              correo: formData.get("correo"),
+              contrasena: formData.get("contrasena"),
+              telefono: formData.get("telefono"),
+              ubicacion: "",
+            }),
+          });
+          const data = await response.json().catch(() => ({}));
+          if (!response.ok) throw new Error(data.mensaje || data.error || "No fue posible crear la cuenta.");
+          window.location.assign(`/login/login?registroExitoso=${encodeURIComponent(data.mensaje || "Cuenta creada correctamente")}`);
+        } catch (error) {
+          mostrarError(error.message || "No se pudo conectar con el servidor.");
+        } finally {
+          enviando = false;
+          button.classList.remove("loading");
+          actualizarBoton();
+        }
+      });
+    })();
+  </script>
 </Layout>

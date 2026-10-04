@@ -5,41 +5,9 @@ import '../../components/styles/trabajador-index.css';
 
 const usuario = { nombre: 'Carlos Pérez', inicial: 'C', rol: 'Trabajador' };
 
-const servicios = [
-	{
-		id: 1,
-		titulo: 'Servicio de plomería general',
-		categoria: 'Plomería',
-		descripcion: 'Reparación de tuberías, desagües, grifería y todo tipo de instalaciones de agua.',
-		precio: 45000,
-		disponible: true,
-	},
-	{
-		id: 2,
-		titulo: 'Reparación de grifos y llaves',
-		categoria: 'Plomería',
-		descripcion: 'Cambio y reparación de grifos, llaves de paso y mezcladoras.',
-		precio: 25000,
-		disponible: true,
-	},
-	{
-		id: 3,
-		titulo: 'Instalación de lavamanos',
-		categoria: 'Plomería',
-		descripcion: 'Instalación profesional de lavamanos y accesorios de baño.',
-		precio: 60000,
-		disponible: false,
-	},
-];
+const servicios: any[] = [];
 
-const solicitudes = [
-	{ id: 1, cliente: 'Ana Martínez', servicio: 'Servicio de plomería general', fecha: '25/09/2026', hora: '09:00', direccion: 'Av. El Dorado #74-25', estado: 'pendiente' },
-	{ id: 2, cliente: 'Pedro Sánchez', servicio: 'Reparación de grifos y llaves', fecha: '26/09/2026', hora: '11:30', direccion: 'Calle 93 #14-45', estado: 'aceptado' },
-	{ id: 3, cliente: 'Lucía Torres', servicio: 'Instalación de lavamanos', fecha: '27/09/2026', hora: '15:00', direccion: 'Cra. 7 #71-21', estado: 'en_proceso' },
-	{ id: 4, cliente: 'Jorge Díaz', servicio: 'Reparación de grifos y llaves', fecha: '20/09/2026', hora: '10:00', direccion: 'Calle 26 #4-78', estado: 'rumbo_a_ubicacion' },
-	{ id: 5, cliente: 'Camila Ríos', servicio: 'Servicio de plomería general', fecha: '18/09/2026', hora: '14:00', direccion: 'Av. Boyacá #122-10', estado: 'trabajo_realizado' },
-	{ id: 6, cliente: 'Andrés López', servicio: 'Instalación de lavamanos', fecha: '15/09/2026', hora: '08:30', direccion: 'Cra. 15 #100-33', estado: 'finalizado' },
-];
+const solicitudes: any[] = [];
 
 const estadoInfo: Record<string, { clase: string; label: string; icono: string }> = {
 	pendiente: { clase: 'badge-warning', label: 'Pendiente', icono: 'clock' },
@@ -107,7 +75,7 @@ const nombre = usuario.nombre;
 							<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
 							Mi panel
 						</a>
-						<a href="/trabajador/perfil/{usuario.nombre.toLowerCase().split(' ')[0]}-{usuario.nombre.toLowerCase().split(' ')[1]}" class="yo-menu-item" role="menuitem">
+						<a href="/trabajador/?section=perfil" class="yo-menu-item" role="menuitem">
 							<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
 							Mi perfil
 						</a>
@@ -133,9 +101,9 @@ const nombre = usuario.nombre;
 			<button class="sidebar-item" id="nav-servicios" onclick="showSection('servicios')">
 				<i class="bi bi-briefcase-fill"></i> Mis Servicios
 			</button>
-			<a href="/trabajador/agregar-servicio" class="sidebar-item">
+			<button type="button" class="sidebar-item" onclick="abrirAgregarServicio()">
 				<i class="bi bi-plus-circle-fill"></i> Agregar Servicio
-			</a>
+			</button>
 
 			<div class="sidebar-section">Solicitudes</div>
 			<button class="sidebar-item" id="nav-solicitudes" onclick="showSection('solicitudes')">
@@ -148,7 +116,7 @@ const nombre = usuario.nombre;
 			</button>
 
 			<div class="sidebar-section">Cuenta</div>
-			<a href="/trabajador/perfil" class="sidebar-item">
+			<a href="/trabajador/?section=perfil" class="sidebar-item" id="nav-perfil">
 				<i class="bi bi-person-fill"></i> Mi Perfil
 			</a>
 			<a href="/login/login" class="sidebar-item danger">
@@ -170,7 +138,7 @@ const nombre = usuario.nombre;
 							<i class="bi bi-briefcase-fill"></i>
 						</div>
 						<div class="stat-card-body">
-							<div class="stat-card-value">{servicios.length}</div>
+							<div class="stat-card-value" id="totalServicios">{servicios.length}</div>
 							<div class="stat-card-label">Servicios registrados</div>
 							<div class="stat-card-trend up">Activos</div>
 						</div>
@@ -180,7 +148,7 @@ const nombre = usuario.nombre;
 							<i class="bi bi-calendar-check-fill"></i>
 						</div>
 						<div class="stat-card-body">
-							<div class="stat-card-value">{solicitudes.length}</div>
+							<div class="stat-card-value" id="totalSolicitudesTrabajador">{solicitudes.length}</div>
 							<div class="stat-card-label">Solicitudes recibidas</div>
 							<div class="stat-card-trend">Total</div>
 						</div>
@@ -200,7 +168,7 @@ const nombre = usuario.nombre;
 							<i class="bi bi-clock-fill"></i>
 						</div>
 						<div class="stat-card-body">
-							<div class="stat-card-value">{pendientes}</div>
+							<div class="stat-card-value" id="totalPendientesTrabajador">{pendientes}</div>
 							<div class="stat-card-label">Pendientes</div>
 							<div class="stat-card-trend">Requieren atención</div>
 						</div>
@@ -249,35 +217,35 @@ const nombre = usuario.nombre;
 					<div class="stat-card">
 						<div class="stat-card-icon primary"><i class="bi bi-check-circle-fill"></i></div>
 						<div class="stat-card-body">
-							<div class="stat-card-value">{conteos.aceptado}</div>
+							<div class="stat-card-value" id="conteoAceptadasTrabajador">{conteos.aceptado}</div>
 							<div class="stat-card-label">Aceptados</div>
 						</div>
 					</div>
 					<div class="stat-card">
 						<div class="stat-card-icon primary"><i class="bi bi-arrow-repeat"></i></div>
 						<div class="stat-card-body">
-							<div class="stat-card-value">{conteos.en_proceso}</div>
+							<div class="stat-card-value" id="conteoProcesoTrabajador">{conteos.en_proceso}</div>
 							<div class="stat-card-label">En proceso</div>
 						</div>
 					</div>
 					<div class="stat-card">
 						<div class="stat-card-icon primary"><i class="bi bi-geo-alt-fill"></i></div>
 						<div class="stat-card-body">
-							<div class="stat-card-value">{conteos.rumbo_a_ubicacion}</div>
+							<div class="stat-card-value" id="conteoRumboTrabajador">{conteos.rumbo_a_ubicacion}</div>
 							<div class="stat-card-label">Rumbo a ubicación</div>
 						</div>
 					</div>
 					<div class="stat-card">
 						<div class="stat-card-icon success"><i class="bi bi-check2-circle"></i></div>
 						<div class="stat-card-body">
-							<div class="stat-card-value">{conteos.trabajo_realizado}</div>
+							<div class="stat-card-value" id="conteoRealizadoTrabajador">{conteos.trabajo_realizado}</div>
 							<div class="stat-card-label">Trabajo realizado</div>
 						</div>
 					</div>
 					<div class="stat-card">
 						<div class="stat-card-icon success"><i class="bi bi-check-all"></i></div>
 						<div class="stat-card-body">
-							<div class="stat-card-value">{conteos.finalizado}</div>
+							<div class="stat-card-value" id="conteoFinalizadoTrabajador">{conteos.finalizado}</div>
 							<div class="stat-card-label">Finalizados</div>
 						</div>
 					</div>
@@ -314,28 +282,46 @@ const nombre = usuario.nombre;
 					))}
 				</div>
 			</div>
+			<template id="plantillaServicio">
+				<div class="worker-card">
+					<div class="worker-banner" style="background: linear-gradient(135deg, var(--primary-soft), var(--primary-light));">
+						<div class="worker-avatar" style="background: var(--primary);"><i class="bi bi-briefcase"></i></div>
+					</div>
+					<div class="worker-info">
+						<h4 data-campo="titulo"></h4>
+						<div class="worker-service" data-campo="categoria"></div>
+						<p data-campo="descripcion"></p>
+						<div class="worker-footer"><strong data-campo="precio"></strong><span data-campo="disponibilidad"></span></div>
+						<div class="flex gap-sm" style="margin-top: 12px;">
+							<button type="button" class="btn btn-sm btn-secondary" data-accion="editar"><i class="bi bi-pencil-fill"></i> Editar</button>
+							<a class="btn btn-sm btn-secondary" data-accion="fotos"><i class="bi bi-camera-fill"></i> Fotos</a>
+							<button type="button" class="btn btn-sm btn-outline-danger" data-accion="eliminar"><i class="bi bi-trash-fill"></i> Eliminar</button>
+						</div>
+					</div>
+				</div>
+			</template>
 			<div id="section-solicitudes" class="section-view">
 				<div class="flex filter-bar gap-sm">
 					<button class="btn btn-sm btn-secondary filtro-btn active" onclick="filtrarSolicitudes('todos', this)">
-						Todos <span class="badge badge-neutral badge-sm">{solicitudes.length}</span>
+						Todos <span class="badge badge-neutral badge-sm" id="filtroTodosTrabajador">{solicitudes.length}</span>
 					</button>
 					<button class="btn btn-sm btn-secondary filtro-btn" onclick="filtrarSolicitudes('pendiente', this)">
-						Pendientes <span class="badge badge-warning badge-sm">{conteos.pendiente}</span>
+						Pendientes <span class="badge badge-warning badge-sm" id="filtroPendientesTrabajador">{conteos.pendiente}</span>
 					</button>
 					<button class="btn btn-sm btn-secondary filtro-btn" onclick="filtrarSolicitudes('aceptado', this)">
-						Aceptados <span class="badge badge-primary badge-sm">{conteos.aceptado}</span>
+						Aceptados <span class="badge badge-primary badge-sm" id="filtroAceptadosTrabajador">{conteos.aceptado}</span>
 					</button>
 					<button class="btn btn-sm btn-secondary filtro-btn" onclick="filtrarSolicitudes('en_proceso', this)">
-						En proceso <span class="badge badge-info badge-sm">{conteos.en_proceso}</span>
+						En proceso <span class="badge badge-info badge-sm" id="filtroProcesoTrabajador">{conteos.en_proceso}</span>
 					</button>
 					<button class="btn btn-sm btn-secondary filtro-btn" onclick="filtrarSolicitudes('rumbo_a_ubicacion', this)">
-						Rumbo <span class="badge badge-info badge-sm">{conteos.rumbo_a_ubicacion}</span>
+						Rumbo <span class="badge badge-info badge-sm" id="filtroRumboTrabajador">{conteos.rumbo_a_ubicacion}</span>
 					</button>
 					<button class="btn btn-sm btn-secondary filtro-btn" onclick="filtrarSolicitudes('trabajo_realizado', this)">
-						Realizado <span class="badge badge-success badge-sm">{conteos.trabajo_realizado}</span>
+						Realizado <span class="badge badge-success badge-sm" id="filtroRealizadoTrabajador">{conteos.trabajo_realizado}</span>
 					</button>
 					<button class="btn btn-sm btn-secondary filtro-btn" onclick="filtrarSolicitudes('finalizado', this)">
-						Finalizados <span class="badge badge-neutral badge-sm">{conteos.finalizado}</span>
+						Finalizados <span class="badge badge-neutral badge-sm" id="filtroFinalizadosTrabajador">{conteos.finalizado}</span>
 					</button>
 				</div>
 
@@ -421,6 +407,51 @@ const nombre = usuario.nombre;
 					</div>
 				))}
 			</div>
+			<div id="section-perfil" class="section-view">
+				<div class="content-header worker-profile-heading">
+					<div>
+						<h2 class="section-title-page">Mi perfil</h2>
+						<p>Actualiza tus datos de contacto y tu foto. El correo no se puede modificar.</p>
+					</div>
+				</div>
+				<div class="card worker-profile-card">
+					<div class="worker-profile-photo-panel">
+						<div class="worker-profile-photo" id="perfilFotoVista">
+							<span id="perfilFotoInicial">C</span>
+							<img id="perfilFotoImagen" alt="Foto de perfil" hidden />
+						</div>
+						<div class="worker-profile-photo-copy">
+							<strong>Foto de perfil</strong>
+							<span>JPG o PNG</span>
+							<label class="btn btn-outline-primary worker-photo-button" for="perfilFotoArchivo">Elegir foto</label>
+							<input id="perfilFotoArchivo" type="file" accept="image/jpeg,image/png" hidden />
+						</div>
+					</div>
+					<div id="perfilTrabajadorMensaje" class="worker-profile-message" role="status" hidden></div>
+					<form id="formPerfilTrabajador" class="worker-profile-form">
+						<div class="form-group">
+							<label for="perfilTrabajadorNombre">Nombre completo</label>
+							<input class="form-control" id="perfilTrabajadorNombre" name="nombre" autocomplete="name" required />
+						</div>
+						<div class="form-group">
+							<label for="perfilTrabajadorCorreo">Correo electrónico</label>
+							<input class="form-control" id="perfilTrabajadorCorreo" type="email" autocomplete="email" disabled />
+							<small class="worker-profile-hint">El correo no se puede modificar.</small>
+						</div>
+						<div class="form-group">
+							<label for="perfilTrabajadorTelefono">Teléfono</label>
+							<input class="form-control" id="perfilTrabajadorTelefono" name="telefono" type="tel" autocomplete="tel" />
+						</div>
+						<div class="form-group">
+							<label for="perfilTrabajadorUbicacion">Ubicación</label>
+							<input class="form-control" id="perfilTrabajadorUbicacion" name="ubicacion" autocomplete="address-level2" />
+						</div>
+						<div class="worker-profile-actions">
+							<button type="submit" class="btn btn-primary" id="guardarPerfilTrabajador"><i class="bi bi-check2-circle"></i> Guardar cambios</button>
+						</div>
+					</form>
+				</div>
+			</div>
 
 		</main>
 	</div>
@@ -434,14 +465,34 @@ const nombre = usuario.nombre;
 			<form id="formRechazo" onsubmit="rechazar(event)">
 				<input type="hidden" name="rechazoId" id="rechazoId" value="" />
 				<div class="modal-body">
-					<p style="color:var(--text-secondary);font-size:14px;margin-bottom:16px">
-						Indica el motivo por el que rechazas esta solicitud. Se enviará un correo al cliente.
-					</p>
-					<textarea name="motivoRechazo" class="form-textarea" placeholder="Escribe el motivo del rechazo..." required maxlength="500" style="min-height:120px"></textarea>
+					<p style="color:var(--text-secondary);font-size:14px;margin-bottom:16px">Confirma el rechazo de esta solicitud. El cliente verá el cambio de estado en su panel.</p>
 				</div>
 				<div class="modal-footer">
 					<button type="button" class="btn btn-secondary" onclick="cerrarModalRechazo()">Cancelar</button>
 					<button type="submit" class="btn btn-danger">Enviar y rechazar</button>
+				</div>
+			</form>
+		</div>
+	</div>
+
+	<div class="modal-overlay" id="modalEditarServicio">
+		<div class="modal" style="max-width:460px">
+			<div class="modal-header">
+				<h3 id="tituloModalServicio">Editar servicio</h3>
+				<button type="button" class="btn-modal-close" id="cerrarEditarServicio" aria-label="Cerrar">&times;</button>
+			</div>
+			<form id="formEditarServicio">
+				<div class="modal-body">
+					<input type="hidden" id="editarServicioId" />
+					<div class="form-group"><label for="editarTitulo">Título</label><input class="form-control" id="editarTitulo" required /></div>
+					<div class="form-group"><label for="editarCategoria">Categoría</label><select class="form-control" id="editarCategoria" required></select></div>
+					<div class="form-group"><label for="editarDescripcion">Descripción</label><textarea class="form-control" id="editarDescripcion" rows="3"></textarea></div>
+					<div class="form-group"><label for="editarPrecio">Precio</label><input class="form-control" id="editarPrecio" type="number" min="0" step="1" required /></div>
+					<div class="form-group"><label for="editarTipoServicio">Tipo de servicio</label><input class="form-control" id="editarTipoServicio" /></div>
+				</div>
+				<div class="modal-footer">
+					<button type="button" class="btn btn-secondary" id="cancelarEditarServicio">Cancelar</button>
+					<button type="submit" class="btn btn-primary" id="guardarEditarServicio">Guardar cambios</button>
 				</div>
 			</form>
 		</div>
@@ -487,7 +538,8 @@ const nombre = usuario.nombre;
 			dashboard: 'Dashboard',
 			servicios: 'Mis Servicios',
 			solicitudes: 'Solicitudes',
-			calificaciones: 'Calificaciones'
+			calificaciones: 'Calificaciones',
+			perfil: 'Mi Perfil'
 		};
 
 		function showSection(name) {
@@ -502,6 +554,7 @@ const nombre = usuario.nombre;
 		}
 
 		function filtrarSolicitudes(estado, btn) {
+			filtroEstadoSolicitudes = estado;
 			var cards = document.querySelectorAll('#lista-solicitudes .solicitud-card');
 			cards.forEach(function (card) {
 				card.style.display = (estado === 'todos' || card.dataset.estado === estado) ? '' : 'none';
@@ -511,94 +564,567 @@ const nombre = usuario.nombre;
 		}
 
 		var estadoInfo = {
+			pendiente: { clase: 'badge-warning', label: 'Pendiente', icono: 'clock' },
 			aceptado: { clase: 'badge-primary', label: 'Aceptado', icono: 'check-circle' },
 			en_proceso: { clase: 'badge-info', label: 'En proceso', icono: 'arrow-repeat' },
 			rumbo_a_ubicacion: { clase: 'badge-info', label: 'Rumbo a ubicación', icono: 'geo-alt' },
 			trabajo_realizado: { clase: 'badge-success', label: 'Trabajo realizado', icono: 'check2-circle' },
 			finalizado: { clase: 'badge-neutral', label: 'Finalizado', icono: 'check-all' },
-			rechazado: { clase: 'badge-danger', label: 'Rechazado', icono: 'x-circle' }
+			rechazado: { clase: 'badge-danger', label: 'Rechazado', icono: 'x-circle' },
+			cancelada: { clase: 'badge-danger', label: 'Cancelada', icono: 'x-circle' }
 		};
-		var cadenaEstados = [
-			{ estado: 'aceptado', btnHtml: '<button type="button" class="btn btn-sm btn-primary" onclick="avanzarSolicitud({id})"><i class="bi bi-arrow-repeat"></i> En proceso</button>' },
-			{ estado: 'en_proceso', btnHtml: '<button type="button" class="btn btn-sm btn-primary" onclick="avanzarSolicitud({id})"><i class="bi bi-geo-alt"></i> Rumbo a ubicación</button>' },
-			{ estado: 'rumbo_a_ubicacion', btnHtml: '<button type="button" class="btn btn-sm btn-success" onclick="avanzarSolicitud({id})"><i class="bi bi-check2-circle"></i> Trabajo realizado</button>' },
-			{ estado: 'trabajo_realizado', btnHtml: '<button type="button" class="btn btn-sm btn-primary" onclick="avanzarSolicitud({id})"><i class="bi bi-check-all"></i> Finalizar</button>' },
-			{ estado: 'finalizado', btnHtml: '' }
-		];
+		var transicionesSolicitud = { aceptado: 'en_proceso', en_proceso: 'rumbo_a_ubicacion', rumbo_a_ubicacion: 'trabajo_realizado', trabajo_realizado: 'finalizado' };
+
+		async function actualizarEstadoSolicitud(id, estado) {
+			try {
+				var respuesta = await fetch('http://127.0.0.1:8000/api/solicitudes/' + encodeURIComponent(id) + '/estado', {
+					method: 'PUT', headers: { 'Content-Type': 'application/json' },
+					body: JSON.stringify({ Estado_Solicitudes: estado })
+				});
+				var resultado = await respuesta.json().catch(function () { return {}; });
+				if (!respuesta.ok) throw new Error(resultado.mensaje || 'No fue posible actualizar la solicitud.');
+				window.mostrarToast(resultado.mensaje || 'Solicitud actualizada.');
+				await cargarSolicitudesTrabajador(true);
+				return true;
+			} catch (error) {
+				window.mostrarToast(error.message || 'No fue posible actualizar la solicitud.');
+				return false;
+			}
+		}
 
 		function avanzarSolicitud(id) {
 			var card = document.querySelector('.solicitud-card[data-id="' + id + '"]');
-			if (!card) return;
-			var actual = card.dataset.estado;
-			var pos = cadenaEstados.map(function (c) { return c.estado; }).indexOf(actual);
-			if (pos < 0 || pos >= cadenaEstados.length - 1) return;
-			var next = cadenaEstados[pos + 1];
-			card.dataset.estado = next.estado;
-			var info = estadoInfo[next.estado];
-			var badge = card.querySelector('.estado-badge');
-			if (badge) {
-				badge.className = 'badge ' + info.clase + ' estado-badge';
-				badge.innerHTML = '<i class="bi bi-' + info.icono + '"></i> ' + info.label;
-			}
-			var celda = card.querySelector('.accion-celda');
-			if (celda) celda.innerHTML = next.btnHtml.replace(/\{id\}/g, id);
-			mostrarToast('Solicitud actualizada a "' + info.label + '" (demo)');
+			var siguiente = card && transicionesSolicitud[card.dataset.estado];
+			if (siguiente) actualizarEstadoSolicitud(id, siguiente);
 		}
 
-		function aceptarSolicitud(id) {
-			var card = document.querySelector('.solicitud-card[data-id="' + id + '"]');
-			if (card) {
-				card.dataset.estado = 'aceptado';
-				var info = estadoInfo.aceptado;
-				var badge = card.querySelector('.estado-badge');
-				if (badge) {
-					badge.className = 'badge ' + info.clase + ' estado-badge';
-					badge.innerHTML = '<i class="bi bi-' + info.icono + '"></i> ' + info.label;
-				}
-				var celda = card.querySelector('.accion-celda');
-				if (celda) celda.innerHTML = cadenaEstados[0].btnHtml.replace(/\{id\}/g, id);
-			}
-			mostrarToast('Solicitud aceptada (demo)');
-		}
+		function aceptarSolicitud(id) { actualizarEstadoSolicitud(id, 'aceptado'); }
 
 		function abrirModalRechazo(id) {
-			document.getElementById('rechazoId').value = id;
 			var form = document.getElementById('formRechazo');
 			form.dataset.id = id;
+			form.reset();
 			document.getElementById('modalRechazo').style.display = 'flex';
 		}
-		function cerrarModalRechazo() {
-			document.getElementById('modalRechazo').style.display = 'none';
-		}
-		document.getElementById('modalRechazo').addEventListener('click', function (e) {
-			if (e.target === this) cerrarModalRechazo();
-		});
+		function cerrarModalRechazo() { document.getElementById('modalRechazo').style.display = 'none'; }
+		document.getElementById('modalRechazo').addEventListener('click', function (e) { if (e.target === this) cerrarModalRechazo(); });
 
-		function rechazar(e) {
+		async function rechazar(e) {
 			e.preventDefault();
-			var id = document.getElementById('formRechazo').dataset.id;
-			cerrarModalRechazo();
-			var card = document.querySelector('.solicitud-card[data-id="' + id + '"]');
-			if (card) {
-				card.dataset.estado = 'rechazado';
-				var info = estadoInfo.rechazado;
-				var badge = card.querySelector('.estado-badge');
-				if (badge) {
-					badge.className = 'badge ' + info.clase + ' estado-badge';
-					badge.innerHTML = '<i class="bi bi-' + info.icono + '"></i> ' + info.label;
-				}
-				var celda = card.querySelector('.accion-celda');
-				if (celda) celda.innerHTML = '';
-			}
-			mostrarToast('Solicitud rechazada (demo)');
+			var form = document.getElementById('formRechazo');
+			var actualizado = await actualizarEstadoSolicitud(form.dataset.id, 'rechazado');
+			if (actualizado) cerrarModalRechazo();
 		}
+
+		var filtroEstadoSolicitudes = 'todos';
+		function fechaSolicitud(fecha) {
+			if (!fecha) return '—';
+			var partes = String(fecha).slice(0, 10).split('-');
+			return partes.length === 3 ? partes[2] + '/' + partes[1] + '/' + partes[0] : String(fecha);
+		}
+		function textoElemento(tag, clase, texto) {
+			var nodo = document.createElement(tag);
+			if (clase) nodo.className = clase;
+			nodo.textContent = texto || '—';
+			return nodo;
+		}
+		function botonAccionSolicitud(texto, clase, icono, accion) {
+			var boton = document.createElement('button');
+			boton.type = 'button'; boton.className = 'btn btn-sm ' + clase;
+			var icon = document.createElement('i'); icon.className = 'bi bi-' + icono;
+			boton.append(icon, document.createTextNode(' ' + texto));
+			boton.addEventListener('click', accion);
+			return boton;
+		}
+		function agregarAccionesSolicitud(celda, solicitud) {
+			var id = solicitud.Id_Solicitud;
+			var estado = solicitud.Estado_Solicitudes;
+			if (estado === 'pendiente') {
+				celda.append(
+					botonAccionSolicitud('Aceptar', 'btn-success', 'check-lg', function () { aceptarSolicitud(id); }),
+					botonAccionSolicitud('Rechazar', 'btn-outline-danger', 'x-lg', function () { abrirModalRechazo(id); })
+				);
+				return;
+			}
+			var acciones = {
+				aceptado: ['En proceso', 'btn-primary', 'arrow-repeat'],
+				en_proceso: ['Rumbo a ubicación', 'btn-primary', 'geo-alt'],
+				rumbo_a_ubicacion: ['Trabajo realizado', 'btn-success', 'check2-circle'],
+				trabajo_realizado: ['Finalizar', 'btn-primary', 'check-all']
+			};
+			if (acciones[estado]) celda.appendChild(botonAccionSolicitud(acciones[estado][0], acciones[estado][1], acciones[estado][2], function () { avanzarSolicitud(id); }));
+		}
+		function crearTarjetaSolicitud(solicitud) {
+			var estado = String(solicitud.Estado_Solicitudes || 'pendiente').toLowerCase();
+			var tarjeta = document.createElement('div'); tarjeta.className = 'card solicitud-card';
+			tarjeta.dataset.id = solicitud.Id_Solicitud; tarjeta.dataset.estado = estado;
+			var cuerpo = document.createElement('div'); cuerpo.className = 'card-body';
+			var info = document.createElement('div'); info.className = 'solicitud-info';
+			var cliente = textoElemento('div', 'cliente', solicitud.Nombre_Cliente || 'Cliente');
+			var clienteIcon = document.createElement('i'); clienteIcon.className = 'bi bi-person-fill'; cliente.prepend(clienteIcon);
+			var servicio = textoElemento('div', 'servicio', solicitud.Titulo_Servicio || 'Servicio');
+			var servicioIcon = document.createElement('i'); servicioIcon.className = 'bi bi-briefcase'; servicio.prepend(servicioIcon);
+			var meta = document.createElement('div'); meta.className = 'meta';
+			var calendario = document.createElement('i'); calendario.className = 'bi bi-calendar3';
+			var reloj = document.createElement('i'); reloj.className = 'bi bi-clock';
+			meta.append(calendario, document.createTextNode(' ' + fechaSolicitud(solicitud.Fecha_Servicio) + ' › '), reloj, document.createTextNode(' ' + String(solicitud.Hora_Servicio || '').slice(0, 5)));
+			if (solicitud.Direccion) { var ubicacion = document.createElement('span'); var pin = document.createElement('i'); pin.className = 'bi bi-geo-alt'; ubicacion.append(document.createTextNode(' › '), pin, document.createTextNode(' ' + solicitud.Direccion)); meta.appendChild(ubicacion); }
+			if (solicitud.Telefono) { var telefono = document.createElement('span'); telefono.textContent = ' › Teléfono: ' + solicitud.Telefono; meta.appendChild(telefono); }
+			info.append(cliente, servicio, meta);
+			if (solicitud.Descripcion_Solicitud) info.appendChild(textoElemento('p', 'meta', solicitud.Descripcion_Solicitud));
+			var acciones = document.createElement('div'); acciones.className = 'solicitud-actions';
+			var datosEstado = estadoInfo[estado] || { clase: 'badge-neutral', label: estado, icono: 'info-circle' };
+			var badge = textoElemento('span', 'badge ' + datosEstado.clase + ' estado-badge', datosEstado.label);
+			var estadoIcono = document.createElement('i'); estadoIcono.className = 'bi bi-' + datosEstado.icono; badge.prepend(estadoIcono);
+			var celda = document.createElement('div'); celda.className = 'accion-celda'; agregarAccionesSolicitud(celda, solicitud);
+			acciones.append(badge, celda); cuerpo.append(info, acciones); tarjeta.appendChild(cuerpo);
+			return tarjeta;
+		}
+
+		async function cargarSolicitudesTrabajador(silencioso) {
+			var usuario;
+			try { usuario = JSON.parse(localStorage.getItem('usuario') || 'null'); } catch { usuario = null; }
+			if (!usuario || Number(usuario.rol) !== 2 || !usuario.id) {
+				if (!silencioso) window.mostrarToast('Inicia sesión como trabajador para consultar las solicitudes.');
+				return;
+			}
+			try {
+				var respuesta = await fetch('http://127.0.0.1:8000/api/solicitudes?trabajador=' + encodeURIComponent(usuario.id));
+				var datos = await respuesta.json().catch(function () { return {}; });
+				if (!respuesta.ok) throw new Error(datos.mensaje || 'No se pudieron cargar las solicitudes.');
+				var items = Array.isArray(datos) ? datos : (Array.isArray(datos.value) ? datos.value : []);
+				var lista = document.getElementById('lista-solicitudes');
+				lista.replaceChildren();
+				var conteosEstado = { pendiente: 0, aceptado: 0, en_proceso: 0, rumbo_a_ubicacion: 0, trabajo_realizado: 0, finalizado: 0, rechazado: 0, cancelada: 0 };
+				items.forEach(function (solicitud) {
+					var estado = String(solicitud.Estado_Solicitudes || 'pendiente').toLowerCase();
+					conteosEstado[estado] = (conteosEstado[estado] || 0) + 1;
+					lista.appendChild(crearTarjetaSolicitud(solicitud));
+				});
+				if (!items.length) lista.appendChild(textoElemento('div', 'card card-body', 'Aún no tienes solicitudes de servicio.'));
+				var idsConteo = { pendiente: 'filtroPendientesTrabajador', aceptado: 'filtroAceptadosTrabajador', en_proceso: 'filtroProcesoTrabajador', rumbo_a_ubicacion: 'filtroRumboTrabajador', trabajo_realizado: 'filtroRealizadoTrabajador', finalizado: 'filtroFinalizadosTrabajador' };
+				Object.keys(idsConteo).forEach(function (estado) { var el = document.getElementById(idsConteo[estado]); if (el) el.textContent = String(conteosEstado[estado] || 0); });
+				var total = document.getElementById('totalSolicitudesTrabajador'); if (total) total.textContent = String(items.length);
+				var totalTodos = document.getElementById('filtroTodosTrabajador'); if (totalTodos) totalTodos.textContent = String(items.length);
+				var pendientes = document.getElementById('totalPendientesTrabajador'); if (pendientes) pendientes.textContent = String(conteosEstado.pendiente || 0);
+				var aceptadas = document.getElementById('conteoAceptadasTrabajador'); if (aceptadas) aceptadas.textContent = String(conteosEstado.aceptado || 0);
+				var proceso = document.getElementById('conteoProcesoTrabajador'); if (proceso) proceso.textContent = String(conteosEstado.en_proceso || 0);
+				var rumbo = document.getElementById('conteoRumboTrabajador'); if (rumbo) rumbo.textContent = String(conteosEstado.rumbo_a_ubicacion || 0);
+				var realizado = document.getElementById('conteoRealizadoTrabajador'); if (realizado) realizado.textContent = String(conteosEstado.trabajo_realizado || 0);
+				var finalizado = document.getElementById('conteoFinalizadoTrabajador'); if (finalizado) finalizado.textContent = String(conteosEstado.finalizado || 0);
+				filtrarSolicitudes(filtroEstadoSolicitudes, document.querySelector('.filtro-btn.active'));
+			} catch (error) { if (!silencioso) window.mostrarToast(error.message || 'No se pudieron cargar las solicitudes.'); }
+		}
+		cargarSolicitudesTrabajador(false);
+		window.setInterval(function () { cargarSolicitudesTrabajador(true); }, 12000);
+		window.addEventListener('focus', function () { cargarSolicitudesTrabajador(true); });
+
+		(function conectarServiciosTrabajador() {
+			var api = 'http://127.0.0.1:8000/api';
+			var grid = document.querySelector('#section-servicios .workers-grid');
+			var template = document.getElementById('plantillaServicio');
+			var contador = document.getElementById('totalServicios');
+			var modal = document.getElementById('modalEditarServicio');
+			var formulario = document.getElementById('formEditarServicio');
+			var categorias = [];
+			var serviciosPorId = {};
+			var modoCreacion = false;
+
+			async function leerRespuesta(respuesta) {
+				var datos = await respuesta.json().catch(function () { return {}; });
+				if (!respuesta.ok) throw new Error(datos.mensaje || datos.error || 'No fue posible completar la operación.');
+				return datos;
+			}
+
+			function mostrarError(error) { window.mostrarToast(error.message || String(error)); }
+
+			function actualizarContador() {
+				if (contador) contador.textContent = String(grid.querySelectorAll('.worker-card').length);
+			}
+
+			function llenarModal(servicio) {
+				modoCreacion = false;
+				document.getElementById('tituloModalServicio').textContent = 'Editar servicio';
+				document.getElementById('guardarEditarServicio').textContent = 'Guardar cambios';
+				document.getElementById('editarServicioId').value = servicio.Id_Servicio;
+				document.getElementById('editarTitulo').value = servicio.Titulo || '';
+				document.getElementById('editarDescripcion').value = servicio.Descripcion || '';
+				document.getElementById('editarPrecio').value = Number(servicio.Precio) || 0;
+				document.getElementById('editarTipoServicio').value = servicio.TipoServicio || '';
+				var selector = document.getElementById('editarCategoria');
+				selector.replaceChildren();
+				categorias.forEach(function (categoria) {
+					var opcion = document.createElement('option');
+					opcion.value = categoria.Id_Categoria;
+					opcion.textContent = categoria.Nombre_Categoria;
+					selector.appendChild(opcion);
+				});
+				selector.value = String(servicio.Id_Categoria);
+				modal.classList.add('open');
+			}
+
+			window.abrirAgregarServicio = function () {
+				if (!categorias.length) {
+					window.mostrarToast('Espera a que carguen las categorías y vuelve a intentarlo.');
+					return;
+				}
+				modoCreacion = true;
+				document.getElementById('tituloModalServicio').textContent = 'Agregar servicio';
+				document.getElementById('guardarEditarServicio').textContent = 'Agregar servicio';
+				document.getElementById('editarServicioId').value = '';
+				document.getElementById('editarTitulo').value = '';
+				document.getElementById('editarDescripcion').value = '';
+				document.getElementById('editarPrecio').value = '';
+				document.getElementById('editarTipoServicio').value = '';
+				var selector = document.getElementById('editarCategoria');
+				selector.replaceChildren();
+				categorias.forEach(function (categoria) {
+					var opcion = document.createElement('option');
+					opcion.value = categoria.Id_Categoria;
+					opcion.textContent = categoria.Nombre_Categoria;
+					selector.appendChild(opcion);
+				});
+				if (typeof showSection === 'function') showSection('servicios');
+				modal.classList.add('open');
+			};
+
+			function crearTarjeta(servicio, idsDisponibles) {
+				var tarjeta = template.content.firstElementChild.cloneNode(true);
+				var id = String(servicio.Id_Servicio);
+				serviciosPorId[id] = servicio;
+				tarjeta.dataset.servicioId = id;
+				tarjeta.querySelector('[data-campo="titulo"]').textContent = servicio.Titulo || '';
+				tarjeta.querySelector('[data-campo="categoria"]').textContent = servicio.Nombre_Categoria || '';
+				tarjeta.querySelector('[data-campo="descripcion"]').textContent = servicio.Descripcion || '';
+				tarjeta.querySelector('[data-campo="precio"]').textContent = '$ ' + Number(servicio.Precio || 0).toLocaleString('es-CO');
+				var estado = tarjeta.querySelector('[data-campo="disponibilidad"]');
+				var tieneDisponibilidad = idsDisponibles.has(id);
+				estado.className = tieneDisponibilidad ? 'badge badge-success' : 'badge badge-neutral';
+				estado.textContent = tieneDisponibilidad ? 'Disponible' : 'No disponible';
+				tarjeta.querySelector('[data-accion="editar"]').addEventListener('click', function () { llenarModal(servicio); });
+				tarjeta.querySelector('[data-accion="fotos"]').href = '/trabajador/fotos/?servicioId=' + encodeURIComponent(id);
+				tarjeta.querySelector('[data-accion="eliminar"]').addEventListener('click', async function () {
+					if (!window.confirm('¿Eliminar este servicio?')) return;
+					try {
+						await leerRespuesta(await fetch(api + '/servicios/' + encodeURIComponent(id), { method: 'DELETE' }));
+						tarjeta.remove();
+						delete serviciosPorId[id];
+						actualizarContador();
+						window.mostrarToast('Servicio eliminado correctamente.');
+					} catch (error) { mostrarError(error); }
+				});
+				return tarjeta;
+			}
+
+			function cerrarModal() { modal.classList.remove('open'); }
+			document.getElementById('cerrarEditarServicio').addEventListener('click', cerrarModal);
+			document.getElementById('cancelarEditarServicio').addEventListener('click', cerrarModal);
+			modal.addEventListener('click', function (evento) { if (evento.target === modal) cerrarModal(); });
+
+			formulario.addEventListener('submit', async function (evento) {
+				evento.preventDefault();
+				var id = document.getElementById('editarServicioId').value;
+				var servicio = serviciosPorId[id];
+				var boton = document.getElementById('guardarEditarServicio');
+				boton.disabled = true;
+				try {
+					var usuario = JSON.parse(localStorage.getItem('usuario') || 'null');
+					var body = {
+						Id_Categoria: Number(document.getElementById('editarCategoria').value),
+						Titulo: document.getElementById('editarTitulo').value.trim(),
+						Descripcion: document.getElementById('editarDescripcion').value.trim() || null,
+						Precio: Number(document.getElementById('editarPrecio').value),
+						TipoServicio: document.getElementById('editarTipoServicio').value.trim() || null
+					};
+					if (modoCreacion) {
+						if (!usuario?.id || Number(usuario.rol) !== 2) throw new Error('Inicia sesión como trabajador para agregar un servicio.');
+						if (!body.Id_Categoria || !body.Titulo || !Number.isFinite(body.Precio) || body.Precio < 0) throw new Error('Completa el título, categoría y precio del servicio.');
+						var nuevoServicio = await leerRespuesta(await fetch(api + '/servicios', {
+							method: 'POST', headers: { 'Content-Type': 'application/json' },
+							body: JSON.stringify({ Id_Trabajador: Number(usuario.id), ...body })
+						}));
+						cerrarModal();
+						modoCreacion = false;
+						await cargarServicios();
+						window.mostrarToast(nuevoServicio.mensaje || 'Servicio agregado correctamente.');
+						return;
+					}
+					await leerRespuesta(await fetch(api + '/servicios/' + encodeURIComponent(id), {
+						method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body)
+					}));
+					Object.assign(servicio, body);
+					var tarjeta = grid.querySelector('[data-servicio-id="' + id + '"]');
+					if (tarjeta) {
+						tarjeta.querySelector('[data-campo="titulo"]').textContent = body.Titulo;
+						tarjeta.querySelector('[data-campo="categoria"]').textContent = categorias.find(function (c) { return Number(c.Id_Categoria) === body.Id_Categoria; })?.Nombre_Categoria || '';
+						tarjeta.querySelector('[data-campo="descripcion"]').textContent = body.Descripcion || '';
+						tarjeta.querySelector('[data-campo="precio"]').textContent = '$ ' + body.Precio.toLocaleString('es-CO');
+					}
+					cerrarModal();
+					window.mostrarToast('Servicio actualizado correctamente.');
+				} catch (error) { mostrarError(error); }
+				finally { boton.disabled = false; }
+			});
+
+			async function cargarServicios() {
+				try {
+					var usuario = JSON.parse(localStorage.getItem('usuario') || 'null');
+					if (!usuario || Number(usuario.rol) !== 2 || !usuario.id) throw new Error('Inicia sesión como trabajador para ver tus servicios.');
+					var respuestas = await Promise.all([
+						fetch(api + '/servicios'), fetch(api + '/disponibilidad'), fetch(api + '/categorias')
+					]);
+					var datos = await Promise.all(respuestas.map(leerRespuesta));
+					var serviciosDelTrabajador = datos[0].filter(function (servicio) { return Number(servicio.Id_Trabajador) === Number(usuario.id); });
+					var idsDisponibles = new Set(datos[1].map(function (registro) { return String(registro.Id_Servicio); }));
+					categorias = datos[2];
+					grid.replaceChildren();
+					serviciosPorId = {};
+					serviciosDelTrabajador.forEach(function (servicio) { grid.appendChild(crearTarjeta(servicio, idsDisponibles)); });
+					actualizarContador();
+				} catch (error) { mostrarError(error); }
+			}
+			cargarServicios();
+		})();
+
+		(async function cargarPerfilTrabajador() {
+			var token = localStorage.getItem('token');
+			var usuarioGuardado;
+
+			try {
+				usuarioGuardado = JSON.parse(localStorage.getItem('usuario') || 'null');
+			} catch {
+				return;
+			}
+
+			if (!token || !usuarioGuardado?.id) return;
+
+			try {
+				var response = await fetch('http://127.0.0.1:8000/api/usuarios/' + encodeURIComponent(usuarioGuardado.id), {
+					headers: { Authorization: 'Bearer ' + token }
+				});
+				if (!response.ok) return;
+
+				var perfil = await response.json();
+				var nombreReal = perfil.Nombre || usuarioGuardado.nombre;
+				if (nombreReal) {
+					var nombreBoton = document.querySelector('.yo-btn > span');
+					var nombreMenu = document.querySelector('.yo-menu-header h4');
+					if (nombreBoton) nombreBoton.textContent = nombreReal;
+					if (nombreMenu) nombreMenu.textContent = nombreReal;
+					document.querySelectorAll('.yo-avatar-placeholder').forEach(function (placeholder) {
+						placeholder.textContent = nombreReal.charAt(0).toUpperCase();
+					});
+				}
+
+				if (perfil.Foto_Perfil) {
+					var fotoUrl = 'http://127.0.0.1:8000/api/usuarios/' + encodeURIComponent(usuarioGuardado.id) + '/foto-perfil';
+					document.querySelectorAll('.yo-avatar').forEach(function (avatar) {
+						var imagen = document.createElement('img');
+						imagen.src = fotoUrl;
+						imagen.alt = nombreReal ? 'Foto de ' + nombreReal : 'Foto de perfil';
+						imagen.onerror = function () { imagen.remove(); };
+						avatar.appendChild(imagen);
+						var inicial = avatar.querySelector('.yo-avatar-placeholder');
+						if (inicial) inicial.style.display = 'none';
+					});
+				}
+			} catch (error) {
+				console.error('No fue posible cargar el perfil del trabajador.', error);
+			}
+		})();
 
 		(function () {
 			var params = new URLSearchParams(window.location.search);
 			var section = params.get('section');
-			if (section && ['dashboard', 'servicios', 'solicitudes', 'calificaciones'].indexOf(section) >= 0) {
+			if (section && ['dashboard', 'servicios', 'solicitudes', 'calificaciones', 'perfil'].indexOf(section) >= 0) {
 				showSection(section);
 			}
 		})();
 	</script>
+	<script is:inline>
+		(function () {
+			var api = 'http://127.0.0.1:8000/api';
+			var form = document.getElementById('formPerfilTrabajador');
+			var feedback = document.getElementById('perfilTrabajadorMensaje');
+			var photoInput = document.getElementById('perfilFotoArchivo');
+			var photoImage = document.getElementById('perfilFotoImagen');
+			var photoInitial = document.getElementById('perfilFotoInicial');
+			var photoPreviewUrl = null;
+			var profileLoaded = false;
+
+			function getSession() {
+				try {
+					var usuario = JSON.parse(localStorage.getItem('usuario') || 'null');
+					var token = localStorage.getItem('token');
+					if (!usuario || Number(usuario.rol) !== 2 || !usuario.id || !token) return null;
+					return { usuario: usuario, token: token };
+				} catch { return null; }
+			}
+			function showFeedback(text, isError) {
+				feedback.textContent = text;
+				feedback.classList.toggle('is-error', Boolean(isError));
+				feedback.hidden = false;
+			}
+			function setPhoto(src, name) {
+				photoInitial.textContent = (name || 'T').trim().charAt(0).toUpperCase();
+				photoInitial.hidden = false;
+				photoImage.hidden = true;
+				photoImage.removeAttribute('src');
+				if (src) {
+					photoImage.onload = function () { photoImage.hidden = false; photoInitial.hidden = true; };
+					photoImage.onerror = function () { photoImage.hidden = true; photoInitial.hidden = false; };
+					photoImage.src = src;
+				}
+			}
+			function updatePanelIdentity(name, photoUrl) {
+				var nameButton = document.querySelector('.yo-btn > span');
+				var nameMenu = document.querySelector('.yo-menu-header h4');
+				var welcome = document.querySelector('.welcome-text strong');
+				if (nameButton) nameButton.textContent = name;
+				if (nameMenu) nameMenu.textContent = name;
+				if (welcome) welcome.textContent = name;
+				document.querySelectorAll('.yo-avatar-placeholder').forEach(function (placeholder) {
+					placeholder.textContent = name.trim().charAt(0).toUpperCase();
+				});
+				if (photoUrl) document.querySelectorAll('.yo-avatar').forEach(function (avatar) {
+					var image = avatar.querySelector('img');
+					if (!image) { image = document.createElement('img'); avatar.appendChild(image); }
+					image.src = photoUrl;
+					image.alt = 'Foto de ' + name;
+					var initial = avatar.querySelector('.yo-avatar-placeholder');
+					if (initial) initial.style.display = 'none';
+				});
+			}
+			async function readResponse(response) {
+				var result = await response.json().catch(function () { return {}; });
+				if (!response.ok) throw new Error(result.mensaje || result.error || 'No se pudo completar la solicitud.');
+				return result;
+			}
+			async function loadProfile() {
+				if (profileLoaded) return;
+				var session = getSession();
+				if (!session) {
+					showFeedback('Inicia sesión como trabajador para editar tu perfil.', true);
+					return;
+				}
+				try {
+					var response = await fetch(api + '/usuarios/' + encodeURIComponent(session.usuario.id), {
+						headers: { Authorization: 'Bearer ' + session.token }
+					});
+					var perfil = await readResponse(response);
+					document.getElementById('perfilTrabajadorNombre').value = perfil.Nombre || session.usuario.nombre || '';
+					document.getElementById('perfilTrabajadorCorreo').value = perfil.Correo || session.usuario.correo || '';
+					document.getElementById('perfilTrabajadorTelefono').value = perfil.Telefono || '';
+					document.getElementById('perfilTrabajadorUbicacion').value = perfil.Ubicacion || '';
+					if (perfil.Foto_Perfil) setPhoto(api + '/usuarios/' + encodeURIComponent(session.usuario.id) + '/foto-perfil?v=' + Date.now(), perfil.Nombre || session.usuario.nombre);
+					else setPhoto('', perfil.Nombre || session.usuario.nombre);
+					profileLoaded = true;
+				} catch (error) {
+					showFeedback(error instanceof Error ? error.message : 'No se pudo cargar tu perfil.', true);
+				}
+			}
+
+			if (!form) return;
+			window.cargarPerfilTrabajador = loadProfile;
+			var query = new URLSearchParams(window.location.search);
+			if (query.get('section') === 'perfil') loadProfile();
+
+			photoInput.addEventListener('change', function () {
+				var file = photoInput.files && photoInput.files[0];
+				if (!file) return;
+				if (!['image/jpeg', 'image/png'].includes(file.type)) {
+					photoInput.value = '';
+					showFeedback('La foto debe ser JPG o PNG.', true);
+					return;
+				}
+				if (photoPreviewUrl) URL.revokeObjectURL(photoPreviewUrl);
+				photoPreviewUrl = URL.createObjectURL(file);
+				setPhoto(photoPreviewUrl, document.getElementById('perfilTrabajadorNombre').value);
+				feedback.hidden = true;
+			});
+
+			form.addEventListener('submit', async function (event) {
+				event.preventDefault();
+				var session = getSession();
+				if (!session) { showFeedback('Inicia sesión como trabajador para guardar los cambios.', true); return; }
+				var button = document.getElementById('guardarPerfilTrabajador');
+				button.disabled = true;
+				feedback.hidden = true;
+				try {
+					var nombre = document.getElementById('perfilTrabajadorNombre').value.trim();
+					var response = await fetch(api + '/usuarios/' + encodeURIComponent(session.usuario.id), {
+						method: 'PUT',
+						headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + session.token },
+						body: JSON.stringify({
+							nombre: nombre,
+							telefono: document.getElementById('perfilTrabajadorTelefono').value.trim(),
+							ubicacion: document.getElementById('perfilTrabajadorUbicacion').value.trim()
+						})
+					});
+					var result = await readResponse(response);
+					localStorage.setItem('usuario', JSON.stringify({ ...session.usuario, nombre: nombre }));
+					updatePanelIdentity(nombre);
+					profileLoaded = true;
+					if (photoInput.files && photoInput.files[0]) {
+						var photoData = new FormData();
+						photoData.append('foto_Perfil', photoInput.files[0]);
+						try {
+							var photoResponse = await fetch(api + '/usuarios/' + encodeURIComponent(session.usuario.id) + '/foto-perfil', {
+								method: 'POST', headers: { Authorization: 'Bearer ' + session.token }, body: photoData
+							});
+							await readResponse(photoResponse);
+							photoInput.value = '';
+							if (photoPreviewUrl) { URL.revokeObjectURL(photoPreviewUrl); photoPreviewUrl = null; }
+							var photoUrl = api + '/usuarios/' + encodeURIComponent(session.usuario.id) + '/foto-perfil?v=' + Date.now();
+							setPhoto(photoUrl, nombre);
+							updatePanelIdentity(nombre, photoUrl);
+						} catch (photoError) {
+							showFeedback('Tus datos se guardaron, pero no se pudo actualizar la foto: ' + (photoError instanceof Error ? photoError.message : 'inténtalo de nuevo.'), true);
+							return;
+						}
+					}
+					showFeedback(result.mensaje || 'Perfil actualizado correctamente.', false);
+				} catch (error) {
+					showFeedback(error instanceof Error ? error.message : 'No se pudo guardar el perfil.', true);
+				} finally {
+					button.disabled = false;
+				}
+			});
+		})();
+	</script>
+	<style>
+		.worker-profile-heading { align-items: flex-end; margin-bottom: 22px; }
+		.worker-profile-heading p { margin: 6px 0 0; color: var(--text-secondary); font-size: 14px; }
+		.worker-profile-card { max-width: 920px; padding: 0; overflow: hidden; }
+		.worker-profile-photo-panel { display: flex; align-items: center; gap: 20px; padding: 26px 30px; border-bottom: 1px solid var(--border); background: linear-gradient(115deg, var(--bg-card), var(--primary-soft)); }
+		.worker-profile-photo { width: 96px; height: 96px; flex: 0 0 96px; overflow: hidden; display: grid; place-items: center; border: 4px solid var(--bg-card); border-radius: 50%; background: var(--primary); color: #fff; font-size: 34px; font-weight: 800; box-shadow: 0 4px 16px rgba(37,99,235,.18); }
+		.worker-profile-photo img { width: 100%; height: 100%; object-fit: cover; }
+		.worker-profile-photo-copy { display: grid; justify-items: start; gap: 6px; }
+		.worker-profile-photo-copy strong { color: var(--text); font-size: 16px; }
+		.worker-profile-photo-copy span, .worker-profile-hint { color: var(--text-muted); font-size: 12px; }
+		.worker-photo-button { display: inline-flex; align-items: center; margin-top: 4px; cursor: pointer; }
+		.worker-profile-form { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px 22px; padding: 28px 30px 30px; }
+		.worker-profile-form .form-group { min-width: 0; margin-bottom: 16px; }
+		.worker-profile-form .form-control { width: 100%; }
+		.worker-profile-form .form-control:disabled { color: var(--text-secondary); background: var(--bg-body); cursor: not-allowed; }
+		.worker-profile-hint { display: block; margin-top: 6px; }
+		.worker-profile-actions { grid-column: 1 / -1; display: flex; justify-content: flex-end; padding-top: 8px; border-top: 1px solid var(--border); }
+		.worker-profile-actions .btn { min-height: 44px; padding-inline: 22px; }
+		.worker-profile-message { max-width: 920px; margin: 18px 0; padding: 13px 16px; border: 1px solid var(--success); border-radius: 12px; background: var(--success-soft); color: var(--success); font-size: 14px; }
+		.worker-profile-message[hidden] { display: none !important; }
+		.worker-profile-message.is-error { border-color: var(--danger); background: var(--danger-soft); color: var(--danger); }
+		@media (max-width: 768px) {
+			.worker-profile-heading { align-items: flex-start; }
+			.worker-profile-card { max-width: none; }
+			.worker-profile-photo-panel { padding: 22px; }
+			.worker-profile-form { padding: 22px; gap: 0 16px; }
+		}
+		@media (max-width: 560px) {
+			.worker-profile-form { grid-template-columns: minmax(0, 1fr); padding: 20px; }
+			.worker-profile-actions { grid-column: 1; }
+			.worker-profile-actions .btn { width: 100%; }
+			.worker-profile-photo-panel { gap: 15px; padding: 20px; }
+			.worker-profile-photo { width: 76px; height: 76px; flex-basis: 76px; font-size: 28px; }
+		}
+	</style>
 </Layout>

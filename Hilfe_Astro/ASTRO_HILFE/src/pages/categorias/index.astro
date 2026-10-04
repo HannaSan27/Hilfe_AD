@@ -6,16 +6,7 @@ import ServiceCard from '../../components/ServiceCard.astro';
 import '../../components/styles/categorias.css';
 import '../../components/styles/design-system.css';
 
-const categorias = [
-	{ id: 1, nombre: 'Plomería' },
-	{ id: 2, nombre: 'Manicura' },
-	{ id: 3, nombre: 'Belleza' },
-	{ id: 4, nombre: 'Aseo' },
-	{ id: 5, nombre: 'Electricista' },
-	{ id: 6, nombre: 'Niñera' },
-	{ id: 7, nombre: 'Jardinería' },
-	{ id: 8, nombre: 'Cocina' },
-];
+const categorias = [];
 
 const catColors = [
 	['#dbeafe', '#eff6ff', '#2563eb'],
@@ -28,14 +19,7 @@ const catColors = [
 	['#d1fae5', '#f0fdf4', '#16a34a'],
 ];
 
-const servicios = [
-	{ id: 1, nombre: 'Carlos Pérez', titulo: 'Plomería general y reparaciones', ubicacion: 'Bogotá', categoria: 'Plomería', calificacion: 4.8, totalResenias: 32, precio: 45000, verificado: true, disponible: true, inicial: 'C' },
-	{ id: 2, nombre: 'María Gómez', titulo: 'Manicura profesional en casa', ubicacion: 'Medellín', categoria: 'Manicura', calificacion: 4.9, totalResenias: 27, precio: 30000, verificado: true, disponible: true, inicial: 'M' },
-	{ id: 3, nombre: 'Jorge Ramírez', titulo: 'Aseo general de hogares', ubicacion: 'Cali', categoria: 'Aseo', calificacion: 4.5, totalResenias: 18, precio: 25000, verificado: false, disponible: true, inicial: 'J' },
-	{ id: 4, nombre: 'Luisa Fernández', titulo: 'Maquillaje y peinados para eventos', ubicacion: 'Bogotá', categoria: 'Belleza', calificacion: 4.7, totalResenias: 41, precio: 35000, verificado: true, disponible: true, inicial: 'L' },
-	{ id: 5, nombre: 'Andrés Torres', titulo: 'Instalaciones eléctricas residenciales', ubicacion: 'Medellín', categoria: 'Electricista', calificacion: 4.6, totalResenias: 15, precio: 50000, verificado: true, disponible: false, inicial: 'A' },
-	{ id: 6, nombre: 'Diana Morales', titulo: 'Niñera con experiencia en primera infancia', ubicacion: 'Cali', categoria: 'Niñera', calificacion: 4.9, totalResenias: 22, precio: 40000, verificado: false, disponible: true, inicial: 'D' },
-];
+const servicios = [];
 
 ---
 
@@ -83,7 +67,7 @@ const servicios = [
 					<div class="cat-filter-list">
 						<button type="button" class="cat-filter-item active" data-cat="" onclick="selectCat(this, '')">
 							<span>Todos los servicios</span>
-							<span class="cat-filter-count">{servicios.length}</span>
+							<span class="cat-filter-count" id="allCategoryCount">0</span>
 						</button>
 						{categorias.map((cat, i) => {
 							const count = servicios.filter((s) => s.categoria === cat.nombre).length;
@@ -203,7 +187,7 @@ const servicios = [
 					show =
 						(card.dataset.name || '').indexOf(q) >= 0 ||
 						(card.dataset.title || '').indexOf(q) >= 0 ||
-						(card.dataset.category || '').indexOf(q) >= 0;
+						(card.dataset.categoryName || '').indexOf(q) >= 0;
 				}
 				if (show && solo && card.dataset.estado !== 'available') show = false;
 				if (show && parseFloat(card.dataset.rating) < minCal) show = false;
@@ -300,21 +284,67 @@ const servicios = [
 
 		(function () {
 			var params = new URLSearchParams(window.location.search);
-			var catId = params.get('categoriaId');
-			var catNameById = {
-				'1': 'plomería', '2': 'manicura', '3': 'belleza', '4': 'aseo',
-				'5': 'electricista', '6': 'niñera', '7': 'jardinería', '8': 'cocina'
+			window.categoriaInicial = params.get('categoriaId');
+			window.busquedaInicial = params.get('search');
+		})();
+
+		(function cargarCatalogo() {
+			var api = 'http://127.0.0.1:8000/api';
+			var colores = [
+				['#dbeafe','#eff6ff','#2563eb'],['#d1fae5','#ecfdf5','#059669'],['#fce7f3','#fff1f2','#db2777'],
+				['#fef3c7','#fffbeb','#d97706'],['#ede9fe','#f5f3ff','#7c3aed'],['#dbeafe','#f0f9ff','#0284c7'],
+				['#fce7f3','#fdf2f8','#be185d'],['#d1fae5','#f0fdf4','#16a34a']
+			];
+			var seguro = function (valor) {
+				return String(valor == null ? '' : valor).replace(/[&<>"']/g, function (c) {
+					return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
+				});
 			};
-			var search = params.get('search');
-			if (catId && catNameById[catId]) {
-				var cat = catNameById[catId];
-				var btn = document.querySelector('.cat-grid-item[data-cat="' + cat + '"]');
-				if (btn) selectCat(btn, cat);
-			}
-			if (search) {
-				document.getElementById('searchInput').value = search;
-				aplicarFiltros();
-			}
+			var diaHoy = new Intl.DateTimeFormat('es-CO', {weekday:'long'}).format(new Date()).toLowerCase();
+			Promise.all([
+				fetch(api + '/categorias').then(function (r) { if (!r.ok) throw new Error('Categorías: ' + r.status); return r.json(); }),
+				fetch(api + '/servicios').then(function (r) { if (!r.ok) throw new Error('Servicios: ' + r.status); return r.json(); }),
+				fetch(api + '/disponibilidad').then(function (r) { if (!r.ok) throw new Error('Disponibilidad: ' + r.status); return r.json(); })
+			]).then(function (respuesta) {
+				var categorias = Array.isArray(respuesta[0]) ? respuesta[0] : (respuesta[0].value || []);
+				var servicios = Array.isArray(respuesta[1]) ? respuesta[1] : (respuesta[1].value || []);
+				var disponibilidad = Array.isArray(respuesta[2]) ? respuesta[2] : (respuesta[2].value || []);
+				var grid = document.getElementById('catGrid');
+				var filtros = document.querySelector('.cat-filter-list');
+				var container = document.getElementById('workersContainer');
+				var conteos = {};
+				servicios.forEach(function (s) { var id = String(s.Id_Categoria); conteos[id] = (conteos[id] || 0) + 1; });
+				categorias.forEach(function (cat, i) {
+					var id = String(cat.Id_Categoria);
+					var nombre = cat.Nombre_Categoria || 'Categoría';
+					var c = colores[i % colores.length];
+					var bGrid = document.createElement('button');
+					bGrid.type = 'button'; bGrid.className = 'cat-grid-item'; bGrid.dataset.cat = id;
+					bGrid.innerHTML = '<div class="cat-grid-icon" style="background:linear-gradient(135deg,' + c[0] + ',' + c[1] + ');"><span style="font-size:20px;">' + seguro(nombre.slice(0,2).toUpperCase()) + '</span></div><span>' + seguro(nombre) + '</span>';
+					bGrid.addEventListener('click', function () { selectCat(bGrid, id); }); grid.appendChild(bGrid);
+					var bFiltro = document.createElement('button');
+					bFiltro.type = 'button'; bFiltro.className = 'cat-filter-item'; bFiltro.dataset.cat = id;
+					bFiltro.innerHTML = '<span>' + seguro(nombre) + '</span><span class="cat-filter-count">' + (conteos[id] || 0) + '</span>';
+					bFiltro.addEventListener('click', function () { selectCat(bFiltro, id); }); filtros.appendChild(bFiltro);
+				});
+				document.getElementById('allCategoryCount').textContent = servicios.length;
+				servicios.forEach(function (s) {
+					var disponible = disponibilidad.some(function (d) { return String(d.Id_Servicio) === String(s.Id_Servicio) && String(d.Dia_Semana).toLowerCase() === diaHoy; });
+					var nombre = s.Nombre_Trabajador || 'Trabajador'; var titulo = s.Titulo || 'Servicio';
+					var cat = s.Nombre_Categoria || 'Servicio'; var precio = Number(s.Precio) || 0;
+					var rating = Number(s.Calificacion_Promedio) || 0; var resenas = Number(s.Total_Resenas) || 0;
+					var estado = disponible ? 'available' : 'unavailable'; var card = document.createElement('div');
+					card.className = 'worker-card fade-in-up'; card.dataset.name = nombre.toLowerCase(); card.dataset.title = titulo.toLowerCase();
+					card.dataset.category = String(s.Id_Categoria); card.dataset.categoryName = cat.toLowerCase(); card.dataset.price = String(precio);
+					card.dataset.rating = String(rating); card.dataset.estado = estado;
+					card.innerHTML = '<div class="worker-card-photo"><div class="photo-placeholder">' + seguro(nombre.charAt(0).toUpperCase()) + '</div><span class="worker-card-badge" style="background:rgba(239,68,68,0.12);color:#ef4444;">âœ— Sin verificar</span><span class="worker-card-status ' + estado + '">' + (disponible ? 'Disponible hoy' : 'No disponible') + '</span></div><div class="worker-card-body"><div class="worker-card-top"><div class="worker-card-name">' + seguro(nombre) + '</div><div class="worker-card-rating">' + rating.toFixed(1) + ' <small>(' + resenas + ')</small></div></div><div class="worker-card-service">' + seguro(titulo) + '</div><div class="worker-card-meta"><span><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>' + seguro(s.Ubicacion || 'Ubicación no disponible') + '</span><span><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>' + resenas + ' reseñas</span></div><div class="worker-card-tags"><span class="worker-tag">' + seguro(cat) + '</span></div><div class="worker-card-footer"><div class="worker-card-price">$' + precio.toLocaleString('es-CO') + '<small>/servicio</small></div><a href="/trabajador/perfil/?id=' + encodeURIComponent(s.Id_Trabajador) + '&servicioId=' + encodeURIComponent(s.Id_Servicio) + '" class="worker-card-btn">Ver perfil<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg></a></div></div>';
+					container.appendChild(card);
+				});
+				var inicial = window.categoriaInicial;
+				if (inicial) { var btn = Array.prototype.find.call(grid.querySelectorAll('.cat-grid-item'), function (b) { return b.dataset.cat === inicial; }); if (btn) selectCat(btn, inicial); }
+				if (window.busquedaInicial) document.getElementById('searchInput').value = window.busquedaInicial;
+				ordenar();
+			}).catch(function (error) { console.error('Error cargando el catálogo:', error); });
 		})();
 	</script>
 </Layout>
