@@ -36,7 +36,7 @@ const mostrarRegistroExitoso = Astro.url.searchParams.get("vista") === "registro
           <p>Tu cuenta fue creada correctamente</p>
         </div>
 
-        <a href="/login" class="btn-auth">
+        <a href="/login/login" class="btn-auth">
           Ir al Login
         </a>
       </div>
@@ -181,7 +181,7 @@ const mostrarRegistroExitoso = Astro.url.searchParams.get("vista") === "registro
             </div>
 
             <div class="login-footer">
-              <a href="/">
+              <a href="/" id="loginVerSitio">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
                 Ver sitio
               </a>
@@ -194,6 +194,54 @@ const mostrarRegistroExitoso = Astro.url.searchParams.get("vista") === "registro
 
   {!mostrarRegistroExitoso && (
     <Fragment>
+      <script is:inline>
+        document.getElementById("loginVerSitio")?.addEventListener("click", () => {
+          localStorage.removeItem("token");
+          localStorage.removeItem("usuario");
+        });
+
+        const loginForm = document.getElementById("loginForm");
+
+        loginForm?.addEventListener("submit", async (event) => {
+          event.preventDefault();
+
+          const formData = new FormData(loginForm);
+          const errorUrl = (message) => `/login/login?error=${encodeURIComponent(message)}`;
+
+          try {
+            const response = await fetch("http://127.0.0.1:8000/api/auth/login", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                correo: formData.get("correo"),
+                contrasena: formData.get("contrasena"),
+              }),
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+              window.location.assign(errorUrl(data.mensaje || data.error || "No fue posible iniciar sesión."));
+              return;
+            }
+
+            localStorage.setItem("token", data.token);
+            localStorage.setItem("usuario", JSON.stringify(data.usuario));
+
+            const destinos = { 1: "/admin/admin", 2: "/trabajador", 3: "/cliente" };
+            const destino = destinos[data.usuario?.rol];
+
+            if (!destino) {
+              window.location.assign(errorUrl("El rol de usuario no es válido."));
+              return;
+            }
+
+            window.location.assign(destino);
+          } catch {
+            window.location.assign(errorUrl("No se pudo conectar con el servidor."));
+          }
+        });
+      </script>
       <script is:inline src="/js/pages/login.js"></script>
       <script is:inline src="/js/site.js"></script>
     </Fragment>

@@ -45,7 +45,7 @@ const mensaje: string | null = null;
             Información personal
           </h3>
         </div>
-        <form method="post" action="/api/cliente/editarperfil" style="padding:24px;">
+        <form id="formPerfilCliente" style="padding:24px;">
           <div class="form-group">
             <label for="nombre">Nombre completo</label>
             <input type="text" name="nombre" id="nombre" class="form-control" value={usuario.nombre} required />
@@ -67,3 +67,56 @@ const mensaje: string | null = null;
     </main>
   </div>
 </Layout>
+
+<script is:inline>
+  const apiPerfilCliente = "http://127.0.0.1:8000";
+  const formularioPerfilCliente = document.getElementById("formPerfilCliente");
+  let ubicacionPerfilCliente = "";
+  const mostrarMensajePerfilCliente = (mensaje, correcto = false) => {
+    let contenedor = document.querySelector(".trabajador-main > .toast-success");
+    if (!correcto) { window.alert(mensaje); return; }
+    if (!contenedor) {
+      contenedor = document.createElement("div");
+      contenedor.className = "toast-success";
+      formularioPerfilCliente?.parentElement?.before(contenedor);
+    }
+    contenedor.textContent = mensaje;
+  };
+  (async () => {
+    let usuario;
+    try { usuario = JSON.parse(localStorage.getItem("usuario") || "null"); } catch { usuario = null; }
+    if (!usuario?.id) { mostrarMensajePerfilCliente("Inicia sesión para consultar tu perfil."); return; }
+    try {
+      const response = await fetch(`${apiPerfilCliente}/api/usuarios/${encodeURIComponent(usuario.id)}`);
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(result.mensaje || "No se pudo cargar tu perfil.");
+      ubicacionPerfilCliente = result.Ubicacion || "";
+      document.getElementById("nombre").value = result.Nombre || usuario.nombre || "";
+      document.getElementById("correo").value = result.Correo || usuario.correo || "";
+      document.getElementById("telefono").value = result.Telefono || "";
+    } catch (error) {
+      mostrarMensajePerfilCliente(error instanceof Error ? error.message : "No se pudo cargar tu perfil.");
+    }
+  })();
+  formularioPerfilCliente?.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    let usuario;
+    try { usuario = JSON.parse(localStorage.getItem("usuario") || "null"); } catch { usuario = null; }
+    const token = localStorage.getItem("token");
+    if (!usuario?.id || !token) { mostrarMensajePerfilCliente("Inicia sesión para guardar los cambios."); return; }
+    try {
+      const response = await fetch(`${apiPerfilCliente}/api/usuarios/${encodeURIComponent(usuario.id)}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ nombre: document.getElementById("nombre").value.trim(), telefono: document.getElementById("telefono").value.trim(), ubicacion: ubicacionPerfilCliente }),
+      });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(result.mensaje || "No se pudieron guardar los cambios.");
+      const actualizado = { ...usuario, nombre: document.getElementById("nombre").value.trim() };
+      localStorage.setItem("usuario", JSON.stringify(actualizado));
+      mostrarMensajePerfilCliente(result.mensaje || "Perfil actualizado correctamente.", true);
+    } catch (error) {
+      mostrarMensajePerfilCliente(error instanceof Error ? error.message : "No se pudieron guardar los cambios.");
+    }
+  });
+</script>

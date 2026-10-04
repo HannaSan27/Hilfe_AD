@@ -1,4 +1,4 @@
-import { Context } from "../Dependencies/dependencies.ts";
+import { Context, RouterContext } from "../Dependencies/dependencies.ts";
 import client from "../Models/conexion.ts";
 import type { Solicitud, EstadoSolicitud } from "../Models/solicitudesModel.ts";
 
@@ -57,7 +57,7 @@ export const getSolicitudes = async (ctx: Context) => {
   }
 };
 
-export const getSolicitudPorId = async (ctx: Context) => {
+export const getSolicitudPorId = async (ctx: RouterContext<string>) => {
   const { id } = ctx.params as { id: string };
   try {
     const result = await client.query(
@@ -132,7 +132,7 @@ export const crearSolicitud = async (ctx: Context) => {
   }
 };
 
-export const cambiarEstadoSolicitud = async (ctx: Context) => {
+export const cambiarEstadoSolicitud = async (ctx: RouterContext<string>) => {
   const { id } = ctx.params as { id: string };
   try {
     const body: Partial<Solicitud> = await ctx.request.body.json();
@@ -179,7 +179,7 @@ export const cambiarEstadoSolicitud = async (ctx: Context) => {
   }
 };
 
-export const eliminarSolicitud = async (ctx: Context) => {
+export const eliminarSolicitud = async (ctx: RouterContext<string>) => {
   const { id } = ctx.params as { id: string };
   try {
     const actual = await client.query(

@@ -1,4 +1,4 @@
-import { Context } from "../Dependencies/dependencies.ts";
+import { Context, RouterContext } from "../Dependencies/dependencies.ts";
 import client from "../Models/conexion.ts";
 import type { Servicio } from "../Models/serviciosModel.ts";
 
@@ -61,7 +61,7 @@ export const getServicios = async (ctx: Context) => {
   }
 };
 
-export const getServicioPorId = async (ctx: Context) => {
+export const getServicioPorId = async (ctx: RouterContext<string>) => {
   const { id } = ctx.params as { id: string };
   try {
     const result = await client.query(
@@ -113,7 +113,7 @@ export const crearServicio = async (ctx: Context) => {
   }
 };
 
-export const actualizarServicio = async (ctx: Context) => {
+export const actualizarServicio = async (ctx: RouterContext<string>) => {
   const { id } = ctx.params as { id: string };
   try {
     const body: Partial<Servicio> = await ctx.request.body.json();
@@ -134,7 +134,7 @@ export const actualizarServicio = async (ctx: Context) => {
   }
 };
 
-export const eliminarServicio = async (ctx: Context) => {
+export const eliminarServicio = async (ctx: RouterContext<string>) => {
   const { id } = ctx.params as { id: string };
   try {
     await client.execute("DELETE FROM servicios WHERE Id_Servicio = ?", [id]);

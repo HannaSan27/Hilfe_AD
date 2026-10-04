@@ -1,4 +1,4 @@
-import { Context } from "../Dependencies/dependencies.ts";
+import { Context, RouterContext } from "../Dependencies/dependencies.ts";
 import client from "../Models/conexion.ts";
 import type { Categoria } from "../Models/categoriasModel.ts";
 
@@ -13,7 +13,7 @@ export const getCategorias = async (ctx: Context) => {
   }
 };
 
-export const getCategoriaPorId = async (ctx: Context) => {
+export const getCategoriaPorId = async (ctx: RouterContext<string>) => {
   const { id } = ctx.params as { id: string };
   try {
     const result = await client.query(
@@ -44,9 +44,17 @@ export const crearCategoria = async (ctx: Context) => {
       return;
     }
 
+    const resultadoId = await client.query(
+      "SELECT COALESCE(MAX(Id_Categoria), 0) + 1 AS Id_Siguiente FROM categorias"
+    );
+    const Id_Categoria = Number(resultadoId[0]?.Id_Siguiente);
+    if (!Number.isInteger(Id_Categoria) || Id_Categoria <= 0) {
+      throw new Error("No fue posible asignar un identificador a la categoría");
+    }
+
     await client.execute(
-      "INSERT INTO categorias (Nombre_Categoria, Descripcion) VALUES (?, ?)",
-      [Nombre_Categoria, Descripcion ?? null]
+      "INSERT INTO categorias (Id_Categoria, Nombre_Categoria, Descripcion) VALUES (?, ?, ?)",
+      [Id_Categoria, Nombre_Categoria, Descripcion ?? null]
     );
 
     ctx.response.status = 201;
@@ -57,7 +65,7 @@ export const crearCategoria = async (ctx: Context) => {
   }
 };
 
-export const actualizarCategoria = async (ctx: Context) => {
+export const actualizarCategoria = async (ctx: RouterContext<string>) => {
   const { id } = ctx.params as { id: string };
   try {
     const body: Partial<Categoria> = await ctx.request.body.json();
@@ -76,7 +84,7 @@ export const actualizarCategoria = async (ctx: Context) => {
   }
 };
 
-export const eliminarCategoria = async (ctx: Context) => {
+export const eliminarCategoria = async (ctx: RouterContext<string>) => {
   const { id } = ctx.params as { id: string };
   try {
     await client.execute("DELETE FROM categorias WHERE Id_Categoria = ?", [id]);

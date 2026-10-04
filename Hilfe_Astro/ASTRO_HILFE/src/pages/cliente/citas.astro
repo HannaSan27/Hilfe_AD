@@ -94,3 +94,49 @@ function formatearFecha(fecha: string | Date) {
     </main>
   </div>
 </Layout>
+
+<script is:inline>
+  const apiClienteCitas = "http://127.0.0.1:8000";
+  const estadoTextoCita = (estado) => ({ pendiente: "Pendiente", aceptado: "Aceptada", en_proceso: "En proceso", rumbo_a_ubicacion: "En camino", trabajo_realizado: "Trabajo realizado", finalizado: "Finalizada", cancelada: "Cancelada", rechazado: "Rechazada" }[estado] || estado || "Pendiente");
+  const estadoClaseCita = (estado) => ({ pendiente: "badge-warning", aceptado: "badge-success", en_proceso: "badge-success", rumbo_a_ubicacion: "badge-success", trabajo_realizado: "badge-info", finalizado: "badge-info", cancelada: "badge-danger", rechazado: "badge-danger" }[estado] || "badge-neutral");
+  const cargarCitasCliente = async (silencioso = false) => {
+    let usuario;
+    try { usuario = JSON.parse(localStorage.getItem("usuario") || "null"); } catch { usuario = null; }
+    if (!usuario?.id) return;
+    try {
+      const token = localStorage.getItem("token");
+      const response = await fetch(`${apiClienteCitas}/api/solicitudes?cliente=${encodeURIComponent(usuario.id)}`, { headers: token ? { Authorization: `Bearer ${token}` } : {} });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(result.mensaje || "No se pudieron cargar tus citas.");
+      const citas = Array.isArray(result) ? result : Array.isArray(result?.value) ? result.value : [];
+      const tbody = document.querySelector(".content-card tbody");
+      if (!tbody) return;
+      tbody.replaceChildren();
+      if (!citas.length) {
+        const row = document.createElement("tr");
+        const cell = document.createElement("td"); cell.colSpan = 6;
+        const empty = document.createElement("div"); empty.className = "empty-state";
+        const icon = document.createElementNS("http://www.w3.org/2000/svg", "svg"); icon.setAttribute("viewBox", "0 0 24 24"); icon.setAttribute("fill", "none"); icon.setAttribute("stroke", "currentColor"); icon.setAttribute("stroke-width", "1.5");
+        const rect = document.createElementNS("http://www.w3.org/2000/svg", "rect"); rect.setAttribute("x", "3"); rect.setAttribute("y", "4"); rect.setAttribute("width", "18"); rect.setAttribute("height", "18"); rect.setAttribute("rx", "2"); rect.setAttribute("ry", "2"); icon.appendChild(rect);
+        const text = document.createElement("p"); text.textContent = "No tienes citas registradas.";
+        empty.append(icon, text); cell.appendChild(empty); row.appendChild(cell); tbody.appendChild(row); return;
+      }
+      for (const cita of citas) {
+        const estado = String(cita.Estado_Solicitudes || "pendiente").toLowerCase();
+        const row = document.createElement("tr");
+        const servicio = document.createElement("td"); const titulo = document.createElement("strong"); titulo.style.color = "var(--primary)"; titulo.textContent = cita.Titulo_Servicio || "Servicio"; servicio.appendChild(titulo);
+        const trabajador = document.createElement("td"); trabajador.textContent = cita.Nombre_Trabajador || "—";
+        const fecha = document.createElement("td"); const date = new Date(cita.Fecha_Servicio); fecha.textContent = cita.Fecha_Servicio && !Number.isNaN(date.getTime()) ? date.toLocaleDateString("es-CO") : cita.Fecha_Servicio || "—";
+        const hora = document.createElement("td"); hora.textContent = cita.Hora_Servicio || "—";
+        const direccion = document.createElement("td"); direccion.textContent = cita.Direccion || "—";
+        const estadoCell = document.createElement("td"); const badge = document.createElement("span"); badge.className = `badge ${estadoClaseCita(estado)}`; badge.textContent = estadoTextoCita(estado); estadoCell.appendChild(badge);
+        row.append(servicio, trabajador, fecha, hora, direccion, estadoCell); tbody.appendChild(row);
+      }
+    } catch (error) {
+      if (!silencioso) window.alert(error instanceof Error ? error.message : "No se pudieron cargar tus citas.");
+    }
+  };
+  cargarCitasCliente();
+  window.setInterval(() => cargarCitasCliente(true), 12000);
+  window.addEventListener("focus", () => cargarCitasCliente(true));
+</script>
