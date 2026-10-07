@@ -1,7 +1,9 @@
 ---
 import Layout from "../../layouts/Layout.astro";
-import ThemeToggle from "../../components/Themetoggle .astro";
+import ClienteSidebar from "../../components/clientesidebar.astro";
+import ClienteTopbar from "../../components/clientetopbar.astro";
 import "../../components/styles/indexcliente.css";
+import "../../components/styles/panelcliente.css";
 
 interface Calificacion {
   puntaje: number;
@@ -47,43 +49,16 @@ const porCalificar = solicitudes.filter((s) => s.estado === "finalizado" && s.ca
 ---
 
 <Layout>
-  <link rel="stylesheet" href="/css/design-system.css" />
-
-  <!-- Navbar -->
-  <nav class="navbar-hilfe" id="hilfeNavbar">
-    <div class="nav-inner">
-      <a href="/" class="logo">
-        Hilf<span class="logo-accent">'e</span>
-      </a>
-      <button class="nav-toggle" id="navToggle" aria-label="Toggle menu">
-        <span></span><span></span><span></span>
-      </button>
-      <div class="nav-links" id="navLinks">
-        <a href="/cliente" class="active">Mis solicitudes</a>
-        <a href="/cliente/citas">Mis citas</a>
-        <a href="/cliente/editarperfil">Mi perfil</a>
-        <a href="/" class="nav-back-link">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
-          Volver al sitio
-        </a>
-      </div>
-      <div class="nav-actions">
-        <ThemeToggle size={18} />
-        <!-- TODO YoMenu: reemplaza por tu componente Astro de menú de usuario -->
-      </div>
-    </div>
-  </nav>
-
-  <!-- Main Content -->
-  <div class="page-layout" style="padding-top: 100px;">
-    <main style="grid-column: 1 / -1">
-      <!-- Header -->
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;flex-wrap:wrap;gap:12px">
-        <div>
-          <h1 style="font-size:28px;font-weight:800;color:var(--text);margin:0">Mis solicitudes</h1>
-          <p style="color:var(--text-secondary);margin:4px 0 0">Bienvenido, <a href="/cliente/editarperfil" style="color:var(--primary);font-weight:700;text-decoration:none">{nombre}</a></p>
+  <div class="trabajador-shell cliente-shell cliente-dashboard-shell">
+    <ClienteSidebar active="solicitudes" />
+    <main class="trabajador-main cliente-main cliente-dashboard-main">
+      <ClienteTopbar title="Mis solicitudes" subtitle="Consulta el estado y el historial de tus servicios." />
+      <section class="cliente-dashboard-intro">
+        <div class="cliente-dashboard-greeting">
+          <span class="cliente-eyebrow">TU ACTIVIDAD</span>
+          <p>Bienvenido, <a id="nombreBienvenidaCliente" href="/cliente/editarperfil">{nombre}</a></p>
         </div>
-        <div style="display:flex;align-items:center;gap:10px">
+        <div class="cliente-dashboard-actions">
           <button id="calificacionesPendientes" class="btn btn-secondary btn-sm" hidden={porCalificar === 0} onclick="var b=document.querySelector('.btn-calificar');if(b){b.scrollIntoView({behavior:'smooth',block:'center'});b.click()}" style="position:relative;padding:8px 14px">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
               Calificar
@@ -94,7 +69,7 @@ const porCalificar = solicitudes.filter((s) => s.estado === "finalizado" && s.ca
             Nuevo servicio
           </a>
         </div>
-      </div>
+      </section>
 
       <!-- Stats Grid -->
       <div class="stats-grid stagger">
@@ -137,7 +112,7 @@ const porCalificar = solicitudes.filter((s) => s.estado === "finalizado" && s.ca
       </div>
 
       <!-- Solicitudes List -->
-      <div class="card" style="margin-top:24px">
+      <div class="card cliente-history-card">
         <div class="card-header">
           <h3 style="font-size:16px;font-weight:700;color:var(--text);display:flex;align-items:center;gap:8px">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
@@ -336,7 +311,7 @@ const porCalificar = solicitudes.filter((s) => s.estado === "finalizado" && s.ca
         if (pendientesDeCalificar) pendientesDeCalificar.hidden = finalizadas === 0;
         if (contadorCalificaciones) contadorCalificaciones.textContent = String(finalizadas);
         const nombre = usuario.nombre || "Cliente";
-        const bienvenida = document.querySelector("main p a[href='/cliente/editarperfil']");
+        const bienvenida = document.getElementById("nombreBienvenidaCliente");
         if (bienvenida) bienvenida.textContent = nombre;
       } catch (error) {
         if (!silencioso) mostrarErrorCliente(error instanceof Error ? error.message : "No se pudieron cargar tus solicitudes.");

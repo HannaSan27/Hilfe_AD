@@ -2,12 +2,13 @@
 import Layout from '../../../layouts/Layout.astro';
 import HomeNav from '../../../components/HomeNav.astro';
 import '../../../components/styles/design-system.css';
+import '../../../components/styles/trabajador-fotos.css';
 ---
 
 <Layout title="Fotos del servicio — Hilf'e">
 	<HomeNav />
 
-	<main class="container" style="padding-top: 40px; padding-bottom: 48px;">
+	<main class="container service-photos-page">
 		<section class="card">
 			<div class="card-header">
 				<h1>Fotos del servicio</h1>
@@ -28,7 +29,7 @@ import '../../../components/styles/design-system.css';
 		<section class="card" aria-labelledby="fotosTitulo">
 			<div class="card-header"><h2 id="fotosTitulo">Fotos guardadas</h2></div>
 			<div class="card-body">
-				<div id="listaFotos"></div>
+				<div id="listaFotos" class="service-photo-grid"></div>
 			</div>
 		</section>
 

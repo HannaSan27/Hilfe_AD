@@ -29,7 +29,8 @@ const {
 
 		<script is:inline>
 			(function () {
-				var current = localStorage.getItem('theme') || 'light';
+				var current = 'light';
+				try { current = localStorage.getItem('theme') || 'light'; } catch (e) {}
 				document.documentElement.setAttribute('data-theme', current);
 
 				function updateAllThemeIcons(theme) {
@@ -44,14 +45,17 @@ const {
 				updateAllThemeIcons(current);
 
 				document.addEventListener('click', function (e) {
-					var btn = e.target.closest('.theme-toggle');
+					var target = e.target;
+					var btn = target && target.closest ? target.closest('.theme-toggle') : null;
 					if (!btn) return;
+					e.preventDefault();
+					e.stopPropagation();
 					var next =
 						document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
 					document.documentElement.setAttribute('data-theme', next);
-					localStorage.setItem('theme', next);
+					try { localStorage.setItem('theme', next); } catch (e) {}
 					updateAllThemeIcons(next);
-				});
+				}, true);
 			})();
 		</script>
 	</body>

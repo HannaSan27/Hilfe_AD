@@ -99,14 +99,14 @@ export const crearServicio = async (ctx: Context) => {
       return;
     }
 
-    await client.execute(
+    const resultado = await client.execute(
       `INSERT INTO servicios (Id_Trabajador, Id_Categoria, Titulo, Descripcion, Precio, TipoServicio)
        VALUES (?, ?, ?, ?, ?, ?)`,
       [Id_Trabajador, Id_Categoria, Titulo, Descripcion ?? null, Precio, TipoServicio ?? null]
     );
 
     ctx.response.status = 201;
-    ctx.response.body = { mensaje: "Servicio creado correctamente" };
+    ctx.response.body = { mensaje: "Servicio creado correctamente", Id_Servicio: Number(resultado.lastInsertId) };
   } catch (error) {
     ctx.response.status = 500;
     ctx.response.body = { mensaje: "Error al crear el servicio", error: String(error) };

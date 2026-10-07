@@ -278,8 +278,9 @@ const totalServicios = categorias.reduce((acc, c) => acc + c.count, 0);
 						fetch(api + '/servicios'),
 						fetch(api + '/trabajadores')
 					]);
-					var datos = await Promise.all(resultados.map(leerRespuesta));
+					var datos = await Promise.all([leerRespuesta(resultados[0]), leerRespuesta(resultados[1])]);
 					var trabajadoresActivos = new Set(datos[1].map(function (trabajador) { return String(trabajador.Id_Usuario); }));
+					var trabajadoresPorId = new Map(datos[1].map(function (trabajador) { return [String(trabajador.Id_Usuario), trabajador]; }));
 					var serviciosActivos = datos[0].filter(function (servicio) {
 						return trabajadoresActivos.has(String(servicio.Id_Trabajador));
 					});
@@ -295,11 +296,36 @@ const totalServicios = categorias.reduce((acc, c) => acc + c.count, 0);
 					serviciosActivos.forEach(function (servicio, indice) {
 						var tarjeta = plantilla.content.firstElementChild.cloneNode(true);
 						var nombre = servicio.Nombre_Trabajador || 'Trabajador';
+						var trabajador = trabajadoresPorId.get(String(servicio.Id_Trabajador));
+						var badgeVerificacion = tarjeta.querySelector('.worker-badge');
+						var estaVerificado = trabajador && (trabajador.Verificado === true || Number(trabajador.Verificado) === 1);
+						badgeVerificacion.textContent = estaVerificado ? '✓ Verificado' : '✗ Sin verificar';
+						if (estaVerificado) badgeVerificacion.removeAttribute('style');
+						else badgeVerificacion.style.cssText = 'background:rgba(239,68,68,0.15);color:#ef4444;';
 						tarjeta.querySelector('.worker-info h4').textContent = nombre;
 						tarjeta.querySelector('.worker-service').textContent = servicio.Titulo || '';
 						tarjeta.querySelector('.worker-meta span').textContent = servicio.Ubicacion || '';
 						tarjeta.querySelector('.worker-footer strong').textContent = '$' + Number(servicio.Precio || 0).toLocaleString('es-CO');
-						tarjeta.querySelector('.worker-avatar').textContent = nombre.charAt(0).toUpperCase();
+						var avatarInicial = tarjeta.querySelector('.worker-avatar-initial');
+						var avatarFoto = tarjeta.querySelector('.worker-avatar-img');
+						var banner = tarjeta.querySelector('.worker-banner');
+						avatarInicial.textContent = nombre.charAt(0).toUpperCase();
+						if (trabajador && trabajador.Foto_Perfil) {
+							var urlFotoPerfil = api + '/usuarios/' + encodeURIComponent(servicio.Id_Trabajador) + '/foto-perfil?v=' + encodeURIComponent(trabajador.Foto_Perfil);
+							banner.style.backgroundImage = 'linear-gradient(135deg, rgba(29, 78, 216, .38), rgba(15, 23, 42, .42)), url("' + urlFotoPerfil + '")';
+							banner.style.backgroundSize = 'cover';
+							banner.style.backgroundPosition = 'center';
+							banner.style.backgroundRepeat = 'no-repeat';
+							avatarFoto.addEventListener('load', function () {
+								avatarFoto.hidden = false;
+								avatarInicial.style.display = 'none';
+							}, { once: true });
+							avatarFoto.addEventListener('error', function () {
+								avatarFoto.hidden = true;
+								avatarInicial.style.display = '';
+							}, { once: true });
+							avatarFoto.src = urlFotoPerfil;
+						}
 						tarjeta.querySelector('.worker-btn').href = '/trabajador/perfil/?id=' + encodeURIComponent(servicio.Id_Trabajador) + '&servicioId=' + encodeURIComponent(servicio.Id_Servicio);
 						tarjeta.style.animationDelay = ((indice % 6) * 0.1).toFixed(1) + 's';
 						grid.appendChild(tarjeta);

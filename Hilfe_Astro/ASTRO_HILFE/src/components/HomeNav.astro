@@ -1,5 +1,6 @@
 ---
 import './styles/homenav.css';
+import UserMenu from './UserMenu.astro';
 ---
 
 <nav class="navbar-hilfe" id="navbar">
@@ -33,12 +34,13 @@ import './styles/homenav.css';
 			<li><a href="/#como-funciona" id="ayudaLink">Ayuda</a></li>
 		</ul>
 		<div class="nav-actions">
-			<button class="theme-toggle" id="themeToggle" aria-label="Cambiar tema">
+			<button type="button" class="theme-toggle" aria-label="Cambiar tema">
 				<svg class="theme-icon-light" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
 				<svg class="theme-icon-dark" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display: none"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
 			</button>
 			<a href="/login/login" class="btn-login">Iniciar sesión</a>
 			<a href="/login/registrar" class="btn-register">Registrarse</a>
+			<UserMenu variant="nav" />
 		</div>
 		<button class="nav-toggle" id="navToggle" aria-label="Menú">
 			<span></span><span></span><span></span>
@@ -57,32 +59,12 @@ import './styles/homenav.css';
 			usuario = JSON.parse(localStorage.getItem('usuario') || 'null');
 		} catch (e) { usuario = null; token = null; }
 		var sesionActiva = typeof token === 'string' && token.trim().length > 0 &&
-			usuario && typeof usuario === 'object' && typeof usuario.nombre === 'string' &&
-			usuario.nombre.trim().length > 0;
+			usuario && typeof usuario === 'object' && typeof (usuario.nombre || usuario.Nombre) === 'string' &&
+			(usuario.nombre || usuario.Nombre).trim().length > 0;
 		var botonLogin = acciones && acciones.querySelector('.btn-login');
-		var botonRegistro = acciones && acciones.querySelector('.btn-register');		
+		var botonRegistro = acciones && acciones.querySelector('.btn-register');
 		if (botonLogin) botonLogin.hidden = Boolean(sesionActiva);
 		if (botonRegistro) botonRegistro.hidden = Boolean(sesionActiva);
-		if (sesionActiva && acciones) {
-			var destinos = { 1: '/admin/admin', 2: '/trabajador/', 3: '/cliente/' };
-			var enlaceExistente = acciones.querySelector('.nav-user');
-			if (enlaceExistente) enlaceExistente.remove();
-			var enlaceUsuario = document.createElement('a');
-			enlaceUsuario.className = 'nav-user';
-			enlaceUsuario.href = destinos[Number(usuario.rol)] || '/';
-			enlaceUsuario.setAttribute('aria-label', 'Sesión iniciada como ' + usuario.nombre);
-			var inicial = document.createElement('span');
-			inicial.className = 'nav-user-initial';
-			inicial.textContent = usuario.nombre.trim().charAt(0).toUpperCase();
-			var nombre = document.createElement('span');
-			nombre.className = 'nav-user-name';
-			nombre.textContent = usuario.nombre.trim();
-			enlaceUsuario.append(inicial, nombre);
-			acciones.appendChild(enlaceUsuario);
-		} else if (acciones) {
-			var enlaceExistente = acciones.querySelector('.nav-user');
-			if (enlaceExistente) enlaceExistente.remove();
-		}
 		var ticking = false;
 		window.addEventListener('scroll', function () {
 			if (!ticking) {

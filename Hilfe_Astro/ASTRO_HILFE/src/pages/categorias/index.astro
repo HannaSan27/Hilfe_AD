@@ -304,11 +304,16 @@ const servicios = [];
 			Promise.all([
 				fetch(api + '/categorias').then(function (r) { if (!r.ok) throw new Error('Categorías: ' + r.status); return r.json(); }),
 				fetch(api + '/servicios').then(function (r) { if (!r.ok) throw new Error('Servicios: ' + r.status); return r.json(); }),
-				fetch(api + '/disponibilidad').then(function (r) { if (!r.ok) throw new Error('Disponibilidad: ' + r.status); return r.json(); })
+				fetch(api + '/disponibilidad').then(function (r) { if (!r.ok) throw new Error('Disponibilidad: ' + r.status); return r.json(); }),
+				fetch(api + '/trabajadores').then(function (r) { if (!r.ok) return []; return r.json(); }).catch(function () { return []; })
 			]).then(function (respuesta) {
 				var categorias = Array.isArray(respuesta[0]) ? respuesta[0] : (respuesta[0].value || []);
 				var servicios = Array.isArray(respuesta[1]) ? respuesta[1] : (respuesta[1].value || []);
 				var disponibilidad = Array.isArray(respuesta[2]) ? respuesta[2] : (respuesta[2].value || []);
+				var trabajadores = Array.isArray(respuesta[3]) ? respuesta[3] : (respuesta[3].value || []);
+				var trabajadoresPorId = new Map(trabajadores.map(function (trabajador) {
+					return [String(trabajador.Id_Usuario), trabajador];
+				}));
 				var grid = document.getElementById('catGrid');
 				var filtros = document.querySelector('.cat-filter-list');
 				var container = document.getElementById('workersContainer');
@@ -338,6 +343,23 @@ const servicios = [];
 					card.dataset.category = String(s.Id_Categoria); card.dataset.categoryName = cat.toLowerCase(); card.dataset.price = String(precio);
 					card.dataset.rating = String(rating); card.dataset.estado = estado;
 					card.innerHTML = '<div class="worker-card-photo"><div class="photo-placeholder">' + seguro(nombre.charAt(0).toUpperCase()) + '</div><span class="worker-card-badge" style="background:rgba(239,68,68,0.12);color:#ef4444;">âœ— Sin verificar</span><span class="worker-card-status ' + estado + '">' + (disponible ? 'Disponible hoy' : 'No disponible') + '</span></div><div class="worker-card-body"><div class="worker-card-top"><div class="worker-card-name">' + seguro(nombre) + '</div><div class="worker-card-rating">' + rating.toFixed(1) + ' <small>(' + resenas + ')</small></div></div><div class="worker-card-service">' + seguro(titulo) + '</div><div class="worker-card-meta"><span><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>' + seguro(s.Ubicacion || 'Ubicación no disponible') + '</span><span><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>' + resenas + ' reseñas</span></div><div class="worker-card-tags"><span class="worker-tag">' + seguro(cat) + '</span></div><div class="worker-card-footer"><div class="worker-card-price">$' + precio.toLocaleString('es-CO') + '<small>/servicio</small></div><a href="/trabajador/perfil/?id=' + encodeURIComponent(s.Id_Trabajador) + '&servicioId=' + encodeURIComponent(s.Id_Servicio) + '" class="worker-card-btn">Ver perfil<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg></a></div></div>';
+					var trabajador = trabajadoresPorId.get(String(s.Id_Trabajador));
+					var badgeVerificacion = card.querySelector('.worker-card-badge');
+					var estaVerificado = trabajador && (trabajador.Verificado === true || Number(trabajador.Verificado) === 1);
+					badgeVerificacion.textContent = estaVerificado ? '✓ Verificado' : '✗ Sin verificar';
+					if (estaVerificado) badgeVerificacion.removeAttribute('style');
+					if (trabajador && trabajador.Foto_Perfil) {
+						var foto = document.createElement('img');
+						var areaFoto = card.querySelector('.worker-card-photo');
+						var inicial = card.querySelector('.photo-placeholder');
+						foto.className = 'worker-card-profile-img';
+						foto.alt = 'Foto de ' + nombre;
+						foto.hidden = true;
+						foto.onload = function () { foto.hidden = false; inicial.hidden = true; };
+						foto.onerror = function () { foto.hidden = true; inicial.hidden = false; };
+						areaFoto.insertBefore(foto, areaFoto.firstChild);
+						foto.src = api + '/usuarios/' + encodeURIComponent(s.Id_Trabajador) + '/foto-perfil?v=' + encodeURIComponent(trabajador.Foto_Perfil);
+					}
 					container.appendChild(card);
 				});
 				var inicial = window.categoriaInicial;

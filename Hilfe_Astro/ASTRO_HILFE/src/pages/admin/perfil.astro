@@ -1,0 +1,122 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import AdminSidebar from '../../components/adminsidebar.astro';
+import AdminTopbar from '../../components/admintopbar.astro';
+import '../../components/styles/admin.css';
+---
+
+<Layout title="Mi perfil">
+  <div class="admin-shell">
+    <AdminSidebar />
+    <div class="admin-main">
+      <AdminTopbar title="Mi perfil" subtitle="Administra tu información personal" />
+      <main class="admin-content">
+        <section class="admin-card admin-profile-card">
+          <div class="admin-card-header">
+            <h3>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+              Información personal
+            </h3>
+          </div>
+          <form id="adminProfileForm" class="admin-profile-form">
+            <div class="form-group">
+              <label for="adminNombre">Nombre completo</label>
+              <input class="form-control" id="adminNombre" name="nombre" autocomplete="name" required />
+            </div>
+            <div class="form-group">
+              <label for="adminCorreo">Correo electrónico</label>
+              <input class="form-control" id="adminCorreo" type="email" disabled />
+              <small>El correo no se puede modificar.</small>
+            </div>
+            <div class="form-group">
+              <label for="adminTelefono">Teléfono</label>
+              <input class="form-control" id="adminTelefono" name="telefono" autocomplete="tel" />
+            </div>
+            <div class="form-group">
+              <label for="adminUbicacion">Ubicación</label>
+              <input class="form-control" id="adminUbicacion" name="ubicacion" autocomplete="address-level2" />
+            </div>
+            <p id="adminProfileMessage" class="admin-profile-message" role="status" hidden></p>
+            <div class="admin-profile-actions"><button class="btn btn-primary" type="submit">Guardar cambios</button></div>
+          </form>
+        </section>
+      </main>
+    </div>
+  </div>
+</Layout>
+
+<style>
+  .admin-profile-card { max-width: 900px; overflow: hidden; }
+  .admin-profile-card .admin-card-header h3 { display: flex; align-items: center; gap: 11px; }
+  .admin-profile-card .admin-card-header svg { width: 36px; height: 36px; padding: 8px; border-radius: 10px; background: var(--primary-soft); color: var(--primary); }
+  .admin-profile-form { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 2px 22px; padding: 28px; }
+  .admin-profile-form[hidden] { display: none !important; }
+  .admin-profile-form .form-group { min-width: 0; margin-bottom: 18px; }
+  .admin-profile-form .form-control { min-height: 44px; background: var(--input-bg); color: var(--text); font: inherit; }
+  .admin-profile-form .form-control:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(37, 99, 235, .15); }
+  .admin-profile-form .form-control:disabled { background: var(--bg-card-alt); color: var(--text-secondary); cursor: not-allowed; }
+  .admin-profile-form small { display: block; margin-top: 6px; color: var(--text-muted); font-size: 12px; }
+  .admin-profile-message { grid-column: 1 / -1; margin: 0 0 12px; padding: 12px 14px; border-radius: 10px; background: var(--success-soft); color: var(--success); font-size: 14px; }
+  .admin-profile-message.is-error { background: var(--danger-soft); color: var(--danger); }
+  .admin-profile-actions { grid-column: 1 / -1; display: flex; justify-content: flex-end; padding-top: 18px; border-top: 1px solid var(--border); }
+  .admin-profile-actions .btn { min-height: 44px; padding-inline: 22px; }
+  @media (max-width: 640px) { .admin-profile-form { grid-template-columns: 1fr; padding: 20px; } .admin-profile-actions .btn { width: 100%; justify-content: center; } }
+</style>
+
+<script is:inline>
+  (() => {
+    const api = 'http://127.0.0.1:8000/api';
+    const form = document.getElementById('adminProfileForm');
+    const message = document.getElementById('adminProfileMessage');
+    const fields = {
+      nombre: document.getElementById('adminNombre'),
+      correo: document.getElementById('adminCorreo'),
+      telefono: document.getElementById('adminTelefono'),
+      ubicacion: document.getElementById('adminUbicacion')
+    };
+    let usuario = null;
+    try { usuario = JSON.parse(localStorage.getItem('usuario') || 'null'); } catch {}
+    if (!usuario?.id || Number(usuario.rol) !== 1) {
+      message.textContent = 'Inicia sesión como administrador para consultar tu perfil.';
+      message.classList.add('is-error'); message.hidden = false;
+      form.hidden = true;
+      return;
+    }
+    const mostrarMensaje = (texto, error = false) => {
+      message.textContent = texto;
+      message.classList.toggle('is-error', error);
+      message.hidden = false;
+    };
+    (async () => {
+      try {
+        const response = await fetch(`${api}/usuarios/${encodeURIComponent(usuario.id)}`);
+        const result = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(result.mensaje || 'No se pudo cargar tu perfil.');
+        fields.nombre.value = result.Nombre || usuario.nombre || '';
+        fields.correo.value = result.Correo || usuario.correo || '';
+        fields.telefono.value = result.Telefono || '';
+        fields.ubicacion.value = result.Ubicacion || '';
+      } catch (error) { mostrarMensaje(error instanceof Error ? error.message : 'No se pudo cargar tu perfil.', true); }
+    })();
+    form.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const token = localStorage.getItem('token');
+      if (!token) { mostrarMensaje('Inicia sesión para guardar los cambios.', true); return; }
+      const boton = form.querySelector('button[type="submit"]');
+      boton.disabled = true;
+      try {
+        const response = await fetch(`${api}/usuarios/${encodeURIComponent(usuario.id)}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+          body: JSON.stringify({ nombre: fields.nombre.value.trim(), telefono: fields.telefono.value.trim(), ubicacion: fields.ubicacion.value.trim() })
+        });
+        const result = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(result.mensaje || 'No se pudieron guardar los cambios.');
+        usuario.nombre = fields.nombre.value.trim();
+        localStorage.setItem('usuario', JSON.stringify(usuario));
+        mostrarMensaje(result.mensaje || 'Perfil actualizado correctamente.');
+      } catch (error) { mostrarMensaje(error instanceof Error ? error.message : 'No se pudieron guardar los cambios.', true); }
+      finally { boton.disabled = false; }
+    });
+  })();
+</script>

@@ -23,7 +23,7 @@ const animDelay = ((id % 6) * 0.1).toFixed(1);
 				<span class="worker-badge" style="background:rgba(239,68,68,0.15);color:#ef4444;">✗ Sin verificar</span>
 			)
 		}
-		<span class="worker-avatar">{inicial}</span>
+		<span class="worker-avatar"><span class="worker-avatar-initial">{inicial}</span><img class="worker-avatar-img" alt={`Foto de ${nombre}`} hidden /></span>
 	</div>
 	<div class="worker-info">
 		<h4>{nombre}</h4>

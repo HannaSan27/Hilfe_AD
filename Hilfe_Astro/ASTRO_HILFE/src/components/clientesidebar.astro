@@ -14,9 +14,13 @@ const { active = "solicitudes" } = Astro.props;
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
       Mis solicitudes
     </a>
-    <a href="/cliente/citas" class:list={["sidebar-link", { active: active === "citas" }]}>
+    <a href="/cliente/citas" class:list={["sidebar-link", { active: active === "citas" }]} id="navCitasCliente" aria-label="Mis citas">
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
       Mis citas
+      <span class="cliente-citas-bell-area" aria-hidden="true">
+        <svg class="cliente-citas-bell-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M10 21h4"/></svg>
+        <span id="contadorAvisosCitasCliente" class="cliente-citas-badge" hidden>0</span>
+      </span>
     </a>
     <a href="/cliente/editarperfil" class:list={["sidebar-link", { active: active === "perfil" }]}>
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
@@ -36,4 +40,75 @@ const { active = "solicitudes" } = Astro.props;
     localStorage.removeItem("token");
     localStorage.removeItem("usuario");
   });
+
+  (() => {
+    const api = "http://127.0.0.1:8000/api/solicitudes";
+    const claveEstado = (id) => `hilf-e:cliente:${id}:estados-solicitudes`;
+    const claveAvisos = (id) => `hilf-e:cliente:${id}:avisos-citas`;
+    const relevantes = new Set(["aceptado", "rechazado"]);
+    const botonCitas = document.getElementById("navCitasCliente");
+    const badge = document.getElementById("contadorAvisosCitasCliente");
+    if (!botonCitas || !badge) return;
+
+    const leerObjeto = (key) => {
+      try {
+        const value = JSON.parse(localStorage.getItem(key) || "{}");
+        return value && typeof value === "object" && !Array.isArray(value) ? value : {};
+      } catch { return {}; }
+    };
+    const leerAvisos = (key) => {
+      try {
+        const value = JSON.parse(localStorage.getItem(key) || "[]");
+        return Array.isArray(value) ? value : [];
+      } catch { return []; }
+    };
+    const guardar = (key, value) => {
+      try { localStorage.setItem(key, JSON.stringify(value)); } catch {}
+    };
+    const actualizarBadge = (cantidad) => {
+      badge.textContent = cantidad > 99 ? "99+" : String(cantidad);
+      badge.hidden = cantidad === 0;
+      botonCitas.setAttribute("aria-label", cantidad ? `Mis citas, ${cantidad} avisos sin leer` : "Mis citas");
+    };
+
+    const cargarAvisos = async () => {
+      let usuario;
+      try { usuario = JSON.parse(localStorage.getItem("usuario") || "null"); } catch { usuario = null; }
+      const clienteId = usuario?.id;
+      if (!clienteId) { actualizarBadge(0); return; }
+
+      try {
+        const token = localStorage.getItem("token");
+        const response = await fetch(`${api}?cliente=${encodeURIComponent(clienteId)}`, {
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+        });
+        if (!response.ok) return;
+        const result = await response.json();
+        const solicitudes = Array.isArray(result) ? result : Array.isArray(result?.value) ? result.value : [];
+        const estadosActuales = {};
+        const estadosAnteriores = leerObjeto(claveEstado(clienteId));
+        const primeraConsulta = !localStorage.getItem(claveEstado(clienteId));
+        const avisos = new Set(leerAvisos(claveAvisos(clienteId)));
+
+        for (const solicitud of solicitudes) {
+          const id = String(solicitud.Id_Solicitud ?? "");
+          if (!id) continue;
+          const estado = String(solicitud.Estado_Solicitudes || "pendiente").toLowerCase();
+          estadosActuales[id] = estado;
+          const anterior = estadosAnteriores[id];
+          const cambioAtendible = relevantes.has(estado) && (primeraConsulta || (anterior && anterior !== estado));
+          if (cambioAtendible) avisos.add(`${id}:${estado}`);
+        }
+
+        guardar(claveEstado(clienteId), estadosActuales);
+        if (botonCitas.classList.contains("active")) avisos.clear();
+        guardar(claveAvisos(clienteId), [...avisos]);
+        actualizarBadge(avisos.size);
+      } catch {}
+    };
+
+    cargarAvisos();
+    window.setInterval(cargarAvisos, 12000);
+    window.addEventListener("focus", cargarAvisos);
+  })();
 </script>

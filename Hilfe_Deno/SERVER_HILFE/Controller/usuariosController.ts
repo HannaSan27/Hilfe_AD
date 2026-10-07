@@ -2,6 +2,8 @@ import { Context, RouterContext } from "./../Dependencies/dependencies.ts";
 import {
   buscarUsuarioPorId,
   actualizarUsuario,
+  actualizarUsuarioConLimiteNombre,
+  consultarCambiosNombreRestantes,
   actualizarFotoPerfil,
 } from "./../Models/usuariosModel.ts";
 
@@ -26,7 +28,9 @@ export async function obtenerPerfil(ctx: RouterContext<string>) {
 export async function editarPerfil(ctx: RouterContext<string>) {
   const id = Number(ctx.params.id);
   const body = await ctx.request.body.json();
-  const { nombre, telefono, ubicacion } = body;
+  const nombre = String(body.nombre || "").trim().replace(/\s+/g, " ");
+  const telefono = body.telefono;
+  const ubicacion = body.ubicacion;
 
   if (!nombre) {
     ctx.response.status = 400;
@@ -34,10 +38,37 @@ export async function editarPerfil(ctx: RouterContext<string>) {
     return;
   }
 
-  await actualizarUsuario(id, nombre, telefono, ubicacion);
+  const usuarioActual = await buscarUsuarioPorId(id);
+  if (!usuarioActual) {
+    ctx.response.status = 404;
+    ctx.response.body = { mensaje: "Usuario no encontrado" };
+    return;
+  }
+
+  const nombreActual = String(usuarioActual.Nombre || "").trim().replace(/\s+/g, " ");
+  if (nombre !== nombreActual) {
+    const resultado = await actualizarUsuarioConLimiteNombre(id, nombre, telefono, ubicacion);
+    if (Number(resultado.affectedRows || 0) === 0) {
+      const usuarioRevisado = await buscarUsuarioPorId(id);
+      const nombreRevisado = String(usuarioRevisado?.Nombre || "").trim().replace(/\s+/g, " ");
+      if (nombre !== nombreRevisado) {
+        ctx.response.status = 429;
+        ctx.response.body = {
+          mensaje: "Alcanzaste el límite de 3 cambios de nombre completo este mes.",
+          cambiosNombreRestantes: 0,
+        };
+        return;
+      }
+      await actualizarUsuario(id, nombre, telefono, ubicacion);
+    }
+  } else {
+    await actualizarUsuario(id, nombre, telefono, ubicacion);
+  }
+
+  const cambiosNombreRestantes = await consultarCambiosNombreRestantes(id);
 
   ctx.response.status = 200;
-  ctx.response.body = { mensaje: "Perfil actualizado correctamente" };
+  ctx.response.body = { mensaje: "Perfil actualizado correctamente", cambiosNombreRestantes };
 }
 
 // POST /api/usuarios/:id/foto-perfil

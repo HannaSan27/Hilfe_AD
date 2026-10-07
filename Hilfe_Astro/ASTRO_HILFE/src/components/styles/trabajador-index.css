@@ -49,6 +49,11 @@
     color: #fff;
 }
 .sidebar-item i { font-size: 1.1rem; width: 20px; text-align: center; }
+.solicitudes-bell-area { position: relative; display: grid; place-items: center; width: 27px; height: 28px; margin-left: auto; flex: 0 0 27px; color: var(--text-muted); }
+.sidebar-item.active .solicitudes-bell-area { color: #fff; }
+.sidebar-item .solicitudes-bell-area > i { width: auto; font-size: 15px; }
+.solicitudes-badge { position: absolute; top: -3px; right: -5px; display: grid; place-items: center; min-width: 18px; height: 18px; padding: 0 5px; border: 2px solid var(--bg-card, #fff); border-radius: 999px; background: #dc2626; color: #fff; font-size: 10px; font-weight: 800; line-height: 1; }
+.solicitudes-badge[hidden] { display: none !important; }
 .sidebar-item.danger { color: var(--danger); }
 .sidebar-item.danger:hover { background: var(--danger-soft); color: var(--danger); }
 .section-view { display: none; }

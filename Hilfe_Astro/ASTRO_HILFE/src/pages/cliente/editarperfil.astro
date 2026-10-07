@@ -3,11 +3,13 @@ import Layout from "../../layouts/Layout.astro";
 import ClienteSidebar from "../../components/clientesidebar.astro";
 import ClienteTopbar from "../../components/clientetopbar.astro";
 import "../../components/styles/editarcliente.css";
+import "../../components/styles/panelcliente.css";
 
 interface Usuario {
   nombre: string;
   correo: string;
   telefono: string;
+  ubicacion: string;
 }
 
 // TODO: reemplaza por tu lógica real (sesión/BD/API) cuando conectes tu backend
@@ -15,20 +17,17 @@ const usuario: Usuario = {
   nombre: "",
   correo: "",
   telefono: "",
+  ubicacion: "",
 };
 
 const mensaje: string | null = null;
 ---
 
 <Layout title="Mi Perfil">
-<Fragment slot="head">
-  <link rel="stylesheet" href="/css/design-system.css" />
-</Fragment>
-
-  <div class="trabajador-shell">
+  <div class="trabajador-shell cliente-shell">
     <ClienteSidebar active="perfil" />
 
-    <main class="trabajador-main">
+    <main class="trabajador-main cliente-main">
       <ClienteTopbar title="Mi perfil" subtitle="Administra tu información personal" />
 
       {mensaje && (
@@ -38,31 +37,89 @@ const mensaje: string | null = null;
         </div>
       )}
 
-      <div class="content-card">
-        <div class="card-header">
-          <h3>
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-            Información personal
-          </h3>
+      <div class="cliente-profile-layout">
+        <div class="cliente-profile-aside">
+          <section class="cliente-profile-identity">
+            <div class="cliente-profile-person">
+              <div class="cliente-profile-avatar">
+                <img id="fotoPerfilClientePreview" alt="Foto de perfil" hidden />
+                <span id="inicialPerfilCliente">A</span>
+              </div>
+              <div class="cliente-profile-person-copy">
+                <span class="cliente-profile-kicker">PERFIL DE CLIENTE</span>
+                <h2 id="resumenNombrePerfil">Mi cuenta</h2>
+                <p id="resumenCorreoPerfil">Mantén tus datos al día</p>
+              </div>
+            </div>
+            <div class="cliente-profile-photo-actions">
+              <input id="fotoPerfilCliente" type="file" accept="image/png,image/jpeg" hidden />
+              <button id="elegirFotoPerfilCliente" type="button" class="btn btn-secondary">
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 4h-4l-2 3H5a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2-3Z"/><circle cx="12" cy="13" r="3"/></svg>
+                Elegir foto
+              </button>
+              <button id="guardarFotoPerfilCliente" type="button" class="btn btn-primary" disabled>Guardar foto</button>
+              <small id="estadoFotoPerfilCliente">JPG o PNG · máximo 8 MB</small>
+            </div>
+          </section>
+
+          <section class="cliente-profile-completion" aria-labelledby="tituloProgresoPerfil">
+            <div class="cliente-profile-completion-heading">
+              <div>
+                <span class="cliente-profile-kicker">TU CUENTA</span>
+                <h3 id="tituloProgresoPerfil">Completa tu perfil</h3>
+              </div>
+              <strong id="porcentajePerfilCliente">0%</strong>
+            </div>
+            <div class="cliente-profile-progress" role="progressbar" aria-label="Progreso del perfil" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+              <span id="barraProgresoPerfilCliente"></span>
+            </div>
+            <p id="textoProgresoPerfilCliente">Agrega tus datos para facilitar la coordinación de tus servicios.</p>
+            <ul class="cliente-profile-checklist">
+              <li data-profile-check="nombre">Nombre completo</li>
+              <li data-profile-check="telefono">Teléfono</li>
+              <li data-profile-check="ubicacion">Ubicación</li>
+              <li data-profile-check="foto">Foto de perfil</li>
+            </ul>
+          </section>
         </div>
-        <form id="formPerfilCliente" style="padding:24px;">
-          <div class="form-group">
-            <label for="nombre">Nombre completo</label>
-            <input type="text" name="nombre" id="nombre" class="form-control" value={usuario.nombre} required />
+
+        <section class="content-card cliente-content-card cliente-profile-card">
+          <div class="card-header">
+            <h3>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+              Información personal
+            </h3>
+            <p>Actualiza tus datos de contacto y el lugar donde solicitas servicios.</p>
           </div>
-          <div class="form-group">
-            <label for="correo">Correo electrónico</label>
-            <input type="email" id="correo" class="form-control" value={usuario.correo} disabled />
-            <small style="color:var(--text-muted,#94a3b8);margin-top:4px;display:block;font-size:12px;">El correo no se puede modificar.</small>
-          </div>
-          <div class="form-group">
-            <label for="telefono">Teléfono</label>
-            <input type="text" name="telefono" id="telefono" class="form-control" value={usuario.telefono} />
-          </div>
-          <div class="form-actions">
-            <button type="submit" class="btn btn-primary">Guardar cambios</button>
-          </div>
-        </form>
+          <form id="formPerfilCliente">
+            <div class="form-group">
+              <label for="nombre">Nombre</label>
+              <input type="text" name="nombre" id="nombre" class="form-control" value={usuario.nombre} autocomplete="given-name" lang="es" spellcheck="true" autocapitalize="words" required />
+            </div>
+            <div class="form-group">
+              <label for="apellido">Apellido</label>
+              <input type="text" name="apellido" id="apellido" class="form-control" autocomplete="family-name" lang="es" spellcheck="true" autocapitalize="words" required />
+              <small>Máximo 3 cambios del nombre completo por mes. Usa las sugerencias ortográficas del navegador si las necesitas.</small>
+            </div>
+            <div class="form-group">
+              <label for="correo">Correo electrónico</label>
+              <input type="email" id="correo" class="form-control" value={usuario.correo} autocomplete="email" disabled />
+              <small>El correo no se puede modificar.</small>
+            </div>
+            <div class="form-group">
+              <label for="telefono">Teléfono</label>
+              <input type="tel" name="telefono" id="telefono" class="form-control" autocomplete="tel" inputmode="tel" />
+            </div>
+            <div class="form-group">
+              <label for="ubicacion">Ciudad o ubicación</label>
+              <input type="text" name="ubicacion" id="ubicacion" class="form-control" placeholder="Ej.: Bogotá" autocomplete="address-level2" />
+            </div>
+            <div class="form-actions">
+              <span>Los cambios se reflejarán en tu cuenta.</span>
+              <button type="submit" class="btn btn-primary">Guardar cambios</button>
+            </div>
+          </form>
+        </section>
       </div>
     </main>
   </div>
@@ -71,33 +128,174 @@ const mensaje: string | null = null;
 <script is:inline>
   const apiPerfilCliente = "http://127.0.0.1:8000";
   const formularioPerfilCliente = document.getElementById("formPerfilCliente");
-  let ubicacionPerfilCliente = "";
+  const fotoInputPerfilCliente = document.getElementById("fotoPerfilCliente");
+  const fotoPreviewPerfilCliente = document.getElementById("fotoPerfilClientePreview");
+  const inicialPerfilCliente = document.getElementById("inicialPerfilCliente");
+  const botonGuardarFotoPerfilCliente = document.getElementById("guardarFotoPerfilCliente");
+  const estadoFotoPerfilCliente = document.getElementById("estadoFotoPerfilCliente");
+  let usuarioActualPerfilCliente = null;
+  let archivoFotoPerfilCliente = null;
+  let fotoPerfilGuardada = false;
+  let urlVistaPreviaPerfilCliente = "";
+
   const mostrarMensajePerfilCliente = (mensaje, correcto = false) => {
-    let contenedor = document.querySelector(".trabajador-main > .toast-success");
+    let contenedor = document.querySelector(".cliente-profile-layout > .toast-success");
     if (!correcto) { window.alert(mensaje); return; }
     if (!contenedor) {
       contenedor = document.createElement("div");
       contenedor.className = "toast-success";
-      formularioPerfilCliente?.parentElement?.before(contenedor);
+      document.querySelector(".cliente-profile-layout")?.before(contenedor);
     }
     contenedor.textContent = mensaje;
   };
+
+  const actualizarResumenPerfilCliente = () => {
+    const nombre = document.getElementById("nombre")?.value.trim() || "";
+    const apellido = document.getElementById("apellido")?.value.trim() || "";
+    const nombreCompleto = [nombre, apellido].filter(Boolean).join(" ") || "Mi cuenta";
+    const correo = document.getElementById("correo")?.value.trim() || "Correo no disponible";
+    document.getElementById("resumenNombrePerfil").textContent = nombreCompleto;
+    document.getElementById("resumenCorreoPerfil").textContent = correo;
+    inicialPerfilCliente.textContent = nombre.charAt(0).toUpperCase();
+  };
+
+  const actualizarProgresoPerfilCliente = () => {
+    const completados = {
+      nombre: Boolean(document.getElementById("nombre")?.value.trim() && document.getElementById("apellido")?.value.trim()),
+      telefono: Boolean(document.getElementById("telefono")?.value.trim()),
+      ubicacion: Boolean(document.getElementById("ubicacion")?.value.trim()),
+      foto: fotoPerfilGuardada,
+    };
+    const total = Object.keys(completados).length;
+    const hechos = Object.values(completados).filter(Boolean).length;
+    const porcentaje = Math.round((hechos / total) * 100);
+    document.getElementById("porcentajePerfilCliente").textContent = `${porcentaje}%`;
+    document.getElementById("barraProgresoPerfilCliente").style.width = `${porcentaje}%`;
+    document.querySelector(".cliente-profile-progress").setAttribute("aria-valuenow", String(porcentaje));
+    document.getElementById("textoProgresoPerfilCliente").textContent = hechos === total
+      ? "Tu perfil está completo. Tus datos están listos para coordinar servicios."
+      : `Tienes ${hechos} de ${total} datos completos. Agrega los que faltan para facilitar la coordinación.`;
+    document.querySelectorAll("[data-profile-check]").forEach((item) => {
+      const completado = completados[item.dataset.profileCheck] === true;
+      item.classList.toggle("complete", completado);
+      item.setAttribute("aria-checked", String(completado));
+    });
+  };
+
+  const mostrarFotoPerfilCliente = (url, guardada = false) => {
+    if (!fotoPreviewPerfilCliente || !inicialPerfilCliente || !url) return;
+    fotoPreviewPerfilCliente.hidden = true;
+    inicialPerfilCliente.hidden = true;
+    fotoPreviewPerfilCliente.onload = () => {
+      fotoPreviewPerfilCliente.hidden = false;
+      inicialPerfilCliente.hidden = true;
+      if (guardada) fotoPerfilGuardada = true;
+      actualizarProgresoPerfilCliente();
+    };
+    fotoPreviewPerfilCliente.onerror = () => {
+      fotoPreviewPerfilCliente.hidden = true;
+      inicialPerfilCliente.hidden = false;
+      if (guardada) fotoPerfilGuardada = false;
+      actualizarProgresoPerfilCliente();
+    };
+    fotoPreviewPerfilCliente.src = url;
+  };
+
+  document.getElementById("elegirFotoPerfilCliente")?.addEventListener("click", () => fotoInputPerfilCliente?.click());
+  fotoInputPerfilCliente?.addEventListener("change", () => {
+    const archivo = fotoInputPerfilCliente.files?.[0];
+    if (!archivo) return;
+    if (!["image/jpeg", "image/png"].includes(archivo.type)) {
+      fotoInputPerfilCliente.value = "";
+      window.alert("Elige una imagen JPG o PNG.");
+      return;
+    }
+    if (archivo.size > 8 * 1024 * 1024) {
+      fotoInputPerfilCliente.value = "";
+      window.alert("La foto no puede superar los 8 MB.");
+      return;
+    }
+    archivoFotoPerfilCliente = archivo;
+    if (urlVistaPreviaPerfilCliente) URL.revokeObjectURL(urlVistaPreviaPerfilCliente);
+    urlVistaPreviaPerfilCliente = URL.createObjectURL(archivo);
+    mostrarFotoPerfilCliente(urlVistaPreviaPerfilCliente);
+    estadoFotoPerfilCliente.textContent = `${archivo.name} · lista para guardar`;
+    botonGuardarFotoPerfilCliente.disabled = false;
+  });
+
+  botonGuardarFotoPerfilCliente?.addEventListener("click", async () => {
+    if (!archivoFotoPerfilCliente || !usuarioActualPerfilCliente?.id) return;
+    const token = localStorage.getItem("token");
+    if (!token) { mostrarMensajePerfilCliente("Inicia sesión para cambiar tu foto."); return; }
+    const datos = new FormData();
+    datos.append("foto_Perfil", archivoFotoPerfilCliente);
+    botonGuardarFotoPerfilCliente.disabled = true;
+    estadoFotoPerfilCliente.textContent = "Guardando foto…";
+    try {
+      const response = await fetch(`${apiPerfilCliente}/api/usuarios/${encodeURIComponent(usuarioActualPerfilCliente.id)}/foto-perfil`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+        body: datos,
+      });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(result.mensaje || "No se pudo guardar la foto.");
+      fotoPerfilGuardada = true;
+      archivoFotoPerfilCliente = null;
+      fotoInputPerfilCliente.value = "";
+      if (urlVistaPreviaPerfilCliente) URL.revokeObjectURL(urlVistaPreviaPerfilCliente);
+      urlVistaPreviaPerfilCliente = "";
+      const urlFotoActualizada = `${apiPerfilCliente}${result.url}?t=${Date.now()}`;
+      mostrarFotoPerfilCliente(urlFotoActualizada, true);
+      window.dispatchEvent(new CustomEvent("hilfe:profile-photo-updated", { detail: { url: urlFotoActualizada } }));
+      estadoFotoPerfilCliente.textContent = "Foto de perfil actualizada.";
+      actualizarProgresoPerfilCliente();
+    } catch (error) {
+      estadoFotoPerfilCliente.textContent = "No se pudo guardar la foto. Inténtalo de nuevo.";
+      botonGuardarFotoPerfilCliente.disabled = false;
+      mostrarMensajePerfilCliente(error instanceof Error ? error.message : "No se pudo guardar la foto.");
+    }
+  });
+
   (async () => {
     let usuario;
     try { usuario = JSON.parse(localStorage.getItem("usuario") || "null"); } catch { usuario = null; }
     if (!usuario?.id) { mostrarMensajePerfilCliente("Inicia sesión para consultar tu perfil."); return; }
+    usuarioActualPerfilCliente = usuario;
     try {
       const response = await fetch(`${apiPerfilCliente}/api/usuarios/${encodeURIComponent(usuario.id)}`);
       const result = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(result.mensaje || "No se pudo cargar tu perfil.");
-      ubicacionPerfilCliente = result.Ubicacion || "";
-      document.getElementById("nombre").value = result.Nombre || usuario.nombre || "";
-      document.getElementById("correo").value = result.Correo || usuario.correo || "";
+      const partesNombre = String(result.Nombre || usuario.nombre || "").trim().split(/\s+/).filter(Boolean);
+      document.getElementById("nombre").value = partesNombre.shift() || "";
+      document.getElementById("apellido").value = partesNombre.join(" ");
+      const correoPerfil = String(result.Correo ?? result.correo ?? result.Email ?? result.email ?? usuario.correo ?? usuario.Correo ?? "").trim();
+      const campoCorreoPerfil = document.querySelector("#formPerfilCliente #correo");
+      if (campoCorreoPerfil) {
+        campoCorreoPerfil.value = correoPerfil;
+        campoCorreoPerfil.defaultValue = correoPerfil;
+      }
+      if (correoPerfil && correoPerfil !== usuario.correo) {
+        usuario = { ...usuario, correo: correoPerfil };
+        localStorage.setItem("usuario", JSON.stringify(usuario));
+        usuarioActualPerfilCliente = usuario;
+      }
       document.getElementById("telefono").value = result.Telefono || "";
+      document.getElementById("ubicacion").value = result.Ubicacion || "";
+      actualizarResumenPerfilCliente();
+      actualizarProgresoPerfilCliente();
+      if (result.Foto_Perfil) {
+        mostrarFotoPerfilCliente(`${apiPerfilCliente}/api/usuarios/${encodeURIComponent(usuario.id)}/foto-perfil?t=${Date.now()}`, true);
+      }
     } catch (error) {
       mostrarMensajePerfilCliente(error instanceof Error ? error.message : "No se pudo cargar tu perfil.");
     }
   })();
+  ["nombre", "apellido", "telefono", "ubicacion"].forEach((id) => {
+    document.getElementById(id)?.addEventListener("input", () => {
+      if (id === "nombre" || id === "apellido") actualizarResumenPerfilCliente();
+      actualizarProgresoPerfilCliente();
+    });
+  });
   formularioPerfilCliente?.addEventListener("submit", async (event) => {
     event.preventDefault();
     let usuario;
@@ -108,13 +306,20 @@ const mensaje: string | null = null;
       const response = await fetch(`${apiPerfilCliente}/api/usuarios/${encodeURIComponent(usuario.id)}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ nombre: document.getElementById("nombre").value.trim(), telefono: document.getElementById("telefono").value.trim(), ubicacion: ubicacionPerfilCliente }),
+        body: JSON.stringify({ nombre: [document.getElementById("nombre").value.trim(), document.getElementById("apellido").value.trim()].filter(Boolean).join(" "), telefono: document.getElementById("telefono").value.trim(), ubicacion: document.getElementById("ubicacion").value.trim() }),
       });
       const result = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(result.mensaje || "No se pudieron guardar los cambios.");
-      const actualizado = { ...usuario, nombre: document.getElementById("nombre").value.trim() };
+      const actualizado = { ...usuario, nombre: [document.getElementById("nombre").value.trim(), document.getElementById("apellido").value.trim()].filter(Boolean).join(" ") };
       localStorage.setItem("usuario", JSON.stringify(actualizado));
-      mostrarMensajePerfilCliente(result.mensaje || "Perfil actualizado correctamente.", true);
+      usuarioActualPerfilCliente = actualizado;
+      window.dispatchEvent(new CustomEvent("hilfe:profile-updated", { detail: { nombre: actualizado.nombre } }));
+      actualizarResumenPerfilCliente();
+      actualizarProgresoPerfilCliente();
+      const mensajeExito = Number.isInteger(result.cambiosNombreRestantes)
+        ? `Perfil actualizado correctamente. Te quedan ${result.cambiosNombreRestantes} cambios de nombre este mes.`
+        : result.mensaje || "Perfil actualizado correctamente.";
+      mostrarMensajePerfilCliente(mensajeExito, true);
     } catch (error) {
       mostrarMensajePerfilCliente(error instanceof Error ? error.message : "No se pudieron guardar los cambios.");
     }

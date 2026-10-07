@@ -1,6 +1,55 @@
 import { Context, RouterContext } from "../Dependencies/dependencies.ts";
 import client from "../Models/conexion.ts";
+import { nuevaConexion } from "../Models/conexion.ts";
 import type { Disponibilidad } from "../Models/disponibilidadModel.ts";
+
+const DIAS_VALIDOS = new Set(["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"]);
+
+export const reemplazarDisponibilidadServicio = async (ctx: RouterContext<string>) => {
+  const { id } = ctx.params as { id: string };
+  let db: Awaited<ReturnType<typeof nuevaConexion>> | undefined;
+  let enTransaccion = false;
+  try {
+    const body = await ctx.request.body.json();
+    const trabajadorId = Number(body.Id_Trabajador);
+    const horarios = Array.isArray(body.horarios) ? body.horarios : null;
+    if (!trabajadorId || !horarios || horarios.some((h: any) =>
+      !DIAS_VALIDOS.has(h.Dia_Semana) || !h.Hora_Inicio || !h.Hora_Fin || h.Hora_Inicio >= h.Hora_Fin
+    )) {
+      ctx.response.status = 400;
+      ctx.response.body = { mensaje: "Indica horarios válidos para cada día seleccionado." };
+      return;
+    }
+    db = await nuevaConexion();
+    await db.execute("START TRANSACTION");
+    enTransaccion = true;
+    const propietario = await db.query("SELECT Id_Servicio FROM servicios WHERE Id_Servicio = ? AND Id_Trabajador = ? FOR UPDATE", [id, trabajadorId]);
+    if (!propietario.length) {
+      await db.execute("ROLLBACK");
+      enTransaccion = false;
+      ctx.response.status = 404;
+      ctx.response.body = { mensaje: "No se encontró el servicio del trabajador." };
+      return;
+    }
+    await db.execute("DELETE FROM disponibilidad WHERE Id_Servicio = ?", [id]);
+    for (const horario of horarios) {
+      await db.execute(
+        "INSERT INTO disponibilidad (Id_Servicio, Dia_Semana, Hora_Inicio, Hora_Fin) VALUES (?, ?, ?, ?)",
+        [id, horario.Dia_Semana, horario.Hora_Inicio, horario.Hora_Fin]
+      );
+    }
+    await db.execute("COMMIT");
+    enTransaccion = false;
+    ctx.response.status = 200;
+    ctx.response.body = { mensaje: "Disponibilidad guardada correctamente", horarios };
+  } catch (error) {
+    if (db && enTransaccion) await db.execute("ROLLBACK").catch(() => {});
+    ctx.response.status = 500;
+    ctx.response.body = { mensaje: "Error al guardar la disponibilidad", error: String(error) };
+  } finally {
+    if (db) await db.close().catch(() => {});
+  }
+};
 
 export const getDisponibilidad = async (ctx: Context) => {
   try {

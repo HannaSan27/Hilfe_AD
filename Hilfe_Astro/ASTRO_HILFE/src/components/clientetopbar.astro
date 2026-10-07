@@ -1,5 +1,6 @@
 ---
-import ThemeToggle from "../components/Themetoggle .astro";
+import ThemeToggle from "../components/Themetoggle.astro";
+import UserMenu from "./UserMenu.astro";
 
 interface Props {
   title: string;
@@ -13,5 +14,5 @@ const { title, subtitle } = Astro.props;
     <h1>{title}</h1>
     {subtitle && <p>{subtitle}</p>}
   </div>
-  <ThemeToggle />
+  <div class="client-topbar-actions"><ThemeToggle /><UserMenu /></div>
 </div>

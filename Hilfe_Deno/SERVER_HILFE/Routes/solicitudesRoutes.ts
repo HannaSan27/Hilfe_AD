@@ -3,6 +3,7 @@ import {
   getSolicitudes,
   getSolicitudPorId,
   crearSolicitud,
+  getHorariosOcupados,
   cambiarEstadoSolicitud,
   eliminarSolicitud,
 } from "../Controller/solicitudesController.ts";
@@ -10,6 +11,7 @@ import {
 const router = new Router();
 
 router
+  .get("/api/solicitudes/horarios-ocupados", getHorariosOcupados)
   .get("/api/solicitudes", getSolicitudes)
   .get("/api/solicitudes/:id", getSolicitudPorId)
   .post("/api/solicitudes", crearSolicitud)

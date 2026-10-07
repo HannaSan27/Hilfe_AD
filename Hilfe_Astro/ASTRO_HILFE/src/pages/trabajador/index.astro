@@ -1,9 +1,10 @@
 ---
 import Layout from '../../layouts/Layout.astro';
+import UserMenu from '../../components/UserMenu.astro';
 import '../../components/styles/design-system.css';
 import '../../components/styles/trabajador-index.css';
 
-const usuario = { nombre: 'Carlos Pérez', inicial: 'C', rol: 'Trabajador' };
+const usuario = { nombre: 'Trabajador', inicial: 'T', rol: 'Trabajador' };
 
 const servicios: any[] = [];
 
@@ -50,42 +51,11 @@ const nombre = usuario.nombre;
 		<div class="nav-inner">
 			<a href="/" class="logo">Hilf<span class="logo-accent">'e</span></a>
 			<div class="nav-actions">
-				<button class="theme-toggle" id="themeToggle" aria-label="Toggle theme">
+				<button type="button" class="theme-toggle" aria-label="Toggle theme">
 					<svg class="theme-icon-light" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
 					<svg class="theme-icon-dark" style="display:none" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
 				</button>
-				<div class="yo-dropdown" id="yoDropdown">
-					<button class="yo-btn" id="yoBtn" type="button" aria-haspopup="true" aria-expanded="false">
-						<div class="yo-avatar">
-							<span class="yo-avatar-placeholder">{usuario.inicial}</span>
-						</div>
-						<span>{usuario.nombre}</span>
-					</button>
-					<div class="yo-menu" role="menu">
-						<div class="yo-menu-header">
-							<div class="yo-avatar">
-								<span class="yo-avatar-placeholder">{usuario.inicial}</span>
-							</div>
-							<div>
-								<h4>{usuario.nombre}</h4>
-								<p><span class="badge badge-primary badge-sm">Trabajador</span></p>
-							</div>
-						</div>
-						<a href="/trabajador/" class="yo-menu-item" role="menuitem">
-							<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
-							Mi panel
-						</a>
-						<a href="/trabajador/?section=perfil" class="yo-menu-item" role="menuitem">
-							<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-							Mi perfil
-						</a>
-						<div class="yo-menu-divider"></div>
-						<a href="/account/login" class="yo-menu-item danger" role="menuitem">
-							<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
-							Cerrar sesión
-						</a>
-					</div>
-				</div>
+				<UserMenu />
 			</div>
 		</div>
 	</nav>
@@ -106,8 +76,9 @@ const nombre = usuario.nombre;
 			</button>
 
 			<div class="sidebar-section">Solicitudes</div>
-			<button class="sidebar-item" id="nav-solicitudes" onclick="showSection('solicitudes')">
-				<i class="bi bi-calendar-check-fill"></i> Solicitudes
+			<button class="sidebar-item" id="nav-solicitudes" onclick="showSection('solicitudes')" aria-label="Solicitudes, 0 pendientes">
+				<i class="bi bi-calendar-check-fill"></i><span>Solicitudes</span>
+				<span class="solicitudes-bell-area" aria-hidden="true"><i class="bi bi-bell-fill"></i><span id="campanaSolicitudesPendientes" class="solicitudes-badge" hidden>0</span></span>
 			</button>
 
 			<div class="sidebar-section">Calificaciones</div>
@@ -354,7 +325,7 @@ const nombre = usuario.nombre;
 									{sol.estado === 'pendiente' ? (
 									<>
 									<button type="button" class="btn btn-sm btn-success" onclick={`aceptarSolicitud(${sol.id})`}><i class="bi bi-check-lg"></i> Aceptar</button>
-									<button type="button" class="btn btn-sm btn-outline-danger" onclick={`abrirModalRechazo(${sol.id})`}><i class="bi bi-x-lg"></i> Rechazar</button>
+									<button type="button" class="btn btn-sm btn-outline-danger js-rechazar-solicitud" data-solicitud-id={sol.id}><i class="bi bi-x-lg"></i> Rechazar</button>
 									</>
 									) : sol.estado === 'aceptado' ? (
 									<button type="button" class="btn btn-sm btn-primary" onclick={`avanzarSolicitud(${sol.id})`}><i class="bi bi-arrow-repeat"></i> En proceso</button>
@@ -410,7 +381,6 @@ const nombre = usuario.nombre;
 			<div id="section-perfil" class="section-view">
 				<div class="content-header worker-profile-heading">
 					<div>
-						<h2 class="section-title-page">Mi perfil</h2>
 						<p>Actualiza tus datos de contacto y tu foto. El correo no se puede modificar.</p>
 					</div>
 				</div>
@@ -456,27 +426,8 @@ const nombre = usuario.nombre;
 		</main>
 	</div>
 
-	<div class="modal-overlay" id="modalRechazo" style="display:none">
-		<div class="modal" style="max-width:460px">
-			<div class="modal-header">
-				<h3>Rechazar solicitud</h3>
-				<button type="button" class="btn-modal-close" onclick="cerrarModalRechazo()">&times;</button>
-			</div>
-			<form id="formRechazo" onsubmit="rechazar(event)">
-				<input type="hidden" name="rechazoId" id="rechazoId" value="" />
-				<div class="modal-body">
-					<p style="color:var(--text-secondary);font-size:14px;margin-bottom:16px">Confirma el rechazo de esta solicitud. El cliente verá el cambio de estado en su panel.</p>
-				</div>
-				<div class="modal-footer">
-					<button type="button" class="btn btn-secondary" onclick="cerrarModalRechazo()">Cancelar</button>
-					<button type="submit" class="btn btn-danger">Enviar y rechazar</button>
-				</div>
-			</form>
-		</div>
-	</div>
-
 	<div class="modal-overlay" id="modalEditarServicio">
-		<div class="modal" style="max-width:460px">
+		<div class="modal service-editor-modal">
 			<div class="modal-header">
 				<h3 id="tituloModalServicio">Editar servicio</h3>
 				<button type="button" class="btn-modal-close" id="cerrarEditarServicio" aria-label="Cerrar">&times;</button>
@@ -484,11 +435,20 @@ const nombre = usuario.nombre;
 			<form id="formEditarServicio">
 				<div class="modal-body">
 					<input type="hidden" id="editarServicioId" />
+					<div class="service-fields-grid">
 					<div class="form-group"><label for="editarTitulo">Título</label><input class="form-control" id="editarTitulo" required /></div>
 					<div class="form-group"><label for="editarCategoria">Categoría</label><select class="form-control" id="editarCategoria" required></select></div>
 					<div class="form-group"><label for="editarDescripcion">Descripción</label><textarea class="form-control" id="editarDescripcion" rows="3"></textarea></div>
 					<div class="form-group"><label for="editarPrecio">Precio</label><input class="form-control" id="editarPrecio" type="number" min="0" step="1" required /></div>
 					<div class="form-group"><label for="editarTipoServicio">Tipo de servicio</label><input class="form-control" id="editarTipoServicio" /></div>
+					</div>
+					<div class="form-group">
+						<div class="schedule-heading"><div><label>Disponibilidad</label><small>Define cuándo pueden reservar tus servicios.</small></div></div>
+						<label class="availability-247-option" for="disponible247"><input id="disponible247" type="checkbox" /><span><strong>Disponible 24/7</strong><small>Todos los días, a cualquier hora</small></span></label>
+						<div id="mensaje247" class="availability-247-message" hidden>Tu servicio estará disponible todos los días, durante todo el día.</div>
+						<div id="horariosServicio" class="weekly-schedule-editor"></div>
+						<small class="schedule-help">O elige los días y horarios en los que trabajas.</small>
+					</div>
 				</div>
 				<div class="modal-footer">
 					<button type="button" class="btn btn-secondary" id="cancelarEditarServicio">Cancelar</button>
@@ -517,21 +477,6 @@ const nombre = usuario.nombre;
 			}
 			window.mostrarToast = mostrarToast;
 
-			var dd = document.getElementById('yoDropdown');
-			var yoBtn = document.getElementById('yoBtn');
-			if (dd && yoBtn) {
-				yoBtn.addEventListener('click', function (e) {
-					e.stopPropagation();
-					var open = dd.classList.toggle('open');
-					yoBtn.setAttribute('aria-expanded', open);
-				});
-				var menu = dd.querySelector('.yo-menu');
-				if (menu) menu.addEventListener('click', function (e) { e.stopPropagation(); });
-				document.addEventListener('click', function () {
-					dd.classList.remove('open');
-					yoBtn.setAttribute('aria-expanded', 'false');
-				});
-			}
 			})();
 
 		var titles = {
@@ -600,21 +545,11 @@ const nombre = usuario.nombre;
 
 		function aceptarSolicitud(id) { actualizarEstadoSolicitud(id, 'aceptado'); }
 
-		function abrirModalRechazo(id) {
-			var form = document.getElementById('formRechazo');
-			form.dataset.id = id;
-			form.reset();
-			document.getElementById('modalRechazo').style.display = 'flex';
-		}
-		function cerrarModalRechazo() { document.getElementById('modalRechazo').style.display = 'none'; }
-		document.getElementById('modalRechazo').addEventListener('click', function (e) { if (e.target === this) cerrarModalRechazo(); });
-
-		async function rechazar(e) {
-			e.preventDefault();
-			var form = document.getElementById('formRechazo');
-			var actualizado = await actualizarEstadoSolicitud(form.dataset.id, 'rechazado');
-			if (actualizado) cerrarModalRechazo();
-		}
+		var listaSolicitudes = document.getElementById('lista-solicitudes');
+		if (listaSolicitudes) listaSolicitudes.addEventListener('click', function (e) {
+			var boton = e.target.closest('.js-rechazar-solicitud');
+			if (boton && window.confirm('¿Deseas rechazar esta solicitud?')) actualizarEstadoSolicitud(boton.dataset.solicitudId, 'rechazado');
+		});
 
 		var filtroEstadoSolicitudes = 'todos';
 		function fechaSolicitud(fecha) {
@@ -633,7 +568,7 @@ const nombre = usuario.nombre;
 			boton.type = 'button'; boton.className = 'btn btn-sm ' + clase;
 			var icon = document.createElement('i'); icon.className = 'bi bi-' + icono;
 			boton.append(icon, document.createTextNode(' ' + texto));
-			boton.addEventListener('click', accion);
+			if (accion) boton.addEventListener('click', accion);
 			return boton;
 		}
 		function agregarAccionesSolicitud(celda, solicitud) {
@@ -642,7 +577,9 @@ const nombre = usuario.nombre;
 			if (estado === 'pendiente') {
 				celda.append(
 					botonAccionSolicitud('Aceptar', 'btn-success', 'check-lg', function () { aceptarSolicitud(id); }),
-					botonAccionSolicitud('Rechazar', 'btn-outline-danger', 'x-lg', function () { abrirModalRechazo(id); })
+					botonAccionSolicitud('Rechazar', 'btn-outline-danger', 'x-lg', function () {
+						if (window.confirm('¿Deseas rechazar esta solicitud?')) actualizarEstadoSolicitud(id, 'rechazado');
+					})
 				);
 				return;
 			}
@@ -693,6 +630,7 @@ const nombre = usuario.nombre;
 				var datos = await respuesta.json().catch(function () { return {}; });
 				if (!respuesta.ok) throw new Error(datos.mensaje || 'No se pudieron cargar las solicitudes.');
 				var items = Array.isArray(datos) ? datos : (Array.isArray(datos.value) ? datos.value : []);
+				items.sort(function (a, b) { return Number(b.Id_Solicitud || 0) - Number(a.Id_Solicitud || 0); });
 				var lista = document.getElementById('lista-solicitudes');
 				lista.replaceChildren();
 				var conteosEstado = { pendiente: 0, aceptado: 0, en_proceso: 0, rumbo_a_ubicacion: 0, trabajo_realizado: 0, finalizado: 0, rechazado: 0, cancelada: 0 };
@@ -704,6 +642,11 @@ const nombre = usuario.nombre;
 				if (!items.length) lista.appendChild(textoElemento('div', 'card card-body', 'Aún no tienes solicitudes de servicio.'));
 				var idsConteo = { pendiente: 'filtroPendientesTrabajador', aceptado: 'filtroAceptadosTrabajador', en_proceso: 'filtroProcesoTrabajador', rumbo_a_ubicacion: 'filtroRumboTrabajador', trabajo_realizado: 'filtroRealizadoTrabajador', finalizado: 'filtroFinalizadosTrabajador' };
 				Object.keys(idsConteo).forEach(function (estado) { var el = document.getElementById(idsConteo[estado]); if (el) el.textContent = String(conteosEstado[estado] || 0); });
+				var numeroPendientes = Number(conteosEstado.pendiente || 0);
+				var campana = document.getElementById('campanaSolicitudesPendientes');
+				if (campana) { campana.textContent = numeroPendientes > 99 ? '99+' : String(numeroPendientes); campana.hidden = numeroPendientes === 0; }
+				var botonSolicitudes = document.getElementById('nav-solicitudes');
+				if (botonSolicitudes) botonSolicitudes.setAttribute('aria-label', 'Solicitudes, ' + numeroPendientes + ' pendientes');
 				var total = document.getElementById('totalSolicitudesTrabajador'); if (total) total.textContent = String(items.length);
 				var totalTodos = document.getElementById('filtroTodosTrabajador'); if (totalTodos) totalTodos.textContent = String(items.length);
 				var pendientes = document.getElementById('totalPendientesTrabajador'); if (pendientes) pendientes.textContent = String(conteosEstado.pendiente || 0);
@@ -728,7 +671,69 @@ const nombre = usuario.nombre;
 			var formulario = document.getElementById('formEditarServicio');
 			var categorias = [];
 			var serviciosPorId = {};
+			var horariosPorServicio = {};
 			var modoCreacion = false;
+			var diasSemana = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
+			var horariosGuardadosAntes247 = null;
+
+			function pintarEditorHorarios(horarios) {
+				var contenedor = document.getElementById('horariosServicio');
+				contenedor.replaceChildren();
+				var porDia = {};
+				(horarios || []).forEach(function (h) { porDia[h.Dia_Semana] = h; });
+				var disponible247 = diasSemana.every(function (dia) {
+					var h = porDia[dia];
+					return h && String(h.Hora_Inicio).slice(0, 5) === '00:00' && String(h.Hora_Fin) === '23:59:59';
+				}) && Object.keys(porDia).length === diasSemana.length;
+				var opcion247 = document.getElementById('disponible247');
+				opcion247.checked = disponible247;
+				document.getElementById('mensaje247').hidden = !disponible247;
+				contenedor.hidden = disponible247;
+				var encabezado = document.createElement('div'); encabezado.className = 'weekly-schedule-header';
+				['Día', 'Desde', 'Hasta'].forEach(function (texto) { var celda = document.createElement('span'); celda.textContent = texto; encabezado.appendChild(celda); });
+				contenedor.appendChild(encabezado);
+				diasSemana.forEach(function (dia) {
+					var existente = porDia[dia];
+					var fila = document.createElement('div'); fila.className = 'weekly-schedule-row';
+					var etiqueta = document.createElement('label'); etiqueta.className = 'weekly-schedule-day';
+					var check = document.createElement('input'); check.type = 'checkbox'; check.dataset.dia = dia; check.checked = !!existente;
+					etiqueta.append(check, document.createTextNode(dia));
+					var inicio = document.createElement('input'); inicio.type = 'time'; inicio.dataset.inicio = dia; inicio.value = existente ? String(existente.Hora_Inicio).slice(0, 5) : '08:00'; inicio.setAttribute('aria-label', 'Hora de inicio ' + dia);
+					var fin = document.createElement('input'); fin.type = 'time'; fin.dataset.fin = dia; fin.value = existente ? String(existente.Hora_Fin).slice(0, 5) : '17:00'; fin.setAttribute('aria-label', 'Hora de fin ' + dia);
+					if (disponible247) { check.checked = true; inicio.value = '00:00'; fin.value = '23:59'; check.disabled = true; inicio.disabled = true; fin.disabled = true; }
+					var inicioCampo = document.createElement('label'); inicioCampo.className = 'weekly-time-field'; var inicioTexto = document.createElement('span'); inicioTexto.textContent = 'Desde'; inicioCampo.append(inicioTexto, inicio);
+					var finCampo = document.createElement('label'); finCampo.className = 'weekly-time-field'; var finTexto = document.createElement('span'); finTexto.textContent = 'Hasta'; finCampo.append(finTexto, fin);
+					fila.append(etiqueta, inicioCampo, finCampo); contenedor.appendChild(fila);
+				});
+			}
+
+			function leerHorariosEditor(ignorarModo247) {
+				if (!ignorarModo247 && document.getElementById('disponible247').checked) return diasSemana.map(function (dia) { return { Dia_Semana: dia, Hora_Inicio: '00:00', Hora_Fin: '23:59:59' }; });
+				return Array.from(document.querySelectorAll('#horariosServicio [data-dia]:checked')).map(function (check) {
+					var dia = check.dataset.dia;
+					return { Dia_Semana: dia, Hora_Inicio: document.querySelector('[data-inicio="' + dia + '"]').value, Hora_Fin: document.querySelector('[data-fin="' + dia + '"]').value };
+				});
+			}
+
+			document.getElementById('disponible247').addEventListener('change', function (evento) {
+				if (evento.target.checked) {
+					horariosGuardadosAntes247 = leerHorariosEditor(true);
+					pintarEditorHorarios(diasSemana.map(function (dia) { return { Dia_Semana: dia, Hora_Inicio: '00:00', Hora_Fin: '23:59:59' }; }));
+				} else {
+					pintarEditorHorarios(horariosGuardadosAntes247 || []);
+					horariosGuardadosAntes247 = null;
+				}
+			});
+
+			async function guardarHorarios(servicioId, trabajadorId) {
+				var horarios = leerHorariosEditor();
+				if (horarios.some(function (h) { return !h.Hora_Inicio || !h.Hora_Fin || h.Hora_Inicio >= h.Hora_Fin; })) throw new Error('Revisa los horarios: la hora de inicio debe ser anterior a la hora de fin.');
+				await leerRespuesta(await fetch(api + '/disponibilidad/servicio/' + encodeURIComponent(servicioId), {
+					method: 'PUT', headers: { 'Content-Type': 'application/json' },
+					body: JSON.stringify({ Id_Trabajador: Number(trabajadorId), horarios: horarios })
+				}));
+				horariosPorServicio[String(servicioId)] = horarios;
+			}
 
 			async function leerRespuesta(respuesta) {
 				var datos = await respuesta.json().catch(function () { return {}; });
@@ -760,6 +765,7 @@ const nombre = usuario.nombre;
 					selector.appendChild(opcion);
 				});
 				selector.value = String(servicio.Id_Categoria);
+				pintarEditorHorarios(horariosPorServicio[String(servicio.Id_Servicio)] || []);
 				modal.classList.add('open');
 			}
 
@@ -769,6 +775,7 @@ const nombre = usuario.nombre;
 					return;
 				}
 				modoCreacion = true;
+				horariosGuardadosAntes247 = null;
 				document.getElementById('tituloModalServicio').textContent = 'Agregar servicio';
 				document.getElementById('guardarEditarServicio').textContent = 'Agregar servicio';
 				document.getElementById('editarServicioId').value = '';
@@ -776,6 +783,7 @@ const nombre = usuario.nombre;
 				document.getElementById('editarDescripcion').value = '';
 				document.getElementById('editarPrecio').value = '';
 				document.getElementById('editarTipoServicio').value = '';
+				pintarEditorHorarios([]);
 				var selector = document.getElementById('editarCategoria');
 				selector.replaceChildren();
 				categorias.forEach(function (categoria) {
@@ -843,8 +851,16 @@ const nombre = usuario.nombre;
 							method: 'POST', headers: { 'Content-Type': 'application/json' },
 							body: JSON.stringify({ Id_Trabajador: Number(usuario.id), ...body })
 						}));
-						cerrarModal();
+						if (!nuevoServicio.Id_Servicio) throw new Error('El servicio se creó, pero el servidor no devolvió su identificador para guardar los horarios.');
+						id = String(nuevoServicio.Id_Servicio);
+						document.getElementById('editarServicioId').value = id;
+						servicio = { Id_Servicio: id, Id_Trabajador: Number(usuario.id), ...body };
+						serviciosPorId[id] = servicio;
 						modoCreacion = false;
+						document.getElementById('tituloModalServicio').textContent = 'Editar servicio';
+						document.getElementById('guardarEditarServicio').textContent = 'Guardar cambios';
+						await guardarHorarios(nuevoServicio.Id_Servicio, usuario.id);
+						cerrarModal();
 						await cargarServicios();
 						window.mostrarToast(nuevoServicio.mensaje || 'Servicio agregado correctamente.');
 						return;
@@ -852,6 +868,8 @@ const nombre = usuario.nombre;
 					await leerRespuesta(await fetch(api + '/servicios/' + encodeURIComponent(id), {
 						method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body)
 					}));
+					var usuarioActual = JSON.parse(localStorage.getItem('usuario') || 'null');
+					await guardarHorarios(id, usuarioActual && usuarioActual.id);
 					Object.assign(servicio, body);
 					var tarjeta = grid.querySelector('[data-servicio-id="' + id + '"]');
 					if (tarjeta) {
@@ -870,12 +888,14 @@ const nombre = usuario.nombre;
 				try {
 					var usuario = JSON.parse(localStorage.getItem('usuario') || 'null');
 					if (!usuario || Number(usuario.rol) !== 2 || !usuario.id) throw new Error('Inicia sesión como trabajador para ver tus servicios.');
-					var respuestas = await Promise.all([
-						fetch(api + '/servicios'), fetch(api + '/disponibilidad'), fetch(api + '/categorias')
+				var respuestas = await Promise.all([
+					fetch(api + '/servicios'), fetch(api + '/disponibilidad'), fetch(api + '/categorias')
 					]);
 					var datos = await Promise.all(respuestas.map(leerRespuesta));
 					var serviciosDelTrabajador = datos[0].filter(function (servicio) { return Number(servicio.Id_Trabajador) === Number(usuario.id); });
 					var idsDisponibles = new Set(datos[1].map(function (registro) { return String(registro.Id_Servicio); }));
+					horariosPorServicio = {};
+					datos[1].forEach(function (registro) { (horariosPorServicio[String(registro.Id_Servicio)] ||= []).push(registro); });
 					categorias = datos[2];
 					grid.replaceChildren();
 					serviciosPorId = {};
@@ -898,6 +918,17 @@ const nombre = usuario.nombre;
 
 			if (!token || !usuarioGuardado?.id) return;
 
+			var nombreSesion = usuarioGuardado.nombre || 'Trabajador';
+			var nombreBoton = document.querySelector('.account-trigger-name');
+			var nombreMenu = document.querySelector('.yo-menu-header h4');
+			var bienvenida = document.querySelector('.welcome-text strong');
+			if (nombreBoton) nombreBoton.textContent = nombreSesion;
+			if (nombreMenu) nombreMenu.textContent = nombreSesion;
+			if (bienvenida) bienvenida.textContent = nombreSesion;
+			document.querySelectorAll('.yo-avatar-placeholder').forEach(function (placeholder) {
+				placeholder.textContent = nombreSesion.charAt(0).toUpperCase();
+			});
+
 			try {
 				var response = await fetch('http://127.0.0.1:8000/api/usuarios/' + encodeURIComponent(usuarioGuardado.id), {
 					headers: { Authorization: 'Bearer ' + token }
@@ -907,10 +938,12 @@ const nombre = usuario.nombre;
 				var perfil = await response.json();
 				var nombreReal = perfil.Nombre || usuarioGuardado.nombre;
 				if (nombreReal) {
-					var nombreBoton = document.querySelector('.yo-btn > span');
-					var nombreMenu = document.querySelector('.yo-menu-header h4');
+					nombreBoton = document.querySelector('.account-trigger-name');
+					nombreMenu = document.querySelector('.yo-menu-header h4');
+					bienvenida = document.querySelector('.welcome-text strong');
 					if (nombreBoton) nombreBoton.textContent = nombreReal;
 					if (nombreMenu) nombreMenu.textContent = nombreReal;
+					if (bienvenida) bienvenida.textContent = nombreReal;
 					document.querySelectorAll('.yo-avatar-placeholder').forEach(function (placeholder) {
 						placeholder.textContent = nombreReal.charAt(0).toUpperCase();
 					});
@@ -920,12 +953,19 @@ const nombre = usuario.nombre;
 					var fotoUrl = 'http://127.0.0.1:8000/api/usuarios/' + encodeURIComponent(usuarioGuardado.id) + '/foto-perfil';
 					document.querySelectorAll('.yo-avatar').forEach(function (avatar) {
 						var imagen = document.createElement('img');
-						imagen.src = fotoUrl;
-						imagen.alt = nombreReal ? 'Foto de ' + nombreReal : 'Foto de perfil';
-						imagen.onerror = function () { imagen.remove(); };
-						avatar.appendChild(imagen);
 						var inicial = avatar.querySelector('.yo-avatar-placeholder');
-						if (inicial) inicial.style.display = 'none';
+						imagen.hidden = true;
+						imagen.alt = nombreReal ? 'Foto de ' + nombreReal : 'Foto de perfil';
+						imagen.onload = function () {
+							imagen.hidden = false;
+							if (inicial) { inicial.hidden = true; inicial.style.display = 'none'; }
+						};
+						imagen.onerror = function () {
+							imagen.remove();
+							if (inicial) { inicial.hidden = false; inicial.style.display = ''; }
+						};
+						avatar.appendChild(imagen);
+						imagen.src = fotoUrl;
 					});
 				}
 			} catch (error) {
@@ -977,7 +1017,7 @@ const nombre = usuario.nombre;
 				}
 			}
 			function updatePanelIdentity(name, photoUrl) {
-				var nameButton = document.querySelector('.yo-btn > span');
+				var nameButton = document.querySelector('.account-trigger-name');
 				var nameMenu = document.querySelector('.yo-menu-header h4');
 				var welcome = document.querySelector('.welcome-text strong');
 				if (nameButton) nameButton.textContent = name;
@@ -989,10 +1029,19 @@ const nombre = usuario.nombre;
 				if (photoUrl) document.querySelectorAll('.yo-avatar').forEach(function (avatar) {
 					var image = avatar.querySelector('img');
 					if (!image) { image = document.createElement('img'); avatar.appendChild(image); }
-					image.src = photoUrl;
-					image.alt = 'Foto de ' + name;
 					var initial = avatar.querySelector('.yo-avatar-placeholder');
-					if (initial) initial.style.display = 'none';
+					if (initial) { initial.hidden = false; initial.style.display = ''; }
+					image.hidden = true;
+					image.alt = 'Foto de ' + name;
+					image.onload = function () {
+						image.hidden = false;
+						if (initial) { initial.hidden = true; initial.style.display = 'none'; }
+					};
+					image.onerror = function () {
+						image.hidden = true;
+						if (initial) { initial.hidden = false; initial.style.display = ''; }
+					};
+					image.src = photoUrl;
 				});
 			}
 			async function readResponse(response) {
@@ -1093,6 +1142,9 @@ const nombre = usuario.nombre;
 		})();
 	</script>
 	<style>
+		.service-editor-modal{max-width:680px!important;max-height:min(90vh,860px)!important}.service-editor-modal #formEditarServicio{display:flex;flex-direction:column;min-height:0;flex:1}.service-editor-modal .modal-body{min-height:0;padding:22px 28px;overscroll-behavior:contain}.service-editor-modal .form-group{margin-bottom:16px}.service-editor-modal .form-group>label{display:block;margin-bottom:7px;font-weight:600}.service-editor-modal .schedule-heading{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}.service-editor-modal .schedule-heading label{margin:0!important;font-size:15px}.schedule-heading small,.schedule-help,.availability-247-option small{display:block;color:var(--text-secondary,#64748b);font-size:12px;font-weight:400}.availability-247-option{display:flex!important;align-items:center;gap:12px;padding:13px 15px;border:1px solid #cfe0ff;border-radius:12px;background:linear-gradient(120deg,#f4f8ff,#fff);cursor:pointer}.availability-247-option input{width:18px;height:18px;accent-color:#2563eb}.availability-247-option span{display:grid;gap:3px}.availability-247-option strong{color:var(--text,#172033);font-size:14px}.availability-247-message{margin:10px 0 0;padding:12px 14px;border:1px solid #b9e7ce;border-radius:10px;background:#effbf4;color:#187343;font-size:13px}.availability-247-message[hidden],.weekly-schedule-editor[hidden]{display:none!important}.weekly-schedule-editor{display:grid;gap:0;margin-top:12px;overflow:hidden;border:1px solid var(--border,#dce4ef);border-radius:12px;background:var(--bg-card,#fff)}.weekly-schedule-header,.weekly-schedule-row{display:grid;grid-template-columns:minmax(150px,1.2fr) minmax(140px,1fr) minmax(140px,1fr);gap:14px;align-items:center;padding:9px 16px}.weekly-schedule-header{background:var(--bg-body,#f5f7fb);color:var(--text-secondary,#64748b);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em}.weekly-schedule-row+.weekly-schedule-row{border-top:1px solid var(--border,#e5eaf1)}.weekly-schedule-day{display:flex;gap:10px;align-items:center;font-weight:500}.weekly-schedule-day input{width:17px;height:17px;accent-color:#2563eb}.weekly-schedule-row input[type="time"]{min-width:0;width:100%;min-height:38px;padding:6px 10px;border:1px solid #dce4ef;border-radius:8px;background:var(--bg-card,#fff);color:var(--text,#172033);font:inherit}.weekly-schedule-row input:disabled{opacity:.7}.schedule-help{margin-top:8px}.service-editor-modal .modal-footer{flex:0 0 auto;padding:14px 28px}.service-editor-modal .modal-header{padding:20px 28px 12px}.service-editor-modal .btn{min-height:42px}@media(max-width:600px){.service-editor-modal{max-height:94vh!important}.service-editor-modal .modal-body{padding:18px 16px}.service-editor-modal .modal-header{padding:16px 16px 10px}.service-editor-modal .modal-footer{padding:12px 16px}.weekly-schedule-header,.weekly-schedule-row{grid-template-columns:minmax(95px,1fr) minmax(96px,1fr) minmax(96px,1fr);gap:7px;padding:9px 8px}.weekly-schedule-day{gap:6px;font-size:12px}.weekly-schedule-row input[type="time"]{padding:5px;font-size:12px}}
+		.weekly-time-field{display:grid;gap:4px;color:var(--text-secondary,#64748b);font-size:10px}.weekly-time-field span{font-weight:600}
+		@media(max-width:600px){.weekly-schedule-header{display:none}.weekly-schedule-row{grid-template-columns:1fr 1fr;gap:10px;padding:12px}.weekly-schedule-day{grid-column:1/-1;gap:8px;font-size:13px}.weekly-time-field input[type="time"]{padding:6px;font-size:13px}}
 		.worker-profile-heading { align-items: flex-end; margin-bottom: 22px; }
 		.worker-profile-heading p { margin: 6px 0 0; color: var(--text-secondary); font-size: 14px; }
 		.worker-profile-card { max-width: 920px; padding: 0; overflow: hidden; }
@@ -1126,5 +1178,19 @@ const nombre = usuario.nombre;
 			.worker-profile-photo-panel { gap: 15px; padding: 20px; }
 			.worker-profile-photo { width: 76px; height: 76px; flex-basis: 76px; font-size: 28px; }
 		}
+	</style>
+	<style is:global>
+		.service-editor-modal .service-fields-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 18px}
+		.service-editor-modal .service-fields-grid .form-group:nth-child(3){grid-column:1/-1}
+		.service-editor-modal .weekly-schedule-header,.service-editor-modal .weekly-schedule-row{display:grid;grid-template-columns:minmax(150px,1.2fr) minmax(140px,1fr) minmax(140px,1fr);gap:14px;align-items:center;padding:9px 16px}
+		.service-editor-modal .weekly-schedule-header{background:var(--bg-body,#f5f7fb);color:var(--text-secondary,#64748b);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em}
+		.service-editor-modal .weekly-schedule-row+.weekly-schedule-row{border-top:1px solid var(--border,#e5eaf1)}
+		.service-editor-modal .weekly-schedule-day{display:flex;gap:10px;align-items:center;font-weight:500}
+		.service-editor-modal .weekly-schedule-day input{width:17px;height:17px;accent-color:#2563eb}
+		.service-editor-modal .weekly-time-field{display:grid;gap:4px;color:var(--text-secondary,#64748b);font-size:10px}
+		.service-editor-modal .weekly-time-field span{font-weight:600}
+		.service-editor-modal .weekly-schedule-row input[type="time"]{min-width:0;width:100%;min-height:38px;padding:6px 10px;border:1px solid #dce4ef;border-radius:8px;background:var(--bg-card,#fff);color:var(--text,#172033);font:inherit}
+		.service-editor-modal .weekly-schedule-row input:disabled{opacity:.7}
+		@media(max-width:600px){.service-editor-modal .service-fields-grid{grid-template-columns:minmax(0,1fr)}.service-editor-modal .service-fields-grid .form-group:nth-child(3){grid-column:auto}.service-editor-modal .weekly-schedule-header{display:none}.service-editor-modal .weekly-schedule-row{grid-template-columns:1fr 1fr;gap:10px;padding:12px}.service-editor-modal .weekly-schedule-day{grid-column:1/-1;gap:8px;font-size:13px}.service-editor-modal .weekly-time-field input[type="time"]{padding:6px;font-size:13px}}
 	</style>
 </Layout>

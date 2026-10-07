@@ -1,0 +1,110 @@
+---
+import './styles/user-menu.css';
+
+interface Props { variant?: 'default' | 'nav'; }
+const { variant = 'default' } = Astro.props;
+---
+
+<div class:list={['yo-dropdown', 'account-dropdown', { 'account-dropdown-nav': variant === 'nav' }]} id="yoDropdown" hidden>
+  <button class:list={['yo-btn', 'account-trigger', { 'nav-user': variant === 'nav' }]} id="yoBtn" type="button" aria-haspopup="true" aria-expanded="false">
+    <div class:list={['yo-avatar', { 'nav-user-initial': variant === 'nav' }]}><img data-user-avatar alt="" hidden /><span class="yo-avatar-placeholder" data-user-initial>?</span></div>
+    <span class="account-trigger-name nav-user-name" data-user-name>Usuario</span>
+    <svg class="account-chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9" /></svg>
+  </button>
+  <div class="yo-menu account-popover" role="menu" hidden>
+    <div class="yo-menu-header account-summary">
+      <div class="yo-avatar account-summary-avatar"><img data-user-avatar alt="" hidden /><span class="yo-avatar-placeholder" data-user-initial>?</span></div>
+      <div class="account-summary-copy">
+        <h4 data-user-name>Usuario</h4>
+        <p><span class="badge badge-primary badge-sm" data-user-role>Cuenta</span></p>
+      </div>
+    </div>
+    <a href="/" class="yo-menu-item" role="menuitem" data-user-panel>
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+      <span>Mi panel</span>
+    </a>
+    <a href="/" class="yo-menu-item" role="menuitem" data-user-profile>
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+      <span>Mi perfil</span>
+    </a>
+    <div class="yo-menu-divider"></div>
+    <a href="/login/login" class="yo-menu-item danger" role="menuitem" data-user-logout>
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+      <span>Cerrar sesión</span>
+    </a>
+  </div>
+</div>
+
+<script is:inline>
+  (() => {
+    const root = document.getElementById('yoDropdown');
+    if (!root) return;
+    const trigger = root.querySelector('#yoBtn');
+    const popover = root.querySelector('.account-popover');
+    const setOpen = (open) => {
+      root.classList.toggle('open', open);
+      trigger.setAttribute('aria-expanded', String(open));
+      popover.hidden = !open;
+    };
+    let usuario = null;
+    let token = null;
+    try {
+      usuario = JSON.parse(localStorage.getItem('usuario') || 'null');
+      token = localStorage.getItem('token');
+    } catch {}
+    const nombre = String(usuario?.nombre || usuario?.Nombre || '').trim();
+    const rol = Number(usuario?.rol ?? usuario?.Rol);
+    const perfiles = {
+      1: { label: 'Administrador', panel: '/admin/admin', profile: '/admin/perfil' },
+      2: { label: 'Trabajador', panel: '/trabajador/', profile: '/trabajador/?section=perfil' },
+      3: { label: 'Cliente', panel: '/cliente/', profile: '/cliente/editarperfil' }
+    };
+    const cuenta = perfiles[rol];
+    if (!token || !nombre || !cuenta) return;
+    root.hidden = false;
+    root.querySelectorAll('[data-user-name]').forEach((node) => { node.textContent = nombre; });
+    root.querySelectorAll('[data-user-initial]').forEach((node) => { node.textContent = nombre.charAt(0).toUpperCase(); });
+    window.addEventListener('hilfe:profile-updated', (event) => {
+      const nombreActualizado = String(event.detail?.nombre || '').trim();
+      if (!nombreActualizado) return;
+      root.querySelectorAll('[data-user-name]').forEach((node) => { node.textContent = nombreActualizado; });
+      root.querySelectorAll('[data-user-initial]').forEach((node) => { node.textContent = nombreActualizado.charAt(0).toUpperCase(); });
+    });
+    root.querySelector('[data-user-role]').textContent = cuenta.label;
+    root.querySelector('[data-user-panel]').href = cuenta.panel;
+    root.querySelector('[data-user-profile]').href = cuenta.profile;
+    const cargarFotoPerfilCliente = (url) => {
+      if (rol !== 3) return;
+      root.querySelectorAll('[data-user-avatar]').forEach((image) => {
+        const placeholder = image.parentElement?.querySelector('[data-user-initial]');
+        image.hidden = true;
+        if (placeholder) placeholder.hidden = true;
+        image.onload = () => {
+          image.hidden = false;
+          if (placeholder) placeholder.hidden = true;
+        };
+        image.onerror = () => {
+          image.hidden = true;
+          if (placeholder) placeholder.hidden = false;
+        };
+        image.src = url;
+      });
+    };
+    if (rol === 3 && usuario?.id) {
+      cargarFotoPerfilCliente(`http://127.0.0.1:8000/api/usuarios/${encodeURIComponent(usuario.id)}/foto-perfil?t=${Date.now()}`);
+      window.addEventListener('hilfe:profile-photo-updated', (event) => {
+        const url = event.detail?.url || `http://127.0.0.1:8000/api/usuarios/${encodeURIComponent(usuario.id)}/foto-perfil?t=${Date.now()}`;
+        cargarFotoPerfilCliente(url);
+      });
+    }
+    trigger.addEventListener('click', (event) => { event.stopPropagation(); setOpen(popover.hidden); });
+    popover.addEventListener('click', (event) => event.stopPropagation());
+    document.addEventListener('click', () => setOpen(false));
+    document.addEventListener('keydown', (event) => { if (event.key === 'Escape') setOpen(false); });
+    root.querySelector('[data-user-logout]').addEventListener('click', (event) => {
+      event.preventDefault();
+      try { localStorage.removeItem('token'); localStorage.removeItem('usuario'); } catch {}
+      window.location.href = '/login/login';
+    });
+  })();
+</script>
