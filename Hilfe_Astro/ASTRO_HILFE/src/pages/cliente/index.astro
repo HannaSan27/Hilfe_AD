@@ -114,10 +114,11 @@ const porCalificar = solicitudes.filter((s) => s.estado === "finalizado" && s.ca
       <!-- Solicitudes List -->
       <div class="card cliente-history-card">
         <div class="card-header">
-          <h3 style="font-size:16px;font-weight:700;color:var(--text);display:flex;align-items:center;gap:8px">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-            Historial de solicitudes
-          </h3>
+          <div class="cliente-history-heading">
+            <span class="cliente-history-icon"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><path d="M8 13h8M8 17h6"/></svg></span>
+            <span><strong>Historial de solicitudes</strong><small>Revisa el progreso de tus servicios</small></span>
+          </div>
+          <span class="cliente-history-caption">ACTIVIDAD RECIENTE</span>
         </div>
 
         {solicitudes.length > 0 ? (
@@ -138,8 +139,8 @@ const porCalificar = solicitudes.filter((s) => s.estado === "finalizado" && s.ca
                   const necesitaCalificar = s.estado === "finalizado" && s.calificacion == null;
                   return (
                     <tr>
-                      <td><strong style="color:var(--text)">{s.servicioTitulo}</strong></td>
-                      <td style="color:var(--text-secondary)">{s.trabajadorNombre}</td>
+                      <td><span class="cliente-request-service"><span class="cliente-request-service-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="m14.7 6.3 3 3M4 20l4.2-1 10.5-10.5a2.1 2.1 0 0 0-3-3L5.2 16 4 20Z"/><path d="m13 8 3 3"/></svg></span><strong>{s.servicioTitulo}</strong></span></td>
+                      <td><span class="cliente-worker-name">{s.trabajadorNombre}</span></td>
                       <td>{formatearFecha(s.fechaServicio)}</td>
                       <td>{s.horaServicio}</td>
                       <td><span class={`badge ${badgeClase(s.estado)}`}>{s.estado}</span></td>
@@ -286,11 +287,15 @@ const porCalificar = solicitudes.filter((s) => s.estado === "finalizado" && s.ca
           if (estado === "finalizado") finalizadas++;
           const tr = document.createElement("tr");
           const servicio = document.createElement("td");
+          servicio.className = "cliente-service-cell";
+          const serviceLabel = document.createElement("span"); serviceLabel.className = "cliente-request-service";
+          const serviceIcon = document.createElement("span"); serviceIcon.className = "cliente-request-service-icon";
+          serviceIcon.innerHTML = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="m14.7 6.3 3 3M4 20l4.2-1 10.5-10.5a2.1 2.1 0 0 0-3-3L5.2 16 4 20Z"/><path d="m13 8 3 3"/></svg>';
           const strong = document.createElement("strong");
-          strong.style.color = "var(--text)";
+          strong.className = "cliente-request-service-title";
           strong.textContent = solicitud.Titulo_Servicio || "Servicio";
-          servicio.appendChild(strong);
-          const trabajador = document.createElement("td"); trabajador.style.color = "var(--text-secondary)"; trabajador.textContent = solicitud.Nombre_Trabajador || "—";
+          serviceLabel.append(serviceIcon, strong); servicio.appendChild(serviceLabel);
+          const trabajador = document.createElement("td"); trabajador.className = "cliente-worker-cell"; trabajador.textContent = solicitud.Nombre_Trabajador || "—";
           const fecha = document.createElement("td"); fecha.textContent = fechaCliente(solicitud.Fecha_Servicio);
           const hora = document.createElement("td"); hora.textContent = textoSeguroCliente(solicitud.Hora_Servicio) || "—";
           const estadoTd = document.createElement("td");

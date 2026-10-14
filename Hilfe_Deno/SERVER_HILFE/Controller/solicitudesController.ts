@@ -11,8 +11,8 @@ const TRANSICIONES_VALIDAS: Record<EstadoSolicitud, EstadoSolicitud[]> = {
   rechazado: [],
   finalizado: [],
   cancelada: [],
-};
-
+};    
+   
 export const getSolicitudes = async (ctx: Context) => {
   try {
     const url = ctx.request.url;
