@@ -16,6 +16,9 @@ const loginExitoso = Astro.url.searchParams.get("loginExitoso");
 // de "Registro Exitoso" en vez del formulario de login, dentro de este mismo archivo.
 // Ej: /login?vista=registroExitoso
 const mostrarRegistroExitoso = Astro.url.searchParams.get("vista") === "registroExitoso";
+
+// Client ID de Google (viene del .env del frontend: PUBLIC_GOOGLE_CLIENT_ID)
+const googleClientId = import.meta.env.PUBLIC_GOOGLE_CLIENT_ID ?? "";
 ---
 
 <Layout title="Hilf'e — Iniciar sesión">
@@ -170,6 +173,10 @@ const mostrarRegistroExitoso = Astro.url.searchParams.get("vista") === "registro
               <div class="spinner"></div>
             </button>
 
+            {/* INICIAR CON GOOGLE */}
+            <div class="divider-o"><span>o</span></div>
+            <div id="googleBtn" data-client-id={googleClientId} style="display:flex;justify-content:center;min-height:44px;"></div>
+
             <div class="register-link">
               ¿No tienes cuenta? <a href="/login/registrar">Registrarse</a>
             </div>
@@ -248,7 +255,97 @@ const mostrarRegistroExitoso = Astro.url.searchParams.get("vista") === "registro
             window.location.assign(errorUrl("No se pudo conectar con el servidor."));
           }
         });
+
+        // ===== Iniciar con Google =====
+        const googleBtn = document.getElementById("googleBtn");
+        const destinosGoogle = { 1: "/admin/admin", 2: "/trabajador", 3: "/cliente" };
+
+        async function manejarGoogle(respuesta) {
+          const errorGoogle = (m) => `/login/login?error=${encodeURIComponent(m)}`;
+          try {
+            const response = await fetch("http://127.0.0.1:8000/api/auth/google", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ credential: respuesta.credential }),
+            });
+            const data = await response.json();
+
+            if (!response.ok) {
+              window.location.assign(errorGoogle(data.mensaje || "No se pudo iniciar con Google."));
+              return;
+            }
+
+            // Cuenta existente: entra directo a su panel
+            if (data.existe) {
+              localStorage.setItem("token", data.token);
+              localStorage.setItem("usuario", JSON.stringify(data.usuario));
+              const destino = destinosGoogle[data.usuario?.rol];
+              window.location.assign(destino ?? errorGoogle("El rol de usuario no es válido."));
+              return;
+            }
+
+            // Cuenta nueva: guardar datos temporales y elegir rol
+            sessionStorage.setItem("googlePendiente", JSON.stringify({
+              registroToken: data.registroToken,
+              correo: data.correo,
+              nombre: data.nombre,
+              creado: Date.now(),
+            }));
+            window.location.assign("/login/registrar");
+          } catch {
+            window.location.assign(errorGoogle("No se pudo conectar con el servidor."));
+          }
+        }
+
+        function mostrarErrorGoogle(mensaje) {
+          if (!googleBtn) return;
+          googleBtn.innerHTML = "";
+          const aviso = document.createElement("p");
+          aviso.textContent = mensaje;
+          aviso.style.cssText = "font-size:12px;line-height:1.4;color:#b45309;text-align:center;margin:0;";
+          googleBtn.appendChild(aviso);
+        }
+
+        function iniciarGoogle() {
+          if (!googleBtn) return true;
+
+          const clientId = (googleBtn.dataset.clientId || "").trim();
+          if (!clientId) {
+            mostrarErrorGoogle("Google no está configurado: falta PUBLIC_GOOGLE_CLIENT_ID en el .env de Astro (reinicia astro dev).");
+            return true;
+          }
+
+          if (!window.google?.accounts?.id) return false; // la librería aún no cargó
+
+          try {
+            google.accounts.id.initialize({ client_id: clientId, callback: manejarGoogle });
+            google.accounts.id.renderButton(googleBtn, {
+              theme: "outline",
+              size: "large",
+              shape: "pill",
+              text: "continue_with",
+              width: 320,
+              locale: "es",
+            });
+          } catch (e) {
+            mostrarErrorGoogle("Error al iniciar Google: " + e.message);
+          }
+          return true;
+        }
+
+        // Reintenta cada 200 ms hasta que la librería de Google esté lista (máx. ~10 s)
+        let intentosGoogle = 0;
+        const temporizadorGoogle = setInterval(() => {
+          intentosGoogle++;
+          if (iniciarGoogle()) {
+            clearInterval(temporizadorGoogle);
+          } else if (intentosGoogle >= 50) {
+            clearInterval(temporizadorGoogle);
+            mostrarErrorGoogle("No se pudo cargar Google. Desactiva el bloqueador de anuncios o revisa tu internet.");
+          }
+        }, 200);
       </script>
+      <script is:inline src="https://accounts.google.com/gsi/client" async defer></script>
       <script is:inline src="/js/pages/login.js"></script>
       <script is:inline src="/js/site.js"></script>
     </Fragment>

@@ -373,3 +373,19 @@ body { font-family: 'Inter', sans-serif; display:flex; min-height:100vh; }
         animation:none !important;
     }
 }
+
+.divider-o {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 18px 0 14px;
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+.divider-o::before,
+.divider-o::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
