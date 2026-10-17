@@ -25,16 +25,20 @@ import "../../components/styles/registrar.css";
 
       <p>Escoge cómo deseas registrarte</p>
 
+      <div id="googleAviso" style="display:none;margin:12px 0;padding:10px 14px;border:1.5px solid var(--border);border-radius:12px;font-size:14px;">
+        <span id="googleAvisoTexto"></span>
+      </div>
+
       <div class="roles-grid">
         <!-- CLIENTE -->
-        <a href="/login/registrarcliente" class="role-card">
+        <a href="/login/registrarcliente" class="role-card" data-rol="3">
           <i class="bi bi-person"></i>
           <h3>Cliente</h3>
           <span>Contrata profesionales</span>
         </a>
 
         <!-- TRABAJADOR -->
-        <a href="/login/registrartrabajador" class="role-card">
+        <a href="/login/registrartrabajador" class="role-card" data-rol="2">
           <i class="bi bi-briefcase"></i>
           <h3>Trabajador</h3>
           <span>Publica tus servicios</span>
@@ -43,5 +47,52 @@ import "../../components/styles/registrar.css";
     </div>
   </div>
 
+  <script is:inline>
+    (function () {
+      const destinos = { 1: "/admin/admin", 2: "/trabajador", 3: "/cliente" };
+      const aviso = document.getElementById("googleAviso");
+      const texto = document.getElementById("googleAvisoTexto");
+
+      let pendiente = null;
+      try { pendiente = JSON.parse(sessionStorage.getItem("googlePendiente")); } catch {}
+
+      // Los datos de Google valen 10 minutos
+      if (!pendiente || Date.now() - pendiente.creado > 10 * 60 * 1000) {
+        sessionStorage.removeItem("googlePendiente");
+        return;
+      }
+
+      texto.textContent = "Continuando con Google como " + pendiente.correo + ". Elige tu rol:";
+      aviso.style.display = "block";
+
+      document.querySelectorAll(".role-card").forEach((card) => {
+        card.addEventListener("click", async (e) => {
+          e.preventDefault();
+          const rol = Number(card.dataset.rol);
+          try {
+            const response = await fetch("http://127.0.0.1:8000/api/auth/google/completar", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ registroToken: pendiente.registroToken, rol }),
+            });
+            const data = await response.json();
+
+            if (!response.ok) {
+              texto.textContent = data.mensaje || "No se pudo completar el registro.";
+              sessionStorage.removeItem("googlePendiente");
+              return;
+            }
+
+            sessionStorage.removeItem("googlePendiente");
+            localStorage.setItem("token", data.token);
+            localStorage.setItem("usuario", JSON.stringify(data.usuario));
+            window.location.assign(destinos[data.usuario.rol] ?? "/login/login");
+          } catch {
+            texto.textContent = "No se pudo conectar con el servidor.";
+          }
+        });
+      });
+    })();
+  </script>
   <script is:inline src="/js/site.js"></script>
 </Layout>
