@@ -10,7 +10,9 @@ export async function buscarUsuarioPorCorreo(correo: string) {
 
 export async function buscarUsuarioPorId(id: number) {
   const resultado = await client.query(
-    "SELECT Id_Usuario, Id_Rol, Nombre, Correo, Telefono, Ubicacion, Foto_Perfil, Estado FROM usuarios WHERE Id_Usuario = ?",
+    `SELECT Id_Usuario, Id_Rol, Nombre, Correo, Telefono, Ubicacion, Foto_Perfil, Estado,
+            Verificado, Estado_Verificacion
+     FROM usuarios WHERE Id_Usuario = ?`,
     [id]
   );
   return resultado[0];
@@ -22,12 +24,36 @@ export async function crearUsuario(
   correo: string,
   contrasenaEncriptada: string,
   telefono: string,
-  ubicacion: string
+  ubicacion: string,
+  tipoDocumento: string | null = null,
+  numeroDocumento: string | null = null,
+  fechaExpedicionDocumento: string | null = null,
+  estadoVerificacion = "pendiente",
+  perfilProfesional: { idCategoria: number; experiencia: string; descripcion: string } | null = null
 ) {
+  const verificado = estadoVerificacion === "aprobado" ? 1 : 0;
   const resultado = await client.execute(
-    `INSERT INTO usuarios (Id_Rol, Nombre, Correo, Contrasena, Telefono, Ubicacion, Fecha_Registro, Estado)
-     VALUES (?, ?, ?, ?, ?, ?, NOW(), 'Activo')`,
-    [idRol, nombre, correo, contrasenaEncriptada, telefono, ubicacion]
+    `INSERT INTO usuarios
+      (Id_Rol, Nombre, Correo, Contrasena, Telefono, Ubicacion, Fecha_Registro, Estado,
+       Verificado, Tipo_Documento, Numero_Documento, Fecha_Expedicion_Documento, Estado_Verificacion,
+       Categoria_Profesional, Experiencia, Descripcion_Profesional)
+     VALUES (?, ?, ?, ?, ?, ?, NOW(), 'Activo', ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [
+      idRol,
+      nombre,
+      correo,
+      contrasenaEncriptada,
+      telefono,
+      ubicacion,
+      verificado,
+      tipoDocumento,
+      numeroDocumento,
+      fechaExpedicionDocumento,
+      estadoVerificacion,
+      perfilProfesional?.idCategoria ?? null,
+      perfilProfesional?.experiencia ?? null,
+      perfilProfesional?.descripcion ?? null,
+    ]
   );
   return resultado;
 }

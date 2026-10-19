@@ -125,6 +125,7 @@ export const crearSolicitud = async (ctx: Context) => {
       Telefono,
       Descripcion_Solicitud,
     } = body;
+    const sesion = ctx.state.usuario as { id?: number; rol?: number } | undefined;
 
     if (!Id_Cliente || !Id_Trabajador || !Id_Servicio || !Fecha_Servicio || !Hora_Servicio) {
       ctx.response.status = 400;
@@ -133,17 +134,43 @@ export const crearSolicitud = async (ctx: Context) => {
       };
       return;
     }
+    if (Number(sesion?.rol) !== 3 || Number(sesion?.id) !== Number(Id_Cliente)) {
+      ctx.response.status = 403;
+      ctx.response.body = { mensaje: "Inicia sesión como cliente para enviar una solicitud desde tu propia cuenta" };
+      return;
+    }
 
     db = await nuevaConexion();
     await db.execute("START TRANSACTION");
     enTransaccion = true;
     // Locking the worker row serializes bookings from concurrent requests for that worker.
-    const trabajador = await db.query("SELECT Id_Usuario FROM usuarios WHERE Id_Usuario = ? FOR UPDATE", [Id_Trabajador]);
+    const trabajador = await db.query(
+      "SELECT Id_Usuario, Verificado, Estado_Verificacion FROM usuarios WHERE Id_Usuario = ? AND Id_Rol = 2 FOR UPDATE",
+      [Id_Trabajador]
+    );
     if (!trabajador.length) {
       await db.execute("ROLLBACK");
       enTransaccion = false;
       ctx.response.status = 404;
       ctx.response.body = { mensaje: "No se encontró el trabajador." };
+      return;
+    }
+    if (Number(trabajador[0].Verificado) !== 1 || trabajador[0].Estado_Verificacion !== "aprobado") {
+      await db.execute("ROLLBACK");
+      enTransaccion = false;
+      ctx.response.status = 403;
+      ctx.response.body = { mensaje: "Este trabajador no está habilitado para recibir solicitudes." };
+      return;
+    }
+    const cliente = await db.query(
+      "SELECT Id_Usuario FROM usuarios WHERE Id_Usuario = ? AND Id_Rol = 3 AND Verificado = 1 AND Estado_Verificacion = 'aprobado'",
+      [Id_Cliente]
+    );
+    if (!cliente.length) {
+      await db.execute("ROLLBACK");
+      enTransaccion = false;
+      ctx.response.status = 403;
+      ctx.response.body = { mensaje: "Tu cuenta debe estar aprobada para solicitar servicios." };
       return;
     }
     const servicio = await db.query("SELECT Id_Servicio FROM servicios WHERE Id_Servicio = ? AND Id_Trabajador = ?", [Id_Servicio, Id_Trabajador]);

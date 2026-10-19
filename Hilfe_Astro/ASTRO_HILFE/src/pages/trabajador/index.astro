@@ -815,7 +815,7 @@ const nombre = usuario.nombre;
 				tarjeta.querySelector('[data-accion="eliminar"]').addEventListener('click', async function () {
 					if (!window.confirm('¿Eliminar este servicio?')) return;
 					try {
-						await leerRespuesta(await fetch(api + '/servicios/' + encodeURIComponent(id), { method: 'DELETE' }));
+						await leerRespuesta(await fetch(api + '/servicios/' + encodeURIComponent(id), { method: 'DELETE', headers: { Authorization: 'Bearer ' + (localStorage.getItem('token') || '') } }));
 						tarjeta.remove();
 						delete serviciosPorId[id];
 						actualizarContador();
@@ -849,7 +849,7 @@ const nombre = usuario.nombre;
 						if (!usuario?.id || Number(usuario.rol) !== 2) throw new Error('Inicia sesión como trabajador para agregar un servicio.');
 						if (!body.Id_Categoria || !body.Titulo || !Number.isFinite(body.Precio) || body.Precio < 0) throw new Error('Completa el título, categoría y precio del servicio.');
 						var nuevoServicio = await leerRespuesta(await fetch(api + '/servicios', {
-							method: 'POST', headers: { 'Content-Type': 'application/json' },
+							method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + (localStorage.getItem('token') || '') },
 							body: JSON.stringify({ Id_Trabajador: Number(usuario.id), ...body })
 						}));
 						if (!nuevoServicio.Id_Servicio) throw new Error('El servicio se creó, pero el servidor no devolvió su identificador para guardar los horarios.');
@@ -867,7 +867,7 @@ const nombre = usuario.nombre;
 						return;
 					}
 					await leerRespuesta(await fetch(api + '/servicios/' + encodeURIComponent(id), {
-						method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body)
+						method: 'PUT', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + (localStorage.getItem('token') || '') }, body: JSON.stringify(body)
 					}));
 					var usuarioActual = JSON.parse(localStorage.getItem('usuario') || 'null');
 					await guardarHorarios(id, usuarioActual && usuarioActual.id);

@@ -20,6 +20,14 @@ export async function generarToken(idUsuario: number, idRol: number) {
   );
 }
 
+export async function generarTokenVerificacion(idUsuario: number, idRol: number) {
+  return await create(
+    { alg: "HS512", typ: "JWT" },
+    { id: idUsuario, rol: idRol, alcance: "verificacion" },
+    llaveSecreta
+  );
+}
+
 export async function verificarToken(token: string) {
   return await verify(token, llaveSecreta);
 }

@@ -13,9 +13,9 @@ import '../../components/styles/design-system.css';
 			<div class="profile-main">
 				<section class="profile-card worker-summary">
 					<div class="worker-avatar"><div class="photo-placeholder" id="trabajadorInicial"></div><img id="trabajadorFoto" alt="Foto del trabajador" hidden /></div>
-					<div class="summary-copy"><h1 id="trabajadorNombre"></h1><p id="trabajadorUbicacion"></p><strong id="servicioResumen"></strong><div class="summary-tags"><span id="trabajadorCategoria"></span><span id="totalResenas"></span><span id="promedioResumen"></span></div></div>
+					<div class="summary-copy"><h1 id="trabajadorNombre"></h1><p id="trabajadorUbicacion"></p><strong id="servicioResumen"></strong><div class="summary-tags"><span id="badgeVerificacion" style="display:inline-flex;align-items:center;gap:4px;font-size:0.8rem;padding:3px 9px;border-radius:12px;font-weight:700;"></span><span id="trabajadorCategoria"></span><span id="totalResenas"></span><span id="promedioResumen"></span></div></div>
 				</section>
-				<section class="profile-card"><h2>Descripción profesional</h2><h3 id="servicioTitulo"></h3><p id="servicioDescripcion"></p><div class="summary-tags"><span id="categoriaDescripcion"></span><span id="disponibilidadResumen"></span></div></section>
+				<section class="profile-card"><h2>Descripción profesional</h2><p id="perfilProfesionalDescripcion" hidden></p><h3 id="servicioTitulo"></h3><p id="servicioDescripcion"></p><div class="summary-tags"><span id="categoriaDescripcion"></span><span id="experienciaProfesional"></span><span id="disponibilidadResumen"></span></div></section>
 				<section class="profile-card"><h2>Trabajos realizados</h2><div class="work-gallery" id="galeriaTrabajos"><p>Cargando fotos...</p></div></section>
 				<section class="profile-card"><h2 id="calificacionesTitulo">Calificaciones</h2><div class="rating-summary"><strong id="promedioCalificaciones">0.0</strong><span id="estrellasResumen">☆☆☆☆☆</span><small id="cantidadCalificaciones">0 reseñas</small></div><div id="listaCalificaciones"></div></section>
 			</div>
@@ -283,11 +283,31 @@ import '../../components/styles/design-system.css';
 					if (!respuestas[0].ok) throw new Error(mensajeDe(datosTrabajador, 'No fue posible cargar el trabajador.'));
 					if (!respuestas[1].ok) throw new Error(mensajeDe(datosServicios, 'No fue posible cargar los servicios.'));
 					trabajador = datosTrabajador;
+					var descripcionPerfil = document.getElementById('perfilProfesionalDescripcion');
+					if (trabajador.Descripcion_Profesional) {
+						descripcionPerfil.textContent = trabajador.Descripcion_Profesional;
+						descripcionPerfil.hidden = false;
+					}
+					document.getElementById('experienciaProfesional').textContent = trabajador.Experiencia || '';
 					servicios = listaDe(datosServicios).filter(function (s) { return String(s.Id_Trabajador) === String(trabajadorId); });
 					calificaciones = respuestas[2].ok ? listaDe(datosCalificaciones) : [];
 					if (!servicios.length) throw new Error('Este trabajador no tiene servicios disponibles.');
 					var nombre = trabajador.Nombre || 'Trabajador';
 					document.getElementById('trabajadorNombre').textContent = nombre;
+					var verificado = trabajador.Verificado === 1 || trabajador.Verificado === true;
+					var badgeEl = document.getElementById('badgeVerificacion');
+					if (badgeEl) {
+						if (verificado) {
+							badgeEl.style.background = '#dcfce7';
+							badgeEl.style.color = '#15803d';
+							badgeEl.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></svg> Identidad Verificada';
+							badgeEl.title = 'Documento de identidad revisado contra registros oficiales por la administración de Hilf\\\'e';
+						} else {
+							badgeEl.style.background = '#fef3c7';
+							badgeEl.style.color = '#b45309';
+							badgeEl.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg> Verificación en trámite';
+						}
+					}
 					document.getElementById('trabajadorInicial').textContent = nombre.charAt(0).toUpperCase();
 					document.getElementById('modalInicial').textContent = nombre.charAt(0).toUpperCase();
 					document.getElementById('modalNombre').textContent = nombre;
@@ -335,7 +355,7 @@ import '../../components/styles/design-system.css';
 				try {
 					if (!validarHorarioSeleccionado()) throw new Error('Selecciona una fecha y una hora disponible dentro del horario publicado.');
 					var respuesta = await fetch(api + '/solicitudes', {
-						method: 'POST', headers: {'Content-Type':'application/json'},
+						method: 'POST', headers: {'Content-Type':'application/json', Authorization: 'Bearer ' + (localStorage.getItem('token') || '')},
 						body: JSON.stringify({
 							Id_Cliente: sesion.id, Id_Trabajador: trabajador.Id_Usuario, Id_Servicio: selector.value,
 							Fecha_Servicio: document.getElementById('fechaServicio').value,

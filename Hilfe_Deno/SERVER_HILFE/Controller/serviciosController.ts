@@ -23,7 +23,7 @@ export const getServicios = async (ctx: Context) => {
       JOIN categorias c ON s.Id_Categoria = c.Id_Categoria
       LEFT JOIN solicitudes sol ON sol.Id_Servicio = s.Id_Servicio AND sol.Estado_Solicitudes = 'finalizado'
       LEFT JOIN calificaciones cal ON cal.Id_Solicitud = sol.Id_Solicitud
-      WHERE 1 = 1
+      WHERE u.Verificado = 1 AND u.Estado_Verificacion = 'aprobado'
     `;
     const params: unknown[] = [];
 
@@ -70,7 +70,7 @@ export const getServicioPorId = async (ctx: RouterContext<string>) => {
        FROM servicios s
        JOIN usuarios u ON s.Id_Trabajador = u.Id_Usuario
        JOIN categorias c ON s.Id_Categoria = c.Id_Categoria
-       WHERE s.Id_Servicio = ?`,
+       WHERE s.Id_Servicio = ? AND u.Verificado = 1 AND u.Estado_Verificacion = 'aprobado'`,
       [id]
     );
     if (result.length === 0) {
@@ -90,11 +90,39 @@ export const crearServicio = async (ctx: Context) => {
   try {
     const body: Partial<Servicio> = await ctx.request.body.json();
     const { Id_Trabajador, Id_Categoria, Titulo, Descripcion, Precio, TipoServicio } = body;
+    const sesion = ctx.state.usuario as { id?: number; rol?: number } | undefined;
+
+    if (Number(sesion?.rol) !== 2 || Number(sesion?.id) !== Number(Id_Trabajador)) {
+      ctx.response.status = 403;
+      ctx.response.body = { mensaje: "Solo puedes publicar servicios desde tu propia cuenta de trabajador" };
+      return;
+    }
 
     if (!Id_Trabajador || !Id_Categoria || !Titulo || Precio === undefined) {
       ctx.response.status = 400;
       ctx.response.body = {
         mensaje: "Id_Trabajador, Id_Categoria, Titulo y Precio son obligatorios",
+      };
+      return;
+    }
+
+    // Validación de seguridad: el trabajador debe estar aprobado para publicar servicios
+    const trabajadores = await client.query(
+      "SELECT Id_Usuario, Verificado, Estado_Verificacion FROM usuarios WHERE Id_Usuario = ? AND Id_Rol = 2",
+      [Id_Trabajador]
+    );
+
+    if (trabajadores.length === 0) {
+      ctx.response.status = 404;
+      ctx.response.body = { mensaje: "El trabajador especificado no existe" };
+      return;
+    }
+
+    const trabajador = trabajadores[0];
+    if (Number(trabajador.Verificado) !== 1 || trabajador.Estado_Verificacion !== "aprobado") {
+      ctx.response.status = 403;
+      ctx.response.body = {
+        mensaje: "Tu cuenta de trabajador está en verificación. No puedes publicar servicios hasta que tu identidad sea aprobada por el administrador.",
       };
       return;
     }
@@ -116,6 +144,30 @@ export const crearServicio = async (ctx: Context) => {
 export const actualizarServicio = async (ctx: RouterContext<string>) => {
   const { id } = ctx.params as { id: string };
   try {
+    const sesion = ctx.state.usuario as { id?: number; rol?: number } | undefined;
+    const servicioActual = await client.query(
+      `SELECT s.Id_Trabajador, u.Verificado, u.Estado_Verificacion
+       FROM servicios s JOIN usuarios u ON u.Id_Usuario = s.Id_Trabajador
+       WHERE s.Id_Servicio = ?`,
+      [id]
+    );
+    if (!servicioActual.length) {
+      ctx.response.status = 404;
+      ctx.response.body = { mensaje: "Servicio no encontrado" };
+      return;
+    }
+    const esAdmin = Number(sesion?.rol) === 1;
+    const esPropietario = Number(sesion?.rol) === 2 && Number(sesion?.id) === Number(servicioActual[0].Id_Trabajador);
+    if (!esAdmin && !esPropietario) {
+      ctx.response.status = 403;
+      ctx.response.body = { mensaje: "No tienes permiso para editar este servicio" };
+      return;
+    }
+    if (esPropietario && (Number(servicioActual[0].Verificado) !== 1 || servicioActual[0].Estado_Verificacion !== "aprobado")) {
+      ctx.response.status = 403;
+      ctx.response.body = { mensaje: "Tu cuenta debe estar aprobada para publicar o editar servicios" };
+      return;
+    }
     const body: Partial<Servicio> = await ctx.request.body.json();
     const { Id_Categoria, Titulo, Descripcion, Precio, TipoServicio } = body;
 
@@ -137,6 +189,25 @@ export const actualizarServicio = async (ctx: RouterContext<string>) => {
 export const eliminarServicio = async (ctx: RouterContext<string>) => {
   const { id } = ctx.params as { id: string };
   try {
+    const sesion = ctx.state.usuario as { id?: number; rol?: number } | undefined;
+    const servicioActual = await client.query(
+      `SELECT s.Id_Trabajador, u.Verificado, u.Estado_Verificacion
+       FROM servicios s JOIN usuarios u ON u.Id_Usuario = s.Id_Trabajador
+       WHERE s.Id_Servicio = ?`,
+      [id]
+    );
+    if (!servicioActual.length) {
+      ctx.response.status = 404;
+      ctx.response.body = { mensaje: "Servicio no encontrado" };
+      return;
+    }
+    const esAdmin = Number(sesion?.rol) === 1;
+    const esPropietario = Number(sesion?.rol) === 2 && Number(sesion?.id) === Number(servicioActual[0].Id_Trabajador);
+    if (!esAdmin && !esPropietario) {
+      ctx.response.status = 403;
+      ctx.response.body = { mensaje: "No tienes permiso para eliminar este servicio" };
+      return;
+    }
     await client.execute("DELETE FROM servicios WHERE Id_Servicio = ?", [id]);
     ctx.response.status = 200;
     ctx.response.body = { mensaje: "Servicio eliminado correctamente" };

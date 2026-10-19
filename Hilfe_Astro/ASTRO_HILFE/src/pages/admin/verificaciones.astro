@@ -1,0 +1,707 @@
+---
+import Layout from "../../layouts/Layout.astro";
+import AdminSidebar from "../../components/adminsidebar.astro";
+import AdminTopbar from "../../components/admintopbar.astro";
+import "../../components/styles/admintrabajador.css";
+import "../../components/styles/admin-polish.css";
+---
+
+<style is:global>
+  .legal-modal-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 2000;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+    overflow-y: auto;
+    background: rgb(15 23 42 / 58%);
+    backdrop-filter: blur(4px);
+  }
+
+  .legal-modal-backdrop.open {
+    display: flex;
+  }
+
+  .legal-modal-window {
+    display: flex;
+    flex-direction: column;
+    width: min(100%, 820px);
+    max-height: min(92vh, 960px);
+    overflow: hidden;
+    background: var(--bg-card, #fff);
+    border: 1px solid var(--border, #dbe3ee);
+    border-radius: 18px;
+    box-shadow: 0 24px 80px rgb(15 23 42 / 28%);
+  }
+
+  .legal-modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid var(--border, #dbe3ee);
+  }
+
+  .legal-modal-body {
+    overflow-y: auto;
+  }
+
+  @media (max-width: 640px) {
+    .legal-modal-backdrop {
+      align-items: flex-end;
+      padding: 0;
+    }
+
+    .legal-modal-window {
+      width: 100%;
+      max-height: 94vh;
+      border-radius: 18px 18px 0 0;
+    }
+  }
+</style>
+
+<Layout title="Verificación de Identidad — Panel Administrativo | Hilf'e">
+  <Fragment slot="head">
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
+  </Fragment>
+
+  <div class="admin-shell">
+    <AdminSidebar active="verificaciones" />
+
+    <div class="admin-main">
+      <AdminTopbar
+        title="Verificación de Identidad"
+        subtitle="Cotejo manual de cédulas y documentos en la Registraduría Nacional de Colombia"
+      />
+
+      <div class="admin-content">
+        <!-- MÉTRICAS DE VERIFICACIÓN -->
+        <div class="stats-grid" style="display:grid;grid-template-columns:repeat(auto-fit, minmax(200px, 1fr));gap:1rem;margin-bottom:1.5rem;">
+          <div class="stat-card">
+            <div class="stat-card-icon primary">
+              <i class="bi bi-shield-check" style="font-size:1.4rem;"></i>
+            </div>
+            <div class="stat-card-body">
+              <div class="stat-card-value" id="statTotal">0</div>
+              <div class="stat-card-label">Total Solicitudes</div>
+            </div>
+          </div>
+
+          <div class="stat-card">
+            <div class="stat-card-icon warning">
+              <i class="bi bi-hourglass-split" style="font-size:1.4rem;"></i>
+            </div>
+            <div class="stat-card-body">
+              <div class="stat-card-value" id="statPendientes">0</div>
+              <div class="stat-card-label">Pendientes</div>
+            </div>
+          </div>
+
+          <div class="stat-card">
+            <div class="stat-card-icon info">
+              <i class="bi bi-eye" style="font-size:1.4rem;"></i>
+            </div>
+            <div class="stat-card-body">
+              <div class="stat-card-value" id="statRevision">0</div>
+              <div class="stat-card-label">En Revisión</div>
+            </div>
+          </div>
+
+          <div class="stat-card">
+            <div class="stat-card-icon success">
+              <i class="bi bi-patch-check-fill" style="font-size:1.4rem;"></i>
+            </div>
+            <div class="stat-card-body">
+              <div class="stat-card-value" id="statAprobadas">0</div>
+              <div class="stat-card-label">Aprobadas</div>
+            </div>
+          </div>
+
+          <div class="stat-card">
+            <div class="stat-card-icon danger">
+              <i class="bi bi-x-circle-fill" style="font-size:1.4rem;"></i>
+            </div>
+            <div class="stat-card-body">
+              <div class="stat-card-value" id="statRechazadas">0</div>
+              <div class="stat-card-label">Rechazadas</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- TARJETA PRINCIPAL DE SOLICITUDES -->
+        <div class="admin-card">
+          <div class="admin-card-header" style="flex-wrap:wrap;gap:1rem;">
+            <h3>
+              <i class="bi bi-person-vcard"></i>
+              Solicitudes de Verificación de Identidad
+            </h3>
+
+            <!-- FILTROS Y BÚSQUEDA -->
+            <div style="display:flex;align-items:center;gap:0.75rem;flex-wrap:wrap;">
+              <select id="filtroEstado" class="search-input" style="padding:0.4rem 0.8rem;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--bg-card);color:var(--text);font-size:0.875rem;">
+                <option value="todos">Todos los estados</option>
+                <option value="pendiente" selected>Pendientes de revisión</option>
+                <option value="en_revision">En revisión</option>
+                <option value="aprobado">Aprobadas</option>
+                <option value="requiere_informacion">Requiere información</option>
+                <option value="rechazado">Rechazadas</option>
+              </select>
+
+              <select id="filtroRol" class="search-input" style="padding:0.4rem 0.8rem;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--bg-card);color:var(--text);font-size:0.875rem;">
+                <option value="0">Todos los roles</option>
+                <option value="2">Trabajadores</option>
+                <option value="3">Clientes</option>
+              </select>
+
+              <div class="search-wrap admin-search-input" style="min-width:220px;">
+                <i class="bi bi-search" style="margin-right:6px;color:var(--text-muted);"></i>
+                <input
+                  type="text"
+                  id="buscarInput"
+                  placeholder="Buscar por nombre, correo..."
+                  class="search-input"
+                />
+              </div>
+            </div>
+          </div>
+
+          <!-- TABLA DE SOLICITUDES -->
+          <div class="table-wrap" style="border-radius:0;border-left:none;border-right:none;border-bottom:none">
+            <table class="table">
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>Usuario</th>
+                  <th>Rol</th>
+                  <th>Documento (Enmascarado)</th>
+                  <th>Fecha Solicitud</th>
+                  <th>Estado</th>
+                  <th>Acciones</th>
+                </tr>
+              </thead>
+              <tbody id="verificacionesBody">
+                <tr>
+                  <td colspan="7" class="text-center text-muted" style="padding:3rem 1rem;">
+                    <div class="spinner" style="margin:0 auto 1rem auto;width:28px;height:28px;border:3px solid var(--border);border-top-color:var(--primary);border-radius:50%;animation:spin 0.8s linear infinite;"></div>
+                    Cargando solicitudes de verificación...
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="table-footer" style="display:flex;align-items:center;justify-content:space-between;padding:1rem 1.5rem;">
+            <span>Total mostradas: <strong id="totalMostradas">0</strong> solicitudes</span>
+            <span style="font-size:0.8rem;color:var(--text-secondary);">
+              <i class="bi bi-shield-lock"></i>
+              Los números de documento se muestran enmascarados en el listado para protección de datos personales.
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL DE REVISIÓN Y DECISIÓN ADMINISTRATIVA -->
+  <div id="modalRevision" class="legal-modal-backdrop" role="dialog" aria-modal="true" aria-hidden="true">
+    <div class="legal-modal-window" style="max-width:820px;">
+      <div class="legal-modal-header" style="background:var(--primary-soft);">
+        <div style="display:flex;align-items:center;gap:10px;">
+          <div style="width:36px;height:36px;border-radius:50%;background:var(--primary);color:#fff;display:flex;align-items:center;justify-content:center;">
+            <i class="bi bi-person-check-fill"></i>
+          </div>
+          <div>
+            <h3 style="color:var(--primary-dark);margin:0;font-size:1.15rem;">Revisión de Verificación de Identidad</h3>
+            <span style="font-size:0.8rem;color:var(--text-secondary);" id="modalSubhead">Solicitud #—</span>
+          </div>
+        </div>
+
+        <button type="button" class="legal-modal-close-btn" id="btnCerrarModal" aria-label="Cerrar modal">
+          <i class="bi bi-x-lg"></i>
+        </button>
+      </div>
+
+      <div class="legal-modal-body" style="padding:1.5rem 1.75rem;">
+        <!-- INFORMACIÓN DEL USUARIO Y DOCUMENTO -->
+        <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(220px, 1fr));gap:1.25rem;background:var(--hover-bg);padding:1.25rem;border-radius:var(--radius);margin-bottom:1.5rem;border:1px solid var(--border);">
+          <div>
+            <small style="color:var(--text-muted);text-transform:uppercase;font-weight:700;font-size:0.75rem;">Nombre Completo</small>
+            <div id="detNombre" style="font-weight:700;font-size:1.05rem;color:var(--text);margin-top:2px;">—</div>
+            <div id="detCorreo" style="font-size:0.85rem;color:var(--text-secondary);">—</div>
+          </div>
+
+          <div>
+            <small style="color:var(--text-muted);text-transform:uppercase;font-weight:700;font-size:0.75rem;">Tipo de Cuenta</small>
+            <div id="detRol" style="font-weight:700;margin-top:2px;">—</div>
+            <div id="detTelefono" style="font-size:0.85rem;color:var(--text-secondary);">—</div>
+          </div>
+
+          <div>
+            <small style="color:var(--text-muted);text-transform:uppercase;font-weight:700;font-size:0.75rem;">Estado Actual</small>
+            <div id="detEstadoBadge" style="margin-top:4px;">—</div>
+            <div id="detFechaSolicitud" style="font-size:0.8rem;color:var(--text-secondary);margin-top:4px;">—</div>
+          </div>
+        </div>
+
+        <!-- DATOS OFICIALES PARA COTEJO EN LA REGISTRADURÍA -->
+        <div style="border:2px solid var(--primary-light);border-radius:var(--radius);padding:1.25rem;margin-bottom:1.5rem;background:var(--bg-card);">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;flex-wrap:wrap;gap:0.5rem;">
+            <div style="display:flex;align-items:center;gap:8px;">
+              <i class="bi bi-card-heading" style="font-size:1.4rem;color:var(--primary);"></i>
+              <strong style="font-size:1.05rem;color:var(--text);">Documento registrado por el trabajador</strong>
+            </div>
+            <span style="font-size:0.8rem;padding:0.25rem 0.6rem;background:var(--primary-soft);color:var(--primary-dark);border-radius:var(--radius-full);font-weight:700;">
+              Exclusivo Administrador
+            </span>
+          </div>
+
+          <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(180px, 1fr));gap:1rem;margin-bottom:1.25rem;">
+            <div>
+              <span style="font-size:0.8rem;color:var(--text-muted);display:block;">Tipo de documento:</span>
+              <strong id="detTipoDoc" style="font-size:1.15rem;color:var(--text);">—</strong>
+            </div>
+
+            <div>
+              <span style="font-size:0.8rem;color:var(--text-muted);display:block;">Número de documento:</span>
+              <strong id="detNumeroDoc" style="font-size:1.25rem;color:var(--primary);font-family:monospace;letter-spacing:0.04em;">—</strong>
+            </div>
+
+            <div>
+              <span style="font-size:0.8rem;color:var(--text-muted);display:block;">Fecha de expedición:</span>
+              <strong id="detFechaExp" style="font-size:1.15rem;color:var(--text);font-family:monospace;">—</strong>
+            </div>
+          </div>
+
+          <!-- BOTÓN OFICIAL DE CONSULTA MANUAL EN REGISTRADURÍA -->
+          <div style="background:var(--hover-bg);padding:1rem;border-radius:var(--radius-sm);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:1rem;">
+            <div style="max-width:440px;">
+              <span style="font-size:0.85rem;color:var(--text);display:block;line-height:1.4;">
+                Abre el portal oficial en una nueva pestaña. Ingresa el número y la fecha de expedición para verificar si la cédula está vigente.
+              </span>
+            </div>
+
+            <a
+              href="https://certvigenciacedula.registraduria.gov.co"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="btn-nav-next"
+              style="text-decoration:none;background:var(--primary);padding:0.65rem 1.25rem;font-size:0.875rem;"
+            >
+              <i class="bi bi-box-arrow-up-right"></i>
+              <span>Consultar en la Registraduría</span>
+            </a>
+          </div>
+        </div>
+
+        <!-- HISTORIAL Y ACEPTACIONES LEGALES AUDITADAS -->
+        <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(280px, 1fr));gap:1rem;margin-bottom:1.5rem;">
+          <div style="background:var(--hover-bg);padding:1rem;border-radius:var(--radius);border:1px solid var(--border);">
+            <strong style="font-size:0.875rem;color:var(--text);display:block;margin-bottom:0.5rem;">
+              <i class="bi bi-file-earmark-check"></i>
+              Aceptaciones Legales Auditadas
+            </strong>
+            <div id="detAceptaciones" style="font-size:0.8rem;color:var(--text-secondary);line-height:1.6;">
+              Consultando consentimientos...
+            </div>
+          </div>
+
+          <div style="background:var(--hover-bg);padding:1rem;border-radius:var(--radius);border:1px solid var(--border);">
+            <strong style="font-size:0.875rem;color:var(--text);display:block;margin-bottom:0.5rem;">
+              <i class="bi bi-clock-history"></i>
+              Historial de Revisión
+            </strong>
+            <div id="detHistorial" style="font-size:0.8rem;color:var(--text-secondary);line-height:1.6;">
+              Sin revisiones previas registradas.
+            </div>
+          </div>
+        </div>
+
+        <!-- PANEL DE DECISIONES ADMINISTRATIVAS -->
+        <div style="border-top:1px solid var(--border);padding-top:1.25rem;">
+          <strong style="font-size:0.95rem;color:var(--text);display:block;margin-bottom:0.75rem;">
+            Registrar decisión administrativa sobre esta solicitud:
+          </strong>
+
+          <div class="field-group" style="margin-bottom:1rem;">
+            <label class="field-label" for="adminObservaciones">
+              Observaciones / Justificación de la decisión:
+            </label>
+            <textarea
+              id="adminObservaciones"
+              class="field-control"
+              rows="2"
+              placeholder="Ej. Cédula consultada en portal de Registraduría y verificada vigente / Documento no coincide..."
+              style="padding-left:1rem;resize:vertical;"
+            ></textarea>
+          </div>
+
+          <div style="display:flex;align-items:center;gap:0.75rem;flex-wrap:wrap;justify-content:flex-end;">
+            <button
+              type="button"
+              class="btn-nav-prev"
+              id="btnPonerEnRevision"
+              style="border-color:#38bdf8;color:#0284c7;"
+            >
+              <i class="bi bi-clock"></i>
+              <span>Mantener en revisión</span>
+            </button>
+
+            <button
+              type="button"
+              class="btn-nav-prev"
+              id="btnSolicitarInfo"
+              style="border-color:#f59e0b;color:#d97706;"
+            >
+              <i class="bi bi-question-circle"></i>
+              <span>Solicitar info adicional</span>
+            </button>
+
+            <button
+              type="button"
+              class="btn-nav-prev"
+              id="btnRechazar"
+              style="border-color:#ef4444;color:#dc2626;"
+            >
+              <i class="bi bi-x-circle"></i>
+              <span>Rechazar</span>
+            </button>
+
+            <button
+              type="button"
+              class="btn-nav-next"
+              id="btnAprobar"
+              style="background:var(--success);margin-left:0;"
+            >
+              <i class="bi bi-check-circle-fill"></i>
+              <span>Aprobar Verificación</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SCRIPT CLIENT-SIDE DE GESTIÓN ADMINISTRATIVA -->
+  <script is:inline>
+    (function () {
+      const api = "http://127.0.0.1:8000/api";
+      const token = localStorage.getItem("token");
+      let usuarioSesion = null;
+      try {
+        usuarioSesion = JSON.parse(localStorage.getItem("usuario") || "null");
+      } catch {}
+
+      // Control de acceso en cliente
+      if (!token || Number(usuarioSesion?.rol) !== 1) {
+        alert("Acceso restringido: Se requiere inicio de sesión con permisos de Administrador.");
+        window.location.assign("/login/login");
+        return;
+      }
+
+      let solicitudes = [];
+      let solicitudActual = null;
+
+      const tablaBody = document.getElementById("verificacionesBody");
+      const filtroEstado = document.getElementById("filtroEstado");
+      const filtroRol = document.getElementById("filtroRol");
+      const buscarInput = document.getElementById("buscarInput");
+      const totalMostradas = document.getElementById("totalMostradas");
+
+      const statTotal = document.getElementById("statTotal");
+      const statPendientes = document.getElementById("statPendientes");
+      const statRevision = document.getElementById("statRevision");
+      const statAprobadas = document.getElementById("statAprobadas");
+      const statRechazadas = document.getElementById("statRechazadas");
+
+      const modalRevision = document.getElementById("modalRevision");
+      const btnCerrarModal = document.getElementById("btnCerrarModal");
+
+      // Cargar listado desde la API
+      async function cargarSolicitudes() {
+        const estado = filtroEstado.value;
+        const rol = filtroRol.value;
+        const busqueda = buscarInput.value.trim();
+
+        let url = `${api}/admin/verificaciones?`;
+        if (estado) url += `estado=${encodeURIComponent(estado)}&`;
+        if (Number(rol) > 0) url += `rol=${encodeURIComponent(rol)}&`;
+        if (busqueda) url += `busqueda=${encodeURIComponent(busqueda)}&`;
+
+        try {
+          const res = await fetch(url, {
+            headers: { Authorization: `Bearer ${token}` },
+          });
+
+          if (!res.ok) {
+            if (res.status === 403 || res.status === 401) {
+              alert("Tu sesión administrativa ha vencido o no tienes permisos.");
+              window.location.assign("/login/login");
+              return;
+            }
+            throw new Error("No se pudo cargar la lista de solicitudes.");
+          }
+
+          solicitudes = await res.json();
+          actualizarMetricas(solicitudes);
+          renderTabla(solicitudes);
+        } catch (err) {
+          tablaBody.innerHTML = `
+            <tr>
+              <td colspan="7" class="text-center text-muted" style="padding:2rem;color:var(--danger);">
+                <i class="bi bi-exclamation-triangle" style="font-size:1.5rem;display:block;margin-bottom:0.5rem;"></i>
+                Error al conectar con la base de datos de verificaciones.
+              </td>
+            </tr>
+          `;
+        }
+      }
+
+      function actualizarMetricas(list) {
+        statTotal.textContent = list.length;
+        statPendientes.textContent = list.filter((s) => s.Estado === "pendiente").length;
+        statRevision.textContent = list.filter((s) => s.Estado === "en_revision").length;
+        statAprobadas.textContent = list.filter((s) => s.Estado === "aprobado").length;
+        statRechazadas.textContent = list.filter((s) => s.Estado === "rechazado").length;
+      }
+
+      function renderBadgeEstado(estado) {
+        const config = {
+          pendiente: { class: "badge-warning", icon: "bi-hourglass-split", label: "Pendiente" },
+          en_revision: { class: "badge-info", icon: "bi-eye", label: "En Revisión" },
+          aprobado: { class: "badge-success", icon: "bi-check-circle-fill", label: "Aprobado" },
+          requiere_informacion: { class: "badge-warning", icon: "bi-question-circle", label: "Requiere Info" },
+          rechazado: { class: "badge-danger", icon: "bi-x-circle-fill", label: "Rechazado" },
+        };
+        const c = config[estado] || { class: "badge-neutral", icon: "bi-circle", label: estado };
+        return `<span class="badge ${c.class}" style="display:inline-flex;align-items:center;gap:4px;font-size:0.8rem;padding:0.25rem 0.65rem;">
+          <i class="bi ${c.icon}"></i> ${c.label}
+        </span>`;
+      }
+
+      function renderTabla(list) {
+        if (!list || list.length === 0) {
+          tablaBody.innerHTML = `
+            <tr>
+              <td colspan="7" class="text-center text-muted" style="padding:3rem 1rem;">
+                No se encontraron solicitudes con los filtros aplicados.
+              </td>
+            </tr>
+          `;
+          totalMostradas.textContent = "0";
+          return;
+        }
+
+        totalMostradas.textContent = String(list.length);
+        tablaBody.innerHTML = "";
+
+        list.forEach((sol) => {
+          const tr = document.createElement("tr");
+
+          const fechaStr = sol.Fecha_Creacion
+            ? new Date(sol.Fecha_Creacion).toLocaleDateString("es-CO", { day: "2-digit", month: "short", year: "numeric" })
+            : "—";
+
+          const rolBadge = Number(sol.Id_Rol) === 2
+            ? `<span style="font-size:0.75rem;padding:2px 8px;border-radius:4px;background:#f5f3ff;color:#7c3aed;font-weight:700;">Trabajador</span>`
+            : `<span style="font-size:0.75rem;padding:2px 8px;border-radius:4px;background:#eff6ff;color:#2563eb;font-weight:700;">Cliente</span>`;
+
+          tr.innerHTML = `
+            <td>#${sol.Id_Solicitud_Verificacion}</td>
+            <td>
+              <div style="display:flex;align-items:center;gap:10px;">
+                <div style="width:34px;height:34px;border-radius:50%;background:var(--border);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:0.85rem;color:var(--text-secondary);flex-shrink:0;">
+                  ${sol.Nombre_Usuario ? sol.Nombre_Usuario.charAt(0).toUpperCase() : "U"}
+                </div>
+                <div>
+                  <strong style="color:var(--text);display:block;font-size:0.9rem;">${sol.Nombre_Usuario || "Usuario"}</strong>
+                  <small style="color:var(--text-secondary);">${sol.Correo_Usuario || ""}</small>
+                </div>
+              </div>
+            </td>
+            <td>${rolBadge}</td>
+            <td>
+              <span class="summary-masked-badge">
+                ${sol.Tipo_Documento} ${sol.Numero_Documento_Enmascarado || "••••"}
+              </span>
+            </td>
+            <td>${fechaStr}</td>
+            <td>${renderBadgeEstado(sol.Estado)}</td>
+            <td>
+              <button
+                type="button"
+                class="btn-nav-prev btn-abrir-revision"
+                data-id="${sol.Id_Solicitud_Verificacion}"
+                style="padding:0.4rem 0.85rem;font-size:0.8rem;border-color:var(--primary);color:var(--primary);"
+              >
+                <i class="bi bi-person-vcard"></i>
+                Consultar datos
+              </button>
+            </td>
+          `;
+
+          tablaBody.appendChild(tr);
+        });
+
+        // Event listener a botones de revisión
+        document.querySelectorAll(".btn-abrir-revision").forEach((btn) => {
+          btn.addEventListener("click", () => {
+            const solId = Number(btn.getAttribute("data-id"));
+            abrirModalDetalle(solId);
+          });
+        });
+      }
+
+      // Abrir modal con detalle completo auditado
+      async function abrirModalDetalle(id) {
+        try {
+          const res = await fetch(`${api}/admin/verificaciones/${id}`, {
+            headers: { Authorization: `Bearer ${token}` },
+          });
+
+          if (!res.ok) {
+            const error = await res.json().catch(() => ({}));
+            throw new Error(error.mensaje || `No fue posible consultar los datos (error ${res.status}).`);
+          }
+          solicitudActual = await res.json();
+
+          document.getElementById("modalSubhead").textContent = `Solicitud #${solicitudActual.Id_Solicitud_Verificacion} • Registrada el ${new Date(solicitudActual.Fecha_Creacion).toLocaleString("es-CO")}`;
+          document.getElementById("detNombre").textContent = solicitudActual.Nombre_Usuario || "—";
+          document.getElementById("detCorreo").textContent = solicitudActual.Correo_Usuario || "—";
+          document.getElementById("detTelefono").textContent = solicitudActual.Telefono_Usuario || "Sin teléfono";
+          document.getElementById("detRol").textContent = Number(solicitudActual.Id_Rol) === 2 ? "Trabajador Independiente" : "Cliente";
+          document.getElementById("detRol").style.color = Number(solicitudActual.Id_Rol) === 2 ? "var(--accent)" : "var(--primary)";
+
+          document.getElementById("detEstadoBadge").innerHTML = renderBadgeEstado(solicitudActual.Estado);
+          document.getElementById("detFechaSolicitud").textContent = `Ubicación: ${solicitudActual.Ubicacion_Usuario || "No especificada"}`;
+
+          // Los datos completos de identidad solo se consultan en el detalle protegido para administradores.
+          document.getElementById("detTipoDoc").textContent = solicitudActual.Tipo_Documento || "No registrado";
+          document.getElementById("detNumeroDoc").textContent = solicitudActual.Numero_Documento || "No registrado";
+          const fechaExpedicion = solicitudActual.Fecha_Expedicion_Documento;
+          document.getElementById("detFechaExp").textContent = fechaExpedicion
+            ? new Date(`${String(fechaExpedicion).slice(0, 10)}T00:00:00`).toLocaleDateString("es-CO", {
+                day: "2-digit",
+                month: "2-digit",
+                year: "numeric",
+              })
+            : "No registrada";
+
+          // Aceptaciones legales
+          const detAcep = document.getElementById("detAceptaciones");
+          if (solicitudActual.aceptacionesLegales && solicitudActual.aceptacionesLegales.length > 0) {
+            detAcep.innerHTML = solicitudActual.aceptacionesLegales
+              .map((a) => `<div><i class="bi bi-check2 text-success"></i> <strong>${a.Titulo || a.Codigo_Documento}</strong> (v${a.Version}) — ${new Date(a.Fecha_Aceptacion).toLocaleDateString("es-CO")}</div>`)
+              .join("");
+          } else {
+            detAcep.innerHTML = "<em>Sin registro formal de aceptaciones previas.</em>";
+          }
+
+          // Historial de revisión
+          const detHist = document.getElementById("detHistorial");
+          if (solicitudActual.Fecha_Revision) {
+            detHist.innerHTML = `
+              <div><strong>Última revisión:</strong> ${new Date(solicitudActual.Fecha_Revision).toLocaleString("es-CO")}</div>
+              <div><strong>Revisor:</strong> ${solicitudActual.Nombre_Admin_Revisor || "Administrador #" + solicitudActual.Revisado_Por}</div>
+              <div><strong>Notas:</strong> ${solicitudActual.Notas_Admin || solicitudActual.Motivo_Rechazo || solicitudActual.Informacion_Requerida || "Ninguna"}</div>
+            `;
+          } else {
+            detHist.innerHTML = "<em>Esta solicitud aún no ha sido revisada por ningún administrador.</em>";
+          }
+
+          document.getElementById("adminObservaciones").value = "";
+          modalRevision.classList.add("open");
+          modalRevision.setAttribute("aria-hidden", "false");
+        } catch (err) {
+          const mensaje = err instanceof TypeError
+            ? "No se pudo conectar con la API. Inicia el servidor Deno en el puerto 8000 y verifica que MySQL de XAMPP esté activo."
+            : (err.message || "Error al cargar los datos del trabajador.");
+          alert(mensaje);
+        }
+      }
+
+      function cerrarModal() {
+        modalRevision.classList.remove("open");
+        modalRevision.setAttribute("aria-hidden", "true");
+        solicitudActual = null;
+      }
+      btnCerrarModal?.addEventListener("click", cerrarModal);
+      modalRevision?.addEventListener("click", (e) => {
+        if (e.target === modalRevision) cerrarModal();
+      });
+
+      // ACCIONES DE DECISIÓN ADMINISTRATIVA
+      async function enviarDecision(endpoint, payload) {
+        if (!solicitudActual) return;
+        try {
+          const res = await fetch(`${api}/admin/verificaciones/${solicitudActual.Id_Solicitud_Verificacion}/${endpoint}`, {
+            method: "PUT",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${token}`,
+            },
+            body: JSON.stringify(payload),
+          });
+
+          const data = await res.json().catch(() => ({}));
+          if (!res.ok) throw new Error(data.mensaje || "Error al registrar la decisión.");
+
+          alert(`Éxito: ${data.mensaje}`);
+          cerrarModal();
+          cargarSolicitudes();
+        } catch (err) {
+          alert(`Error: ${err.message}`);
+        }
+      }
+
+      // 1. APROBAR
+      document.getElementById("btnAprobar")?.addEventListener("click", () => {
+        if (!confirm("¿Confirmas que consultaste la cédula en la Registraduría y se encuentra vigente? Esta acción aprobará la cuenta y otorgará los permisos.")) return;
+        const notas = document.getElementById("adminObservaciones").value.trim() || "Verificación manual en Registraduría exitosa. Cédula vigente.";
+        enviarDecision("aprobar", { notas });
+      });
+
+      // 2. EN REVISIÓN
+      document.getElementById("btnPonerEnRevision")?.addEventListener("click", () => {
+        const notas = document.getElementById("adminObservaciones").value.trim() || "En proceso de revisión manual.";
+        enviarDecision("en-revision", { notas });
+      });
+
+      // 3. SOLICITAR INFO
+      document.getElementById("btnSolicitarInfo")?.addEventListener("click", () => {
+        const obs = document.getElementById("adminObservaciones").value.trim();
+        if (!obs) {
+          alert("Debes escribir en el campo de observaciones la información específica o documento que requiere corregir el usuario.");
+          return;
+        }
+        enviarDecision("solicitar-info", { infoRequerida: obs });
+      });
+
+      // 4. RECHAZAR
+      document.getElementById("btnRechazar")?.addEventListener("click", () => {
+        const obs = document.getElementById("adminObservaciones").value.trim();
+        if (!obs) {
+          alert("Debes indicar en las observaciones el motivo formal del rechazo de la solicitud.");
+          return;
+        }
+        if (!confirm("¿Estás seguro de que deseas rechazar esta solicitud de identidad?")) return;
+        enviarDecision("rechazar", { motivo: obs });
+      });
+
+      // Listeners de filtros
+      filtroEstado?.addEventListener("change", cargarSolicitudes);
+      filtroRol?.addEventListener("change", cargarSolicitudes);
+      buscarInput?.addEventListener("input", () => {
+        clearTimeout(buscarInput._timer);
+        buscarInput._timer = setTimeout(cargarSolicitudes, 300);
+      });
+
+      cargarSolicitudes();
+    })();
+  </script>
+</Layout>

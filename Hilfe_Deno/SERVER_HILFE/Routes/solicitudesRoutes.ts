@@ -1,4 +1,5 @@
 import { Router } from "../Dependencies/dependencies.ts";
+import { verificarSesion } from "../Middlewares/authMiddleware.ts";
 import {
   getSolicitudes,
   getSolicitudPorId,
@@ -14,7 +15,7 @@ router
   .get("/api/solicitudes/horarios-ocupados", getHorariosOcupados)
   .get("/api/solicitudes", getSolicitudes)
   .get("/api/solicitudes/:id", getSolicitudPorId)
-  .post("/api/solicitudes", crearSolicitud)
+  .post("/api/solicitudes", verificarSesion, crearSolicitud)
   .put("/api/solicitudes/:id/estado", cambiarEstadoSolicitud)
   .delete("/api/solicitudes/:id", eliminarSolicitud);
 

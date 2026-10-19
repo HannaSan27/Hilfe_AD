@@ -1,6 +1,7 @@
 {
   "tasks": {
-    "dev": "deno run --watch --env-file --allow-net --allow-env --allow-read --allow-write --allow-ffi app.ts"
+    "dev": "deno run --watch --env-file --allow-net --allow-env --allow-read --allow-write --allow-ffi app.ts",
+    "migrate": "deno run --env-file --allow-net --allow-env --allow-read --allow-ffi migrations/runner.ts"
   },
   "imports": {
     "@felix/bcrypt": "jsr:@felix/bcrypt@^2.1.0",

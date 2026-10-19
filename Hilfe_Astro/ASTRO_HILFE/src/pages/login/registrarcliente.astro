@@ -1,188 +1,1088 @@
 ---
 import Layout from "../../layouts/Layout.astro";
-import "../../components/styles/registrarcliente.css";
-
-// TODO: cuando conectes tu backend, este vendrá de tu lógica real de registro
-// (por ahora se lee como query param, ej: /login/registrarcliente?error=Correo+ya+registrado)
-const error = Astro.url.searchParams.get("error");
+import "../../components/styles/design-system.css";
+import "../../components/styles/auth-premium.css";
 ---
 
-<Layout title="Registro Cliente | Hilf'e">
+<Layout title="Registro de Cliente | Hilf'e Colombia">
   <Fragment slot="head">
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
-    <link rel="stylesheet" href="/css/design-system.css" />
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
   </Fragment>
 
-  <div style="position:fixed;top:20px;right:24px;z-index:1000;">
-    <button type="button" class="theme-toggle" aria-label="Cambiar tema" style="width:36px;height:36px;border-radius:50%;border:1.5px solid var(--border);background:var(--bg-card, #fff);cursor:pointer;display:flex;align-items:center;justify-content:center;">
-      <svg class="theme-icon-light" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--text-secondary)" stroke-width="2"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
-      <svg class="theme-icon-dark" style="display:none;" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--text-secondary)" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
-    </button>
-  </div>
+  <div class="wizard-page-layout">
+    <!-- BARRA SUPERIOR -->
+    <header class="wizard-navbar">
+      <a href="/" class="wizard-brand">
+        Hilf<span style="color:var(--primary);">'e</span>
+      </a>
 
-  <div class="simple-form-container">
-    <div class="simple-form-box">
-
-      <!-- ICONO -->
-      <div class="register-icon">
-        <i class="bi bi-person-fill"></i>
-      </div>
-
-      <h2>Registro Cliente</h2>
-
-      <p class="register-subtitle">
-        Completa la información para crear tu cuenta
-      </p>
-
-      <div class="error-message" id="registerError" role="alert" hidden></div>
-
-      <form method="post" action="http://127.0.0.1:8000/api/auth/registro" id="registerClienteForm">
-
-        <!-- NOMBRE -->
-        <div class="modern-input">
-          <i class="bi bi-person"></i>
-          <input type="text" name="nombre" placeholder="Nombre completo" required />
-        </div>
-
-        <!-- CORREO -->
-        <div class="modern-input" style="position:relative;">
-          <i class="bi bi-envelope"></i>
-          <input type="email" name="correo" id="correoInput" placeholder="Correo electrónico" required autocomplete="email" />
-          <span class="email-status" id="emailStatus" style="position:absolute;right:16px;top:50%;transform:translateY(-50%);font-size:18px;"></span>
-        </div>
-        <div class="email-feedback" id="emailFeedback" style="font-size:12px;font-weight:600;margin:-14px 0 18px 4px;min-height:16px;transition:color .2s;"></div>
-
-        <!-- CONTRASEÑA -->
-        <div class="modern-input password-box">
-          <i class="bi bi-lock"></i>
-          <input type="password" id="password" name="contrasena" placeholder="Contraseña" required />
-          <!-- OJITO -->
-          <i class="bi bi-eye-slash toggle-password" id="togglePassword"></i>
-        </div>
-
-        <!-- INDICADOR DE SEGURIDAD -->
-        <div class="ps-panel" id="psPanel">
-          <div class="ps-bar-track">
-            <div class="ps-bar" id="psBar"></div>
-          </div>
-          <div class="ps-label" id="psLabel">Muy débil</div>
-          <ul class="ps-reqs" id="psReqs">
-            <li id="req-len"><span class="ps-icon" id="icon-len"><i class="bi bi-circle"></i></span> 8 caracteres</li>
-            <li id="req-may"><span class="ps-icon" id="icon-may"><i class="bi bi-circle"></i></span> Una mayúscula</li>
-            <li id="req-min"><span class="ps-icon" id="icon-min"><i class="bi bi-circle"></i></span> Una minúscula</li>
-            <li id="req-num"><span class="ps-icon" id="icon-num"><i class="bi bi-circle"></i></span> Un número</li>
-            <li id="req-sym"><span class="ps-icon" id="icon-sym"><i class="bi bi-circle"></i></span> Un símbolo especial</li>
-          </ul>
-        </div>
-
-        <!-- TELEFONO -->
-        <div class="modern-input">
-          <i class="bi bi-telephone"></i>
-          <input type="text" name="telefono" placeholder="Teléfono" required />
-        </div>
-
-        <!-- BOTON -->
-        <button type="submit" class="btn-register" id="registerBtn" disabled>
-          <span class="btn-text">
-            <i class="bi bi-person-plus"></i>
-            Registrarse
-          </span>
-          <div class="btn-spinner" style="display:none;width:20px;height:20px;border:2px solid rgba(255,255,255,0.3);border-top-color:#fff;border-radius:50%;animation:spin .6s linear infinite;"></div>
+      <div style="display:flex;align-items:center;gap:12px;">
+        <button
+          type="button"
+          class="theme-toggle"
+          aria-label="Cambiar tema de color"
+          style="width:38px;height:38px;border-radius:50%;border:1.5px solid var(--border);background:var(--bg-card);cursor:pointer;display:flex;align-items:center;justify-content:center;"
+        >
+          <svg class="theme-icon-light" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--text-secondary)" stroke-width="2">
+            <circle cx="12" cy="12" r="5"></circle>
+            <line x1="12" y1="1" x2="12" y2="3"></line>
+            <line x1="12" y1="21" x2="12" y2="23"></line>
+            <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+            <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+            <line x1="1" y1="12" x2="3" y2="12"></line>
+            <line x1="21" y1="12" x2="23" y2="12"></line>
+            <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+            <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+          </svg>
+          <svg class="theme-icon-dark" style="display:none;" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--text-secondary)" stroke-width="2">
+            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+          </svg>
         </button>
 
-      </form>
+        <a href="/login/registrar" style="font-size:0.875rem;color:var(--text-secondary);text-decoration:none;font-weight:600;display:flex;align-items:center;gap:4px;">
+          <i class="bi bi-x-lg"></i>
+          <span>Cancelar</span>
+        </a>
+      </div>
+    </header>
 
-      <!-- LOGIN -->
-      <div class="login-redirect">
-        ¿Ya tienes cuenta?
-        <a href="/login/login">Inicia sesión</a>
+    <div class="client-registration-stage">
+      <aside class="client-intro-panel" aria-label="Tu registro como cliente en Hilf'e">
+        <span class="client-intro-label"><i class="bi bi-compass" aria-hidden="true"></i> HILF’E · AYUDA PARA TU DÍA A DÍA</span>
+        <div class="client-request-art" aria-hidden="true">
+          <div class="client-request-card">
+            <span class="client-request-card-label">NUEVA SOLICITUD</span>
+            <div class="client-request-row"><i class="bi bi-tools"></i><span>Elige lo que necesitas</span></div>
+            <div class="client-request-row"><i class="bi bi-geo-alt"></i><span>Encuentra talento cerca</span></div>
+            <div class="client-request-row"><i class="bi bi-calendar2-check"></i><span>Coordina una fecha</span></div>
+            <div class="client-request-rule"></div>
+            <span class="client-request-foot"><i class="bi bi-shield-check"></i> Perfiles con identidad revisada</span>
+          </div>
+          <span class="client-request-orbit orbit-a"></span>
+          <span class="client-request-orbit orbit-b"></span>
+        </div>
+        <div class="client-intro-copy">
+          <h1>Resuelve lo cotidiano con ayuda cercana.</h1>
+          <p>Crea tu cuenta para encontrar profesionales por especialidad y organizar solicitudes desde un mismo lugar.</p>
+        </div>
+        <ol class="client-journey" aria-label="Etapas del registro">
+          <li><span>01</span>Completa tus datos</li>
+          <li><span>02</span>Confirma tu identidad</li>
+          <li><span>03</span>Envía tu solicitud</li>
+        </ol>
+        <div class="client-intro-note"><i class="bi bi-lock" aria-hidden="true"></i> Tu cuenta se habilita después de la revisión de identidad.</div>
+      </aside>
+
+      <!-- ASISTENTE DE REGISTRO DE CLIENTE -->
+      <main class="wizard-card" id="wizardCard">
+      <!-- INDICADOR DE PROGRESO (4 PASOS) -->
+      <nav class="wizard-progress-bar" aria-label="Progreso del registro">
+        <div class="wizard-progress-fill" id="progressFill" style="width: 0%;"></div>
+
+        <button type="button" class="step-indicator active" data-step="1" id="stepIndicator1">
+          <div class="step-bubble">1</div>
+          <span class="step-title">Datos Básicos</span>
+        </button>
+
+        <button type="button" class="step-indicator" data-step="2" id="stepIndicator2">
+          <div class="step-bubble">2</div>
+          <span class="step-title">Identidad</span>
+        </button>
+
+        <button type="button" class="step-indicator" data-step="3" id="stepIndicator3">
+          <div class="step-bubble">3</div>
+          <span class="step-title">Ubicación y Términos</span>
+        </button>
+
+        <button type="button" class="step-indicator" data-step="4" id="stepIndicator4">
+          <div class="step-bubble">4</div>
+          <span class="step-title">Confirmación</span>
+        </button>
+      </nav>
+
+      <!-- MENSAJE DE ERROR GLOBAL -->
+      <div id="generalErrorAlert" class="auth-verification-alert alert-rejected" style="display:none;" role="alert">
+        <i class="bi bi-exclamation-triangle-fill" style="font-size:1.2rem;"></i>
+        <div id="generalErrorText"></div>
       </div>
 
+      <!-- FORMULARIO ASISTENTE -->
+      <form id="clienteWizardForm" novalidate>
+        <!-- ============================================================
+             PASO 1: DATOS BÁSICOS
+             ============================================================ -->
+        <section class="wizard-step-panel active" id="stepPanel1" data-step="1">
+          <div class="step-header">
+            <div class="step-header-tag">Paso 1 de 4 • Perfil de Cliente</div>
+            <h2>Comencemos con tus datos principales</h2>
+            <p>Ingresa la información básica para crear tu cuenta personal y acceder a los servicios.</p>
+          </div>
+
+          <div class="form-grid-2">
+            <div class="field-group">
+              <label class="field-label" for="nombresInput">
+                Nombres <span class="required-dot">*</span>
+              </label>
+              <div class="input-container">
+                <i class="bi bi-person input-lead-icon"></i>
+                <input
+                  type="text"
+                  id="nombresInput"
+                  class="field-control"
+                  placeholder="Ej. Carlos Eduardo"
+                  required
+                  autocomplete="given-name"
+                />
+              </div>
+              <div class="field-error-msg" id="err-nombres" style="display:none;"></div>
+            </div>
+
+            <div class="field-group">
+              <label class="field-label" for="apellidosInput">
+                Apellidos <span class="required-dot">*</span>
+              </label>
+              <div class="input-container">
+                <i class="bi bi-person input-lead-icon"></i>
+                <input
+                  type="text"
+                  id="apellidosInput"
+                  class="field-control"
+                  placeholder="Ej. Gómez Ruiz"
+                  required
+                  autocomplete="family-name"
+                />
+              </div>
+              <div class="field-error-msg" id="err-apellidos" style="display:none;"></div>
+            </div>
+          </div>
+
+          <div class="form-grid-2">
+            <div class="field-group">
+              <label class="field-label" for="correoInput">
+                Correo electrónico <span class="required-dot">*</span>
+              </label>
+              <div class="input-container">
+                <i class="bi bi-envelope input-lead-icon"></i>
+                <input
+                  type="email"
+                  id="correoInput"
+                  class="field-control"
+                  placeholder="tu.correo@ejemplo.com"
+                  required
+                  autocomplete="email"
+                />
+              </div>
+              <div class="field-error-msg" id="err-correo" style="display:none;"></div>
+            </div>
+
+            <div class="field-group">
+              <label class="field-label" for="telefonoInput">
+                Teléfono de contacto <span class="required-dot">*</span>
+              </label>
+              <div class="input-container">
+                <i class="bi bi-telephone input-lead-icon"></i>
+                <input
+                  type="tel"
+                  id="telefonoInput"
+                  class="field-control"
+                  placeholder="Ej. 3101234567"
+                  maxlength="10"
+                  required
+                  autocomplete="tel"
+                />
+              </div>
+              <div class="field-error-msg" id="err-telefono" style="display:none;"></div>
+            </div>
+          </div>
+
+          <div class="form-grid-2">
+            <div class="field-group">
+              <label class="field-label" for="passwordInput">
+                Contraseña segura <span class="required-dot">*</span>
+              </label>
+              <div class="input-container">
+                <i class="bi bi-lock input-lead-icon"></i>
+                <input
+                  type="password"
+                  id="passwordInput"
+                  class="field-control"
+                  placeholder="Mínimo 8 caracteres"
+                  required
+                  autocomplete="new-password"
+                />
+                <button type="button" class="toggle-password-btn" data-target="passwordInput" aria-label="Mostrar contraseña">
+                  <i class="bi bi-eye-slash"></i>
+                </button>
+              </div>
+            </div>
+
+            <div class="field-group">
+              <label class="field-label" for="confirmPasswordInput">
+                Confirmar contraseña <span class="required-dot">*</span>
+              </label>
+              <div class="input-container">
+                <i class="bi bi-shield-lock input-lead-icon"></i>
+                <input
+                  type="password"
+                  id="confirmPasswordInput"
+                  class="field-control"
+                  placeholder="Repite tu contraseña"
+                  required
+                  autocomplete="new-password"
+                />
+                <button type="button" class="toggle-password-btn" data-target="confirmPasswordInput" aria-label="Mostrar contraseña">
+                  <i class="bi bi-eye-slash"></i>
+                </button>
+              </div>
+              <div class="field-error-msg" id="err-confirmPassword" style="display:none;"></div>
+            </div>
+          </div>
+
+          <!-- MEDIDOR DE FORTALEZA -->
+          <div class="password-meter" id="passwordMeter">
+            <div class="meter-status-header">
+              <span class="meter-status-title">Seguridad de la contraseña:</span>
+              <span class="meter-status-label label-weak" id="meterLabel">Pendiente</span>
+            </div>
+            <div class="meter-track">
+              <div class="meter-segment" id="seg1"></div>
+              <div class="meter-segment" id="seg2"></div>
+              <div class="meter-segment" id="seg3"></div>
+              <div class="meter-segment" id="seg4"></div>
+              <div class="meter-segment" id="seg5"></div>
+            </div>
+            <ul class="password-rules">
+              <li id="rule-len"><i class="bi bi-circle"></i> Mínimo 8 caracteres</li>
+              <li id="rule-may"><i class="bi bi-circle"></i> Al menos una mayúscula</li>
+              <li id="rule-min"><i class="bi bi-circle"></i> Al menos una minúscula</li>
+              <li id="rule-num"><i class="bi bi-circle"></i> Al menos un número</li>
+              <li id="rule-sym"><i class="bi bi-circle"></i> Al menos un símbolo (!@#$)</li>
+            </ul>
+          </div>
+
+          <div class="wizard-actions-bar">
+            <span style="font-size:0.875rem;color:var(--text-secondary);">
+              ¿Ya estás registrado? <a href="/login/login" style="color:var(--primary);font-weight:600;text-decoration:none;">Inicia sesión</a>
+            </span>
+            <button type="button" class="btn-nav-next" id="btnNext1">
+              <span>Continuar</span>
+              <i class="bi bi-arrow-right"></i>
+            </button>
+          </div>
+        </section>
+
+        <!-- ============================================================
+             PASO 2: DOCUMENTO DE IDENTIDAD
+             ============================================================ -->
+        <section class="wizard-step-panel" id="stepPanel2" data-step="2">
+          <div class="step-header">
+            <div class="step-header-tag">Paso 2 de 4 • Verificación Oficial</div>
+            <h2>Documento de identidad</h2>
+            <p>Conforme a las políticas de seguridad de Hilf'e, solicitamos tu documento de identidad para verificación manual en registros oficiales.</p>
+          </div>
+
+          <div class="field-group">
+            <label class="field-label" for="tipoDocumentoSelect">
+              Tipo de documento <span class="required-dot">*</span>
+            </label>
+            <div class="input-container">
+              <i class="bi bi-card-text input-lead-icon"></i>
+              <select id="tipoDocumentoSelect" class="field-control" required style="cursor:pointer;">
+                <option value="CC" selected>Cédula de Ciudadanía (CC)</option>
+                <option value="CE">Cédula de Extranjería (CE)</option>
+                <option value="TI">Tarjeta de Identidad (TI)</option>
+                <option value="PASAPORTE">Pasaporte</option>
+                <option value="PPT">Permiso por Protección Temporal (PPT)</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="field-group">
+            <label class="field-label" for="numeroDocumentoInput">
+              Número de documento <span class="required-dot">*</span>
+              <span class="field-hint" id="documentoHint">Solo dígitos numéricos sin puntos ni espacios</span>
+            </label>
+            <div class="input-container">
+              <i class="bi bi-hash input-lead-icon"></i>
+              <input
+                type="text"
+                id="numeroDocumentoInput"
+                class="field-control"
+                placeholder="Ej. 1020304050"
+                inputmode="numeric"
+                required
+              />
+            </div>
+            <div class="field-error-msg" id="err-numeroDocumento" style="display:none;"></div>
+          </div>
+
+          <!-- SELECTOR DE FECHA DE EXPEDICIÓN (DÍA, MES, AÑO) -->
+          <div class="field-group">
+            <label class="field-label">
+              Fecha de expedición del documento <span class="required-dot">*</span>
+              <span class="field-hint">Día / Mes / Año</span>
+            </label>
+            <div class="date-selector-row">
+              <select id="expDiaSelect" class="field-control" required aria-label="Día de expedición">
+                <option value="">Día</option>
+              </select>
+
+              <select id="expMesSelect" class="field-control" required aria-label="Mes de expedición">
+                <option value="">Mes</option>
+                <option value="01">Enero</option>
+                <option value="02">Febrero</option>
+                <option value="03">Marzo</option>
+                <option value="04">Abril</option>
+                <option value="05">Mayo</option>
+                <option value="06">Junio</option>
+                <option value="07">Julio</option>
+                <option value="08">Agosto</option>
+                <option value="09">Septiembre</option>
+                <option value="10">Octubre</option>
+                <option value="11">Noviembre</option>
+                <option value="12">Diciembre</option>
+              </select>
+
+              <select id="expAnioSelect" class="field-control" required aria-label="Año de expedición">
+                <option value="">Año</option>
+              </select>
+            </div>
+            <div class="field-error-msg" id="err-fechaExp" style="display:none;"></div>
+          </div>
+
+          <div class="colombia-law-notice">
+            <i class="bi bi-shield-check" style="color:var(--primary);font-size:1.1rem;"></i>
+            <span>
+              <strong>Validación Registraduría:</strong> Tu documento será consultado de forma manual por un administrador en el portal oficial de la Registraduría Nacional del Estado Civil para autorizar la cuenta.
+            </span>
+          </div>
+
+          <div class="wizard-actions-bar">
+            <button type="button" class="btn-nav-prev" id="btnPrev2">
+              <i class="bi bi-arrow-left"></i>
+              <span>Anterior</span>
+            </button>
+            <button type="button" class="btn-nav-next" id="btnNext2">
+              <span>Continuar</span>
+              <i class="bi bi-arrow-right"></i>
+            </button>
+          </div>
+        </section>
+
+        <!-- ============================================================
+             PASO 3: UBICACIÓN Y DOCUMENTOS LEGALES
+             ============================================================ -->
+        <section class="wizard-step-panel" id="stepPanel3" data-step="3">
+          <div class="step-header">
+            <div class="step-header-tag">Paso 3 de 4 • Ubicación y Términos</div>
+            <h2>Ubicación y acuerdos legales</h2>
+            <p>Indica tu ciudad para sugerirte trabajadores cercanos y revisa los términos de uso y privacidad aplicables en Colombia.</p>
+          </div>
+
+          <div class="field-group">
+            <label class="field-label" for="ciudadInput">
+              Ciudad y Departamento <span class="required-dot">*</span>
+            </label>
+            <div class="input-container">
+              <i class="bi bi-geo-alt input-lead-icon"></i>
+              <input
+                type="text"
+                id="ciudadInput"
+                class="field-control"
+                placeholder="Ej. Bogotá D.C. / Medellín, Antioquia"
+                required
+              />
+            </div>
+            <div class="field-error-msg" id="err-ciudad" style="display:none;"></div>
+          </div>
+
+          <!-- ACEPTACIÓN DE DOCUMENTOS LEGALES (COLOMBIA LEY 1581) -->
+          <div class="legal-acceptance-box">
+            <h4 style="font-size:0.95rem;font-weight:700;color:var(--text);margin-bottom:0.85rem;">
+              Aceptación de documentos regulatorios (Borradores v1.0.0)
+            </h4>
+
+            <div class="legal-item">
+              <input type="checkbox" id="checkTerminos" class="legal-checkbox" required />
+              <div class="legal-text-wrapper">
+                <label for="checkTerminos">
+                  He leído íntegramente y acepto los
+                </label>
+                <button type="button" class="legal-link-btn" data-doc="terminos_condiciones">
+                  Términos y Condiciones Generales de Uso de Hilf'e (v1.0.0)
+                </button>
+                y las
+                <button type="button" class="legal-link-btn" data-doc="condiciones_cliente">
+                  Condiciones Específicas para Clientes
+                </button>.
+              </div>
+            </div>
+
+            <div class="legal-item">
+              <input type="checkbox" id="checkDatos" class="legal-checkbox" required />
+              <div class="legal-text-wrapper">
+                <label for="checkDatos">
+                  Conforme a la Ley 1581 de 2012 de Colombia, autorizo el tratamiento de mis datos personales según la
+                </label>
+                <button type="button" class="legal-link-btn" data-doc="politica_privacidad">
+                  Política de Tratamiento y Protección de Datos Personales
+                </button>
+                y la
+                <button type="button" class="legal-link-btn" data-doc="autorizacion_datos">
+                  Autorización de Cotejo Documental
+                </button>.
+              </div>
+            </div>
+
+            <div class="field-error-msg" id="err-legales" style="display:none;"></div>
+          </div>
+
+          <div class="wizard-actions-bar">
+            <button type="button" class="btn-nav-prev" id="btnPrev3">
+              <i class="bi bi-arrow-left"></i>
+              <span>Anterior</span>
+            </button>
+            <button type="button" class="btn-nav-next" id="btnNext3">
+              <span>Continuar al Resumen</span>
+              <i class="bi bi-arrow-right"></i>
+            </button>
+          </div>
+        </section>
+
+        <!-- ============================================================
+             PASO 4: RESUMEN Y CONFIRMACIÓN
+             ============================================================ -->
+        <section class="wizard-step-panel" id="stepPanel4" data-step="4">
+          <div class="step-header">
+            <div class="step-header-tag">Paso 4 de 4 • Revisión Final</div>
+            <h2>Confirma la información de tu cuenta</h2>
+            <p>Verifica que todos los datos sean correctos antes de enviar tu solicitud. Podrás editarlos si lo requieres.</p>
+          </div>
+
+          <div class="summary-card-block">
+            <div class="summary-header-row">
+              <h4>Datos personales y de contacto</h4>
+              <button type="button" class="summary-edit-btn" data-goto="1">Editar datos</button>
+            </div>
+            <div class="summary-details-grid">
+              <div class="summary-item">
+                <span class="summary-item-label">Nombre completo</span>
+                <span class="summary-item-value" id="sumNombre">—</span>
+              </div>
+              <div class="summary-item">
+                <span class="summary-item-label">Correo electrónico</span>
+                <span class="summary-item-value" id="sumCorreo">—</span>
+              </div>
+              <div class="summary-item">
+                <span class="summary-item-label">Teléfono</span>
+                <span class="summary-item-value" id="sumTelefono">—</span>
+              </div>
+              <div class="summary-item">
+                <span class="summary-item-label">Tipo de cuenta</span>
+                <span class="summary-item-value" style="color:var(--primary);">Cliente Hilf'e</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="summary-card-block">
+            <div class="summary-header-row">
+              <h4>Documento de identidad y ubicación</h4>
+              <button type="button" class="summary-edit-btn" data-goto="2">Editar identidad</button>
+            </div>
+            <div class="summary-details-grid">
+              <div class="summary-item">
+                <span class="summary-item-label">Documento</span>
+                <span class="summary-item-value">
+                  <span id="sumTipoDoc">CC</span>
+                  <span class="summary-masked-badge" id="sumNumeroDocMasked">••••</span>
+                </span>
+              </div>
+              <div class="summary-item">
+                <span class="summary-item-label">Fecha de expedición</span>
+                <span class="summary-item-value" id="sumFechaExp">—</span>
+              </div>
+              <div class="summary-item">
+                <span class="summary-item-label">Ubicación</span>
+                <span class="summary-item-value" id="sumUbicacion">—</span>
+              </div>
+              <div class="summary-item">
+                <span class="summary-item-label">Consentimientos legales</span>
+                <span class="summary-item-value" style="color:var(--success);"><i class="bi bi-check-circle-fill"></i> Aceptados (v1.0.0)</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="colombia-law-notice" style="margin-bottom:1.5rem;">
+            <i class="bi bi-info-circle" style="color:var(--primary);font-size:1.1rem;"></i>
+            <span>
+              Al pulsar <strong>Crear mi cuenta de Cliente</strong>, tus datos serán registrados con estado <em>Pendiente de Verificación</em> hasta su validación manual en la Registraduría Nacional por el administrador.
+            </span>
+          </div>
+
+          <div class="wizard-actions-bar">
+            <button type="button" class="btn-nav-prev" id="btnPrev4">
+              <i class="bi bi-arrow-left"></i>
+              <span>Anterior</span>
+            </button>
+            <button type="button" class="btn-nav-next" id="btnSubmitFinal" style="background:var(--success);padding:0.9rem 2.25rem;">
+              <span id="btnSubmitText">
+                <i class="bi bi-check2-circle"></i>
+                Crear mi cuenta de Cliente
+              </span>
+              <div id="btnSubmitSpinner" style="display:none;width:20px;height:20px;border:2px solid rgba(255,255,255,0.3);border-top-color:#fff;border-radius:50%;animation:spin .6s linear infinite;"></div>
+            </button>
+          </div>
+        </section>
+
+        <!-- ============================================================
+             PANTALLA DE CONFIRMACIÓN POST-REGISTRO
+             ============================================================ -->
+        <section class="verification-pending-card" id="stepSuccessPanel" style="display:none;">
+          <div class="pending-shield-icon">
+            <i class="bi bi-shield-lock-fill"></i>
+          </div>
+          <h2>¡Registro recibido con éxito!</h2>
+          <p>
+            Tu cuenta ha sido creada y se encuentra en estado <strong>Pendiente de Verificación</strong>. Nuestro equipo administrativo validará la información de tu documento en la Registraduría Nacional del Estado Civil a la mayor brevedad.
+          </p>
+          <div style="display:flex;justify-content:center;gap:1rem;flex-wrap:wrap;">
+            <a href="/login/login" class="btn-nav-next" style="text-decoration:none;background:var(--primary);">
+              <i class="bi bi-box-arrow-in-right"></i>
+              <span>Ir a Iniciar Sesión</span>
+            </a>
+          </div>
+        </section>
+      </form>
+      </main>
     </div>
   </div>
 
+  <!-- MODAL DE VISUALIZACIÓN DE TÉRMINOS Y PRIVACIDAD -->
+  <div class="legal-modal-backdrop" id="legalModal" role="dialog" aria-modal="true" aria-hidden="true">
+    <div class="legal-modal-window">
+      <div class="legal-modal-header">
+        <h3 id="legalModalTitle">Documento Legal</h3>
+        <button type="button" class="legal-modal-close-btn" id="closeLegalModal" aria-label="Cerrar modal">
+          <i class="bi bi-x-lg"></i>
+        </button>
+      </div>
+      <div class="legal-modal-body" id="legalModalBody">
+        <p>Cargando contenido del documento...</p>
+      </div>
+      <div class="legal-modal-footer">
+        <button type="button" class="btn-nav-prev" id="btnUnderstoodLegal" style="padding:0.6rem 1.25rem;font-size:0.875rem;">
+          Entendido y leído
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- SCRIPT CLIENT-SIDE DEL ASISTENTE MULTI-STEP -->
   <script is:inline>
     (function () {
-      const form = document.getElementById("registerClienteForm");
-      const password = document.getElementById("password");
-      const button = document.getElementById("registerBtn");
-      const errorBox = document.getElementById("registerError");
-      let enviando = false;
-      const mostrarError = (message) => { errorBox.textContent = message; errorBox.hidden = false; };
-      const ocultarError = () => { errorBox.textContent = ""; errorBox.hidden = true; };
-      const errorPrevio = new URLSearchParams(window.location.search).get("error");
-      if (errorPrevio) mostrarError(errorPrevio);
+      let currentStep = 1;
+      let formEnviado = false;
+      const apiBase = `${window.location.protocol}//${window.location.hostname}:8000/api`;
 
-      const requisitos = [
-        {id:"req-len", test:(value) => value.length >= 8},
-        {id:"req-may", test:(value) => /[A-Z]/.test(value)},
-        {id:"req-min", test:(value) => /[a-z]/.test(value)},
-        {id:"req-num", test:(value) => /\d/.test(value)},
-        {id:"req-sym", test:(value) => /[^A-Za-z0-9]/.test(value)},
-      ];
-      const actualizarBoton = () => { button.disabled = enviando || !form.checkValidity(); };
-      const actualizarSeguridad = () => {
-        const value = password.value;
-        const cumplidos = requisitos.filter((item) => item.test(value)).length;
-        document.getElementById("psPanel").classList.toggle("active", value.length > 0);
-        document.getElementById("psBar").className = "ps-bar ps-" + cumplidos;
-        document.getElementById("psLabel").textContent = ["Muy débil", "Muy débil", "Débil", "Regular", "Fuerte", "Muy fuerte"][cumplidos];
-        requisitos.forEach((item) => {
-          const fila = document.getElementById(item.id);
-          const icono = fila.querySelector(".ps-icon i");
-          const logrado = item.test(value);
-          fila.classList.toggle("met", logrado);
-          if (icono) icono.className = logrado ? "bi bi-check-circle-fill" : "bi bi-circle";
-        });
-        actualizarBoton();
+      // Estado en memoria (nunca en localStorage para contraseñas ni documentos completos)
+      const state = {
+        nombres: "",
+        apellidos: "",
+        correo: "",
+        telefono: "",
+        contrasena: "",
+        tipoDocumento: "CC",
+        numeroDocumento: "",
+        fechaExpedicion: "",
+        ciudad: "",
+        aceptaciones: ["terminos_condiciones", "condiciones_cliente", "politica_privacidad", "autorizacion_datos"]
       };
-      form.addEventListener("input", (event) => {
-        ocultarError();
-        if (event.target === password) actualizarSeguridad(); else actualizarBoton();
-      });
-      form.addEventListener("change", () => { ocultarError(); actualizarBoton(); });
-      document.getElementById("togglePassword").addEventListener("click", function () {
-        const mostrar = password.type === "password";
-        password.type = mostrar ? "text" : "password";
-        this.classList.toggle("bi-eye", mostrar);
-        this.classList.toggle("bi-eye-slash", !mostrar);
-      });
-      actualizarSeguridad();
 
-      form.addEventListener("submit", async (event) => {
-        event.preventDefault();
-        if (enviando || !form.checkValidity()) { form.reportValidity(); return; }
-        enviando = true;
-        button.classList.add("loading");
-        actualizarBoton();
-        ocultarError();
-        const formData = new FormData(form);
+      // Inicializar selectores de días y años
+      const diaSelect = document.getElementById("expDiaSelect");
+      const anioSelect = document.getElementById("expAnioSelect");
+      const mesSelect = document.getElementById("expMesSelect");
+
+      for (let d = 1; d <= 31; d++) {
+        const opt = document.createElement("option");
+        opt.value = d < 10 ? "0" + d : String(d);
+        opt.textContent = String(d);
+        diaSelect?.appendChild(opt);
+      }
+
+      const anioActual = new Date().getFullYear();
+      for (let y = anioActual; y >= 1930; y--) {
+        const opt = document.createElement("option");
+        opt.value = String(y);
+        opt.textContent = String(y);
+        anioSelect?.appendChild(opt);
+      }
+
+      // Password strength tester
+      const pwInput = document.getElementById("passwordInput");
+      const meterLabel = document.getElementById("meterLabel");
+      const segments = [
+        document.getElementById("seg1"),
+        document.getElementById("seg2"),
+        document.getElementById("seg3"),
+        document.getElementById("seg4"),
+        document.getElementById("seg5"),
+      ];
+      const rules = [
+        { id: "rule-len", test: (v) => v.length >= 8 },
+        { id: "rule-may", test: (v) => /[A-Z]/.test(v) },
+        { id: "rule-min", test: (v) => /[a-z]/.test(v) },
+        { id: "rule-num", test: (v) => /\d/.test(v) },
+        { id: "rule-sym", test: (v) => /[^A-Za-z0-9]/.test(v) },
+      ];
+
+      function evaluarContrasena() {
+        const val = pwInput.value || "";
+        let score = 0;
+        rules.forEach((r) => {
+          const ok = r.test(val);
+          const el = document.getElementById(r.id);
+          if (el) {
+            el.classList.toggle("met", ok);
+            const icon = el.querySelector("i");
+            if (icon) icon.className = ok ? "bi bi-check-circle-fill" : "bi bi-circle";
+          }
+          if (ok) score++;
+        });
+
+        const labels = ["Muy débil", "Débil", "Regular", "Buena", "Muy fuerte"];
+        const classes = ["weak", "weak", "fair", "good", "strong"];
+
+        meterLabel.textContent = val.length ? labels[score - 1] || "Muy débil" : "Pendiente";
+        meterLabel.className = "meter-status-label label-" + (classes[score - 1] || "weak");
+
+        segments.forEach((seg, idx) => {
+          seg.className = "meter-segment";
+          if (idx < score) {
+            seg.classList.add("filled-" + classes[score - 1]);
+          }
+        });
+      }
+
+      pwInput?.addEventListener("input", evaluarContrasena);
+
+      // Password visibility toggles
+      document.querySelectorAll(".toggle-password-btn").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          const targetId = btn.getAttribute("data-target");
+          const input = document.getElementById(targetId);
+          if (!input) return;
+          const isPw = input.type === "password";
+          input.type = isPw ? "text" : "password";
+          btn.setAttribute("aria-label", isPw ? "Ocultar contraseña" : "Mostrar contraseña");
+          const icon = btn.querySelector("i");
+          if (icon) {
+            icon.className = isPw ? "bi bi-eye" : "bi bi-eye-slash";
+          }
+        });
+      });
+
+      // Navegación de pasos
+      function setStep(newStep) {
+        if (newStep < 1 || newStep > 4) return;
+        currentStep = newStep;
+
+        // Actualizar paneles
+        document.querySelectorAll(".wizard-step-panel").forEach((panel) => {
+          panel.classList.toggle("active", Number(panel.getAttribute("data-step")) === currentStep);
+        });
+
+        // Actualizar barra de progreso
+        const progressFill = document.getElementById("progressFill");
+        const pct = ((currentStep - 1) / 3) * 100;
+        if (progressFill) progressFill.style.width = pct + "%";
+
+        document.querySelectorAll(".step-indicator").forEach((ind) => {
+          const s = Number(ind.getAttribute("data-step"));
+          ind.classList.toggle("active", s === currentStep);
+          ind.classList.toggle("completed", s < currentStep);
+        });
+
+        window.scrollTo({ top: 0, behavior: "smooth" });
+      }
+
+      // Validaciones Paso 1
+      function validarPaso1() {
+        let valid = true;
+        const nombres = document.getElementById("nombresInput").value.trim();
+        const apellidos = document.getElementById("apellidosInput").value.trim();
+        const correo = document.getElementById("correoInput").value.trim();
+        const telefono = document.getElementById("telefonoInput").value.trim();
+        const pw = document.getElementById("passwordInput").value;
+        const confirmPw = document.getElementById("confirmPasswordInput").value;
+
+        // Nombres
+        const errNombres = document.getElementById("err-nombres");
+        if (nombres.length < 2) {
+          errNombres.textContent = "Ingresa tu nombre completo.";
+          errNombres.style.display = "flex";
+          valid = false;
+        } else {
+          errNombres.style.display = "none";
+        }
+
+        // Apellidos
+        const errApellidos = document.getElementById("err-apellidos");
+        if (apellidos.length < 2) {
+          errApellidos.textContent = "Ingresa tus apellidos.";
+          errApellidos.style.display = "flex";
+          valid = false;
+        } else {
+          errApellidos.style.display = "none";
+        }
+
+        // Correo
+        const errCorreo = document.getElementById("err-correo");
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(correo)) {
+          errCorreo.textContent = "Ingresa un correo electrónico válido.";
+          errCorreo.style.display = "flex";
+          valid = false;
+        } else {
+          errCorreo.style.display = "none";
+        }
+
+        // Teléfono
+        const errTel = document.getElementById("err-telefono");
+        if (!/^\d{7,10}$/.test(telefono)) {
+          errTel.textContent = "Ingresa un número telefónico válido (7 a 10 dígitos).";
+          errTel.style.display = "flex";
+          valid = false;
+        } else {
+          errTel.style.display = "none";
+        }
+
+        // Contraseña
+        const errConfirm = document.getElementById("err-confirmPassword");
+        const rulesPassed = rules.filter((r) => r.test(pw)).length;
+        if (rulesPassed < 4) {
+          errConfirm.textContent = "La contraseña debe cumplir con los requisitos mínimos de seguridad.";
+          errConfirm.style.display = "flex";
+          valid = false;
+        } else if (pw !== confirmPw) {
+          errConfirm.textContent = "Las contraseñas no coinciden.";
+          errConfirm.style.display = "flex";
+          valid = false;
+        } else {
+          errConfirm.style.display = "none";
+        }
+
+        if (valid) {
+          state.nombres = nombres;
+          state.apellidos = apellidos;
+          state.correo = correo;
+          state.telefono = telefono;
+          state.contrasena = pw;
+        }
+
+        return valid;
+      }
+
+      // Validaciones Paso 2
+      function validarPaso2() {
+        let valid = true;
+        const tipoDoc = document.getElementById("tipoDocumentoSelect").value;
+        const numDoc = document.getElementById("numeroDocumentoInput").value.trim();
+        const d = diaSelect.value;
+        const m = mesSelect.value;
+        const y = anioSelect.value;
+
+        const errDoc = document.getElementById("err-numeroDocumento");
+        if (tipoDoc === "CC" || tipoDoc === "TI" || tipoDoc === "CE") {
+          if (!/^\d{5,12}$/.test(numDoc)) {
+            errDoc.textContent = "El documento debe contener exclusivamente dígitos numéricos (5 a 12 dígitos).";
+            errDoc.style.display = "flex";
+            valid = false;
+          } else {
+            errDoc.style.display = "none";
+          }
+        } else {
+          if (numDoc.length < 5 || numDoc.length > 16) {
+            errDoc.textContent = "Ingresa un número de documento válido.";
+            errDoc.style.display = "flex";
+            valid = false;
+          } else {
+            errDoc.style.display = "none";
+          }
+        }
+
+        // Fecha de expedición
+        const errFecha = document.getElementById("err-fechaExp");
+        if (!d || !m || !y) {
+          errFecha.textContent = "Selecciona día, mes y año de expedición.";
+          errFecha.style.display = "flex";
+          valid = false;
+        } else {
+          const diaNum = Number(d);
+          const mesNum = Number(m);
+          const anioNum = Number(y);
+          const esBisiesto = (anioNum % 4 === 0 && anioNum % 100 !== 0) || anioNum % 400 === 0;
+          const maxDias = [31, esBisiesto ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31][mesNum - 1];
+
+          if (diaNum > maxDias) {
+            errFecha.textContent = `El día ${diaNum} no es válido para el mes seleccionado en el año ${anioNum}.`;
+            errFecha.style.display = "flex";
+            valid = false;
+          } else {
+            const fechaExp = new Date(anioNum, mesNum - 1, diaNum, 23, 59, 59);
+            if (fechaExp > new Date()) {
+              errFecha.textContent = "La fecha de expedición no puede ser una fecha futura.";
+              errFecha.style.display = "flex";
+              valid = false;
+            } else {
+              errFecha.style.display = "none";
+              state.tipoDocumento = tipoDoc;
+              state.numeroDocumento = numDoc;
+              state.fechaExpedicion = `${y}-${m}-${d}`;
+            }
+          }
+        }
+
+        return valid;
+      }
+
+      // Validaciones Paso 3
+      function validarPaso3() {
+        let valid = true;
+        const ciudad = document.getElementById("ciudadInput").value.trim();
+        const errCiudad = document.getElementById("err-ciudad");
+        if (ciudad.length < 3) {
+          errCiudad.textContent = "Por favor ingresa tu ciudad o municipio.";
+          errCiudad.style.display = "flex";
+          valid = false;
+        } else {
+          errCiudad.style.display = "none";
+          state.ciudad = ciudad;
+        }
+
+        const chkTerminos = document.getElementById("checkTerminos").checked;
+        const chkDatos = document.getElementById("checkDatos").checked;
+        const errLegales = document.getElementById("err-legales");
+
+        if (!chkTerminos || !chkDatos) {
+          errLegales.textContent = "Es obligatorio aceptar los Términos y Condiciones y otorgar la Autorización de Datos Personales para continuar.";
+          errLegales.style.display = "flex";
+          valid = false;
+        } else {
+          errLegales.style.display = "none";
+        }
+
+        return valid;
+      }
+
+      // Rellenar resumen en Paso 4
+      function actualizarResumen() {
+        document.getElementById("sumNombre").textContent = `${state.nombres} ${state.apellidos}`;
+        document.getElementById("sumCorreo").textContent = state.correo;
+        document.getElementById("sumTelefono").textContent = state.telefono;
+        document.getElementById("sumTipoDoc").textContent = state.tipoDocumento;
+
+        const masked = state.numeroDocumento.length > 4
+          ? "••••" + state.numeroDocumento.slice(-4)
+          : state.numeroDocumento;
+        document.getElementById("sumNumeroDocMasked").textContent = masked;
+
+        document.getElementById("sumFechaExp").textContent = state.fechaExpedicion;
+        document.getElementById("sumUbicacion").textContent = state.ciudad;
+      }
+
+      // Listeners de botones de avance
+      document.getElementById("btnNext1")?.addEventListener("click", () => {
+        if (validarPaso1()) setStep(2);
+      });
+      document.getElementById("btnPrev2")?.addEventListener("click", () => setStep(1));
+
+      document.getElementById("btnNext2")?.addEventListener("click", () => {
+        if (validarPaso2()) setStep(3);
+      });
+      document.getElementById("btnPrev3")?.addEventListener("click", () => setStep(2));
+
+      document.getElementById("btnNext3")?.addEventListener("click", () => {
+        if (validarPaso3()) {
+          actualizarResumen();
+          setStep(4);
+        }
+      });
+      document.getElementById("btnPrev4")?.addEventListener("click", () => setStep(3));
+
+      // Botones "Editar" dentro del resumen
+      document.querySelectorAll(".summary-edit-btn").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          const target = Number(btn.getAttribute("data-goto"));
+          if (target) setStep(target);
+        });
+      });
+
+      // ENVÍO FINAL AL SERVIDOR
+      const submitBtn = document.getElementById("btnSubmitFinal");
+      const submitText = document.getElementById("btnSubmitText");
+      const submitSpinner = document.getElementById("btnSubmitSpinner");
+      const generalErrorAlert = document.getElementById("generalErrorAlert");
+      const generalErrorText = document.getElementById("generalErrorText");
+
+      submitBtn?.addEventListener("click", async () => {
+        if (formEnviado) return;
+        generalErrorAlert.style.display = "none";
+        formEnviado = true;
+        submitBtn.disabled = true;
+        submitText.style.display = "none";
+        submitSpinner.style.display = "inline-block";
+
+        await cargarDocumentosLegales();
+
+        const payload = {
+          idRol: 3, // Cliente
+          nombre: `${state.nombres} ${state.apellidos}`.trim(),
+          correo: state.correo,
+          contrasena: state.contrasena,
+          telefono: state.telefono,
+          ubicacion: state.ciudad,
+          tipoDocumento: state.tipoDocumento,
+          numeroDocumento: state.numeroDocumento,
+          fechaExpedicionDocumento: state.fechaExpedicion,
+          aceptacionesLegales: state.aceptaciones.map((codigo) => ({ codigo, version: docMap?.[codigo]?.version })),
+        };
+
         try {
-          const response = await fetch("http://127.0.0.1:8000/api/auth/registro", {
+          const response = await fetch(`${apiBase}/auth/registro`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              idRol: 3,
-              nombre: formData.get("nombre"),
-              correo: formData.get("correo"),
-              contrasena: formData.get("contrasena"),
-              telefono: formData.get("telefono"),
-              ubicacion: "",
-            }),
+            body: JSON.stringify(payload),
           });
+
           const data = await response.json().catch(() => ({}));
-          if (!response.ok) throw new Error(data.mensaje || data.error || "No fue posible crear la cuenta.");
-          window.location.assign(`/login/login?registroExitoso=${encodeURIComponent(data.mensaje || "Cuenta creada correctamente")}`);
+
+          if (!response.ok) {
+            throw new Error(data.mensaje || data.error || "No fue posible completar el registro.");
+          }
+
+          // Éxito: Ocultar pasos y mostrar confirmación pendiente
+          document.querySelectorAll(".wizard-step-panel").forEach((p) => (p.style.display = "none"));
+          document.querySelector(".wizard-progress-bar").style.display = "none";
+          document.getElementById("stepSuccessPanel").style.display = "block";
         } catch (error) {
-          mostrarError(error.message || "No se pudo conectar con el servidor.");
-        } finally {
-          enviando = false;
-          button.classList.remove("loading");
-          actualizarBoton();
+          generalErrorText.textContent = error instanceof TypeError
+            ? "No se pudo conectar con la API de Hilf'e en el puerto 8000. Inicia el servidor Deno y verifica que XAMPP MySQL siga activo."
+            : error.message || "No fue posible completar el registro.";
+          generalErrorAlert.style.display = "flex";
+          window.scrollTo({ top: 0, behavior: "smooth" });
+          formEnviado = false;
+          submitBtn.disabled = false;
+          submitText.style.display = "inline-flex";
+          submitSpinner.style.display = "none";
         }
+      });
+
+      // MODAL LEGALES
+      const legalModal = document.getElementById("legalModal");
+      const legalModalTitle = document.getElementById("legalModalTitle");
+      const legalModalBody = document.getElementById("legalModalBody");
+      const closeLegalModal = document.getElementById("closeLegalModal");
+      const btnUnderstoodLegal = document.getElementById("btnUnderstoodLegal");
+
+      let docMap = null;
+
+      async function cargarDocumentosLegales() {
+        if (docMap) return;
+        try {
+          const res = await fetch(`${apiBase}/legal/documentos`);
+          if (res.ok) {
+            const list = await res.json();
+            docMap = {};
+            list.forEach((doc) => {
+              docMap[doc.codigo] = doc;
+            });
+          }
+        } catch {
+          // fallback
+        }
+      }
+
+      function renderizarDocumentoLegal(contenido) {
+        const fragment = document.createDocumentFragment();
+        let lista = null;
+        const insertarTextoConFormato = (elemento, texto) => {
+          texto.split(/(\*\*[^*]+\*\*|\*[^*]+\*)/g).forEach((parte) => {
+            if (parte.startsWith("**") && parte.endsWith("**")) {
+              const strong = document.createElement("strong");
+              strong.textContent = parte.slice(2, -2);
+              elemento.appendChild(strong);
+            } else if (parte.startsWith("*") && parte.endsWith("*")) {
+              const em = document.createElement("em");
+              em.textContent = parte.slice(1, -1);
+              elemento.appendChild(em);
+            } else {
+              elemento.appendChild(document.createTextNode(parte));
+            }
+          });
+        };
+        String(contenido || "").replace(/\r\n?/g, "\n").split("\n").forEach((linea) => {
+          const texto = linea.trim();
+          if (!texto) { lista = null; return; }
+          const titulo = texto.match(/^(#{1,3})\s+(.+)$/);
+          const elementoLista = texto.match(/^[-*]\s+(.+)$/) || texto.match(/^\d+\.\s+(.+)$/);
+          if (titulo) {
+            lista = null;
+            const h = document.createElement(titulo[1].length === 1 ? "h2" : "h3");
+            insertarTextoConFormato(h, titulo[2]);
+            fragment.appendChild(h);
+          } else if (elementoLista) {
+            if (!lista) {
+              lista = document.createElement(/^\d+\./.test(texto) ? "ol" : "ul");
+              fragment.appendChild(lista);
+            }
+            const li = document.createElement("li");
+            insertarTextoConFormato(li, elementoLista[1]);
+            lista.appendChild(li);
+          } else {
+            lista = null;
+            const p = document.createElement("p");
+            insertarTextoConFormato(p, texto);
+            fragment.appendChild(p);
+          }
+        });
+        legalModalBody.replaceChildren(fragment);
+      }
+
+      document.querySelectorAll(".legal-link-btn").forEach((btn) => {
+        btn.addEventListener("click", async (e) => {
+          e.preventDefault();
+          const docKey = btn.getAttribute("data-doc");
+          await cargarDocumentosLegales();
+
+          if (docMap && docMap[docKey]) {
+            const d = docMap[docKey];
+            legalModalTitle.textContent = `${d.titulo} (v${d.version})`;
+            renderizarDocumentoLegal(d.contenido);
+          } else {
+            legalModalTitle.textContent = "Documento de cumplimiento legal (Colombia Ley 1581 de 2012)";
+            legalModalBody.innerHTML = `
+              <p><strong>Aviso Regulatorio:</strong> El presente documento rige las condiciones de uso, privacidad y tratamiento de datos personales de la plataforma Hilf'e en la República de Colombia.</p>
+              <p>Puedes consultar la versión vigente directamente o escribir al oficial de datos personales en <em>soportehilfe2@gmail.com</em>.</p>
+            `;
+          }
+
+          legalModal.classList.add("open");
+          legalModal.setAttribute("aria-hidden", "false");
+        });
+      });
+
+      function cerrarModal() {
+        legalModal.classList.remove("open");
+        legalModal.setAttribute("aria-hidden", "true");
+      }
+
+      closeLegalModal?.addEventListener("click", cerrarModal);
+      btnUnderstoodLegal?.addEventListener("click", cerrarModal);
+      legalModal?.addEventListener("click", (e) => {
+        if (e.target === legalModal) cerrarModal();
       });
     })();
   </script>

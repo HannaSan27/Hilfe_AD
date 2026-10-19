@@ -1,0 +1,143 @@
+---
+import Layout from "../../layouts/Layout.astro";
+import "../../components/styles/design-system.css";
+---
+
+<Layout title="Estado de verificación — Hilf'e">
+  <main class="verification-page">
+    <header class="page-brand"><a href="/" aria-label="Volver al inicio">Hilf'e</a></header>
+    <section class="verification-panel" aria-labelledby="pageTitle">
+      <div class="eyebrow">CUENTA HILF'E</div>
+      <h1 id="pageTitle">Estado de verificación</h1>
+      <p class="intro">Consulta el avance de tu solicitud de identidad. La revisión es manual y no certifica experiencia, antecedentes ni calidad del servicio.</p>
+      <div id="statusMessage" class="status-message" role="status" aria-live="polite">Consultando tu solicitud…</div>
+      <p id="statusDetail" class="status-detail"></p>
+
+      <form id="correctionForm" hidden>
+        <div class="form-heading">
+          <h2>Corrige tus datos</h2>
+          <p>Envía solo los datos solicitados. Volverán a revisión y tu cuenta permanecerá limitada hasta recibir una decisión.</p>
+        </div>
+        <label for="tipoDocumento">Tipo de documento</label>
+        <select id="tipoDocumento" required>
+          <option value="">Selecciona una opción</option>
+          <option value="CC">Cédula de ciudadanía</option>
+          <option value="CE">Cédula de extranjería</option>
+          <option value="TI">Tarjeta de identidad</option>
+          <option value="PASAPORTE">Pasaporte</option>
+          <option value="PPT">Permiso por Protección Temporal</option>
+        </select>
+        <label for="numeroDocumento">Número de documento</label>
+        <input id="numeroDocumento" type="text" autocomplete="off" maxlength="20" required />
+        <label for="fechaExpedicion">Fecha de expedición</label>
+        <input id="fechaExpedicion" type="date" required />
+        <p id="formError" class="form-error" role="alert" hidden></p>
+        <button id="submitCorrection" type="submit">Enviar corrección</button>
+      </form>
+
+      <a class="back-link" href="/login/login">Volver al inicio de sesión</a>
+    </section>
+  </main>
+</Layout>
+
+<style>
+  .verification-page { min-height:100vh; padding:24px clamp(16px,5vw,72px) 64px; color:var(--text,#182437); background:var(--bg,#f4f6fa); }
+  .page-brand { max-width:960px; margin:0 auto 32px; font-size:1.25rem; font-weight:850; letter-spacing:-.05em; }
+  .page-brand a { color:var(--primary,#365fe8); text-decoration:none; }
+  .verification-panel { max-width:720px; margin:0 auto; padding:clamp(24px,5vw,52px); border:1px solid var(--border,#e0e5ee); border-radius:22px; background:var(--bg-card,#fff); box-shadow:0 18px 60px rgba(25,42,75,.08); }
+  .eyebrow { color:var(--primary,#365fe8); font-size:.76rem; font-weight:800; letter-spacing:.13em; }
+  h1 { margin:.65rem 0 .75rem; font-size:clamp(2rem,5vw,3.3rem); line-height:1.08; letter-spacing:-.045em; }
+  .intro,.form-heading p { color:var(--text-secondary,#657188); line-height:1.65; }
+  .status-message { margin-top:26px; padding:18px 20px; border-radius:14px; color:#18366c; background:#eef3ff; font-weight:750; line-height:1.5; }
+  .status-message[data-state="aprobado"] { color:#17623c; background:#eaf7ef; }
+  .status-message[data-state="rechazado"] { color:#8b2f25; background:#fff0ed; }
+  .status-message[data-state="requiere_informacion"] { color:#805014; background:#fff7e8; }
+  .status-detail { color:var(--text-secondary,#657188); line-height:1.6; white-space:pre-wrap; }
+  form { display:grid; gap:10px; margin-top:28px; padding-top:26px; border-top:1px solid var(--border,#e0e5ee); }
+  .form-heading h2 { margin:0 0 4px; font-size:1.3rem; }
+  .form-heading p { margin:0 0 10px; font-size:.94rem; }
+  label { margin-top:7px; font-size:.88rem; font-weight:700; }
+  input,select { width:100%; min-height:48px; padding:10px 13px; border:1px solid var(--border,#d8deea); border-radius:10px; color:var(--text,#182437); background:var(--bg-card,#fff); font:inherit; }
+  input:focus,select:focus { outline:3px solid rgba(54,95,232,.2); border-color:var(--primary,#365fe8); }
+  button { min-height:50px; margin-top:10px; border:0; border-radius:11px; color:#fff; background:var(--primary,#365fe8); font:inherit; font-weight:750; cursor:pointer; }
+  button:disabled { opacity:.65; cursor:wait; }
+  .form-error { margin:0; color:#a12c22; font-size:.9rem; }
+  .back-link { display:inline-block; margin-top:28px; color:var(--primary,#365fe8); font-weight:700; text-decoration:none; }
+  .back-link:hover { text-decoration:underline; }
+  @media (prefers-reduced-motion:reduce) { *,*::before,*::after { scroll-behavior:auto!important; animation-duration:.01ms!important; transition-duration:.01ms!important; } }
+</style>
+
+<script>
+  const apiBase = "http://127.0.0.1:8000";
+  const statusMessage = document.getElementById("statusMessage");
+  const statusDetail = document.getElementById("statusDetail");
+  const correctionForm = document.getElementById("correctionForm") as HTMLFormElement;
+  const formError = document.getElementById("formError");
+  const dateInput = document.getElementById("fechaExpedicion") as HTMLInputElement;
+  dateInput.max = new Date().toISOString().slice(0, 10);
+
+  const token = localStorage.getItem("token");
+  if (!token) {
+    window.location.replace("/login/login");
+  } else {
+    cargarEstado();
+  }
+
+  async function cargarEstado() {
+    try {
+      const response = await fetch(`${apiBase}/api/verificaciones/mi-estado`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.mensaje || "No se pudo consultar el estado.");
+      const solicitud = data.solicitud;
+      if (!solicitud) {
+        statusMessage.textContent = "No encontramos una solicitud de verificación para esta cuenta.";
+        return;
+      }
+      statusMessage.dataset.state = solicitud.estado;
+      const mensajes: Record<string, string> = {
+        pendiente: "Tu cuenta está en verificación. Te autorizaremos lo más rápido posible. Mientras tanto, no podrás utilizar todas las funciones de Hilf'e.",
+        en_revision: "Tu solicitud está en revisión. Te avisaremos cuando haya una decisión.",
+        aprobado: "Tu identidad fue revisada y tu cuenta está aprobada.",
+        requiere_informacion: "Necesitamos que corrijas algunos datos antes de continuar.",
+        rechazado: "No pudimos validar la información enviada. Puedes corregirla o solicitar una nueva revisión.",
+      };
+      statusMessage.textContent = mensajes[solicitud.estado] || "Tu cuenta aún no está habilitada.";
+      if (solicitud.informacionRequerida) statusDetail.textContent = `Información solicitada: ${solicitud.informacionRequerida}`;
+      else if (solicitud.motivoRechazo) statusDetail.textContent = `Motivo informado: ${solicitud.motivoRechazo}`;
+      correctionForm.hidden = !["requiere_informacion", "rechazado"].includes(solicitud.estado);
+    } catch (error) {
+      statusMessage.textContent = error instanceof Error ? error.message : "No se pudo consultar el estado.";
+    }
+  }
+
+  correctionForm.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    formError.hidden = true;
+    const button = document.getElementById("submitCorrection") as HTMLButtonElement;
+    button.disabled = true;
+    try {
+      const response = await fetch(`${apiBase}/api/verificaciones/mi-solicitud`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({
+          tipoDocumento: (document.getElementById("tipoDocumento") as HTMLSelectElement).value,
+          numeroDocumento: (document.getElementById("numeroDocumento") as HTMLInputElement).value.trim(),
+          fechaExpedicionDocumento: dateInput.value,
+        }),
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.mensaje || "No fue posible enviar la corrección.");
+      correctionForm.hidden = true;
+      statusMessage.dataset.state = "pendiente";
+      statusMessage.textContent = data.mensaje || "Tu corrección fue enviada y volvió a revisión.";
+      statusDetail.textContent = "";
+    } catch (error) {
+      formError.textContent = error instanceof Error ? error.message : "No fue posible enviar la corrección.";
+      formError.hidden = false;
+    } finally {
+      button.disabled = false;
+    }
+  });
+</script>
