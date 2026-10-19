@@ -1,98 +1,141 @@
 ---
 import Layout from "../../layouts/Layout.astro";
-import "../../components/styles/registrar.css";
+import "../../components/styles/design-system.css";
+import "../../components/styles/auth-premium.css";
 ---
 
-<Layout title="Registrarse | Hilf'e">
+<Layout title="Únete a Hilf'e — Elige cómo deseas registrarte">
   <Fragment slot="head">
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
-    <link rel="stylesheet" href="/css/design-system.css" />
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
   </Fragment>
 
   <div style="position:fixed;top:20px;right:24px;z-index:1000;">
-    <button type="button" class="theme-toggle" aria-label="Cambiar tema" style="width:36px;height:36px;border-radius:50%;border:1.5px solid var(--border);background:var(--bg-card, #fff);cursor:pointer;display:flex;align-items:center;justify-content:center;">
-      <svg class="theme-icon-light" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--text-secondary)" stroke-width="2"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
-      <svg class="theme-icon-dark" style="display:none;" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--text-secondary)" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+    <button
+      type="button"
+      class="theme-toggle"
+      aria-label="Cambiar tema de color"
+      style="width:40px;height:40px;border-radius:50%;border:1.5px solid var(--border);background:var(--bg-card);cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:var(--shadow-sm);transition:all 0.2s ease;"
+    >
+      <svg class="theme-icon-light" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--text-secondary)" stroke-width="2">
+        <circle cx="12" cy="12" r="5"></circle>
+        <line x1="12" y1="1" x2="12" y2="3"></line>
+        <line x1="12" y1="21" x2="12" y2="23"></line>
+        <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+        <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+        <line x1="1" y1="12" x2="3" y2="12"></line>
+        <line x1="21" y1="12" x2="23" y2="12"></line>
+        <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+        <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+      </svg>
+      <svg class="theme-icon-dark" style="display:none;" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--text-secondary)" stroke-width="2">
+        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+      </svg>
     </button>
   </div>
 
-  <div class="roles-container">
-    <div class="roles-box">
-      <h1>Selecciona tu rol</h1>
-
-      <p>Escoge cómo deseas registrarte</p>
-
-      <div id="googleAviso" style="display:none;margin:12px 0;padding:10px 14px;border:1.5px solid var(--border);border-radius:12px;font-size:14px;">
-        <span id="googleAvisoTexto"></span>
+  <main class="role-selection-wrapper">
+    <div class="role-selection-container">
+      <div class="role-header">
+        <div class="brand-badge">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <rect x="3" y="3" width="18" height="18" rx="4"></rect>
+            <line x1="12" y1="7" x2="12" y2="17"></line>
+            <line x1="7" y1="12" x2="17" y2="12"></line>
+          </svg>
+          Hilf'e Colombia
+        </div>
+        <h1>Elige cómo deseas formar parte de Hilf'e</h1>
+        <p>Una plataforma moderna y confiable que conecta necesidades cotidianas con el talento de trabajadores independientes verificados.</p>
       </div>
 
-      <div class="roles-grid">
-        <!-- CLIENTE -->
-        <a href="/login/registrarcliente" class="role-card" data-rol="3">
-          <i class="bi bi-person"></i>
-          <h3>Cliente</h3>
-          <span>Contrata profesionales</span>
+      <div class="role-cards-grid">
+        <!-- OPCIÓN 1: CLIENTE -->
+        <a href="/login/registrarcliente" class="role-choice-card card-client" aria-label="Registrarse como Cliente">
+          <div class="role-visual-head">
+            <div class="role-icon-box">
+              <i class="bi bi-search-heart"></i>
+            </div>
+            <span class="role-tag">Para Contratar</span>
+          </div>
+
+          <div class="role-content">
+            <h2>
+              Quiero contratar ayuda
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="7" y1="17" x2="17" y2="7"></line><polyline points="7 7 17 7 17 17"></polyline></svg>
+            </h2>
+            <p class="role-tagline">
+              Encuentra, solicita y gestiona servicios para tu hogar, negocio o proyecto con profesionales independientes.
+            </p>
+
+            <ul class="role-features-list">
+              <li>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                <span>Accede a especialistas en plomería, electricidad, pintura, cerrajería y más.</span>
+              </li>
+              <li>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                <span>Agenda citas con fecha y hora exacta con confirmación en tiempo real.</span>
+              </li>
+              <li>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                <span>Perfiles con identidad revisada contra registros oficiales para mayor tranquilidad.</span>
+              </li>
+            </ul>
+
+            <button type="button" class="role-cta-btn" tabindex="-1">
+              <span>Registrarme como Cliente</span>
+              <i class="bi bi-arrow-right"></i>
+            </button>
+          </div>
         </a>
 
-        <!-- TRABAJADOR -->
-        <a href="/login/registrartrabajador" class="role-card" data-rol="2">
-          <i class="bi bi-briefcase"></i>
-          <h3>Trabajador</h3>
-          <span>Publica tus servicios</span>
+        <!-- OPCIÓN 2: TRABAJADOR -->
+        <a href="/login/registrartrabajador" class="role-choice-card card-worker" aria-label="Registrarse como Trabajador">
+          <div class="role-visual-head">
+            <div class="role-icon-box">
+              <i class="bi bi-tools"></i>
+            </div>
+            <span class="role-tag">Para Prestar Servicios</span>
+          </div>
+
+          <div class="role-content">
+            <h2>
+              Quiero ofrecer mis servicios
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="7" y1="17" x2="17" y2="7"></line><polyline points="7 7 17 7 17 17"></polyline></svg>
+            </h2>
+            <p class="role-tagline">
+              Crea tu perfil profesional, publica tus especialidades y consigue nuevos clientes sin intermediarios opacos.
+            </p>
+
+            <ul class="role-features-list">
+              <li>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                <span>Define tus propios precios, descripción de servicios y zona geográfica de cobertura.</span>
+              </li>
+              <li>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                <span>Consigue reputación y calificaciones reales basadas en tu trabajo cumplido.</span>
+              </li>
+              <li>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                <span>Insignia oficial de Identidad Verificada que genera máxima confianza en clientes.</span>
+              </li>
+            </ul>
+
+            <button type="button" class="role-cta-btn" tabindex="-1">
+              <span>Registrarme como Trabajador</span>
+              <i class="bi bi-arrow-right"></i>
+            </button>
+          </div>
         </a>
+      </div>
+
+      <div class="auth-subfooter">
+        ¿Ya tienes una cuenta creada? <a href="/login/login">Inicia sesión</a>
       </div>
     </div>
-  </div>
-
-  <script is:inline>
-    (function () {
-      const destinos = { 1: "/admin/admin", 2: "/trabajador", 3: "/cliente" };
-      const aviso = document.getElementById("googleAviso");
-      const texto = document.getElementById("googleAvisoTexto");
-
-      let pendiente = null;
-      try { pendiente = JSON.parse(sessionStorage.getItem("googlePendiente")); } catch {}
-
-      // Los datos de Google valen 10 minutos
-      if (!pendiente || Date.now() - pendiente.creado > 10 * 60 * 1000) {
-        sessionStorage.removeItem("googlePendiente");
-        return;
-      }
-
-      texto.textContent = "Continuando con Google como " + pendiente.correo + ". Elige tu rol:";
-      aviso.style.display = "block";
-
-      document.querySelectorAll(".role-card").forEach((card) => {
-        card.addEventListener("click", async (e) => {
-          e.preventDefault();
-          const rol = Number(card.dataset.rol);
-          try {
-            const response = await fetch("http://127.0.0.1:8000/api/auth/google/completar", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ registroToken: pendiente.registroToken, rol }),
-            });
-            const data = await response.json();
-
-            if (!response.ok) {
-              texto.textContent = data.mensaje || "No se pudo completar el registro.";
-              sessionStorage.removeItem("googlePendiente");
-              return;
-            }
-
-            sessionStorage.removeItem("googlePendiente");
-            localStorage.setItem("token", data.token);
-            localStorage.setItem("usuario", JSON.stringify(data.usuario));
-            window.location.assign(destinos[data.usuario.rol] ?? "/login/login");
-          } catch {
-            texto.textContent = "No se pudo conectar con el servidor.";
-          }
-        });
-      });
-    })();
-  </script>
-  <script is:inline src="/js/site.js"></script>
+  </main>
 </Layout>

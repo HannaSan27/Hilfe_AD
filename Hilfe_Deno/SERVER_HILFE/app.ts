@@ -9,7 +9,8 @@ import serviciosRoutes from "./Routes/serviciosRoutes.ts";
 import disponibilidadRoutes from "./Routes/disponibilidadRoutes.ts";
 import imagenesTrabajosRoutes from "./Routes/imagenesTrabajosRoutes.ts";
 import solicitudesRoutes from "./Routes/solicitudesRoutes.ts";
-import chatAyudaRoutes from "./Routes/chatAyudaRoutes.ts";
+import verificacionesRoutes from "./Routes/verificacionesRoutes.ts";
+import { sincronizarDocumentosLegales } from "./Models/legalesModel.ts";
 
 const app = new Application();
 
@@ -43,8 +44,14 @@ app.use(imagenesTrabajosRoutes.allowedMethods());
 app.use(solicitudesRoutes.routes());
 app.use(solicitudesRoutes.allowedMethods());
 
-app.use(chatAyudaRoutes.routes());
-app.use(chatAyudaRoutes.allowedMethods());
+app.use(verificacionesRoutes.routes());
+app.use(verificacionesRoutes.allowedMethods());
+
+try {
+  await sincronizarDocumentosLegales();
+} catch (e) {
+  console.warn("No se pudieron sincronizar documentos legales al inicio:", e);
+}
 
 const puerto = Number(Deno.env.get("PORT")) || 8000;
 console.log(`Servidor corriendo por el puerto ${puerto}`);

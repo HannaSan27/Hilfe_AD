@@ -68,6 +68,9 @@ const cards = [
       <a href="/admin/admin" class="sidebar-item active">
         <i data-lucide="layout-dashboard"></i> Dashboard
       </a>
+      <a href="/admin/verificaciones" class="sidebar-item">
+        <i data-lucide="shield-check"></i> Verificaciones
+      </a>
       <a href="/admin/usuario" class="sidebar-item">
         <i data-lucide="users"></i> Usuarios
       </a>
@@ -133,6 +136,29 @@ const cards = [
               </div>
             </div>
           ))}
+        </div>
+
+        <!-- ====== BANNER VERIFICACIONES ====== -->
+        <div class="admin-card" style="margin-bottom:1.5rem;background:linear-gradient(135deg, var(--bg-card) 0%, var(--primary-soft) 100%);border:1.5px solid var(--border);">
+          <div style="padding:1.5rem;display:flex;align-items:center;justify-content:space-between;gap:1.5rem;flex-wrap:wrap;">
+            <div style="display:flex;align-items:center;gap:1rem;">
+              <div style="width:48px;height:48px;border-radius:12px;background:var(--primary);color:#fff;display:flex;align-items:center;justify-content:center;font-size:1.5rem;flex-shrink:0;">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></svg>
+              </div>
+              <div>
+                <h3 style="font-size:1.15rem;font-weight:700;color:var(--text);margin-bottom:0.25rem;">
+                  Gestión de Verificación de Identidad
+                </h3>
+                <p style="font-size:0.875rem;color:var(--text-secondary);margin:0;">
+                  Revisa solicitudes de clientes y trabajadores con cotejo manual oficial en la Registraduría Nacional del Estado Civil.
+                </p>
+              </div>
+            </div>
+            <a href="/admin/verificaciones" class="btn btn-primary" style="text-decoration:none;display:inline-flex;align-items:center;gap:8px;">
+              <span>Abrir Verificaciones</span>
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+            </a>
+          </div>
         </div>
 
         <!-- ====== RECENT CITAS TABLE ====== -->

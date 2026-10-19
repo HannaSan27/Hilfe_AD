@@ -27,6 +27,12 @@ export async function obtenerPerfil(ctx: RouterContext<string>) {
 // PUT /api/usuarios/:id
 export async function editarPerfil(ctx: RouterContext<string>) {
   const id = Number(ctx.params.id);
+  const sesion = ctx.state.usuario as { id?: number; rol?: number } | undefined;
+  if (Number(sesion?.id) !== id && Number(sesion?.rol) !== 1) {
+    ctx.response.status = 403;
+    ctx.response.body = { mensaje: "Solo puedes editar tu propio perfil" };
+    return;
+  }
   const body = await ctx.request.body.json();
   const nombre = String(body.nombre || "").trim().replace(/\s+/g, " ");
   const telefono = body.telefono;
@@ -97,6 +103,12 @@ export async function subirFotoPerfil(ctx: RouterContext<string>) {
     return;
   }
 
+  if (foto.size <= 0 || foto.size > 5 * 1024 * 1024) {
+    ctx.response.status = 400;
+    ctx.response.body = { mensaje: "La foto debe pesar entre 1 byte y 5 MB" };
+    return;
+  }
+
   const extensiones: Record<string, string> = {
     "image/jpeg": "jpg",
     "image/png": "png",
@@ -109,12 +121,24 @@ export async function subirFotoPerfil(ctx: RouterContext<string>) {
     return;
   }
 
+  const bytes = new Uint8Array(await foto.arrayBuffer());
+  const esJpeg = bytes.length >= 3 && bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff;
+  const esPng = bytes.length >= 8 && bytes[0] === 0x89 && bytes[1] === 0x50 && bytes[2] === 0x4e &&
+    bytes[3] === 0x47 && bytes[4] === 0x0d && bytes[5] === 0x0a && bytes[6] === 0x1a && bytes[7] === 0x0a;
+  if ((extension === "jpg" && !esJpeg) || (extension === "png" && !esPng)) {
+    ctx.response.status = 400;
+    ctx.response.body = { mensaje: "El contenido del archivo no coincide con una imagen JPG o PNG válida" };
+    return;
+  }
+
   const nombreArchivo = `${crypto.randomUUID()}.${extension}`;
   const rutaArchivo = new URL(nombreArchivo, directorioFotosPerfil);
+  let archivoGuardado = false;
 
   try {
     await Deno.mkdir(directorioFotosPerfil, { recursive: true });
-    await Deno.writeFile(rutaArchivo, new Uint8Array(await foto.arrayBuffer()));
+    await Deno.writeFile(rutaArchivo, bytes, { createNew: true });
+    archivoGuardado = true;
     await actualizarFotoPerfil(id, nombreArchivo);
 
     ctx.response.status = 200;
@@ -124,6 +148,7 @@ export async function subirFotoPerfil(ctx: RouterContext<string>) {
       url: `/api/usuarios/${id}/foto-perfil`,
     };
   } catch (error) {
+    if (archivoGuardado) await Deno.remove(rutaArchivo).catch(() => {});
     ctx.response.status = 500;
     ctx.response.body = { mensaje: "No fue posible guardar la foto de perfil", error: String(error) };
   }
