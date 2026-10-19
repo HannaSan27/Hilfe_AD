@@ -48,8 +48,14 @@ const { active } = Astro.props;
 </aside>
 
 <script is:inline>
-  document.getElementById('cerrarSesionAdmin')?.addEventListener('click', function () {
+  document.getElementById('cerrarSesionAdmin')?.addEventListener('click', function (event) {
+    if (!window.confirm('¿Estás seguro de que quieres cerrar sesión?')) {
+      event.preventDefault();
+      return;
+    }
     localStorage.removeItem('token');
     localStorage.removeItem('usuario');
+    event.preventDefault();
+    window.location.assign('/');
   });
 </script>

@@ -4,3 +4,4 @@ export { Client } from "https://deno.land/x/mysql@v2.12.1/mod.ts";
 export { hash, verify as verificarContrasena } from "jsr:@felix/bcrypt";
 export { create, verify } from "jsr:@zaubrik/djwt";
 export { SMTPClient } from "https://deno.land/x/denomailer@1.6.0/mod.ts";
+export { createRemoteJWKSet, jwtVerify } from "npm:jose@5";
