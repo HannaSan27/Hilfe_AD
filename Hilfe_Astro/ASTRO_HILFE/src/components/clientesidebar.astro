@@ -36,9 +36,15 @@ const { active = "solicitudes" } = Astro.props;
 </aside>
 
 <script is:inline>
-  document.getElementById("cerrarSesionCliente")?.addEventListener("click", () => {
+  document.getElementById("cerrarSesionCliente")?.addEventListener("click", (event) => {
+    if (!window.confirm("¿Estás seguro de que quieres cerrar sesión?")) {
+      event.preventDefault();
+      return;
+    }
     localStorage.removeItem("token");
     localStorage.removeItem("usuario");
+    event.preventDefault();
+    window.location.assign("/");
   });
 
   (() => {
