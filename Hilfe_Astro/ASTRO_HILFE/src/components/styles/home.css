@@ -620,7 +620,8 @@ img { max-width: 100%; display: block; }
     border-radius: 50px;
     font-size: 13px;
     font-weight: 500;
-    color: var(--gray-600);
+    /* These tags keep a white surface in both themes, so keep their text dark too. */
+    color: #334155;
     transition: var(--transition);
     text-decoration: none;
     cursor: pointer;

@@ -91,10 +91,22 @@ const nombre = usuario.nombre;
 			<a href="/trabajador/?section=perfil" class="sidebar-item" id="nav-perfil">
 				<i class="bi bi-person-fill"></i> Mi Perfil
 			</a>
-			<a href="/login/login" class="sidebar-item danger">
+			<a href="/" class="sidebar-item danger" id="cerrarSesionTrabajador">
 				<i class="bi bi-box-arrow-right"></i> Cerrar sesión
 			</a>
 		</aside>
+		<script is:inline>
+			document.getElementById('cerrarSesionTrabajador')?.addEventListener('click', (event) => {
+				if (!window.confirm('¿Estás seguro de que quieres cerrar sesión?')) {
+					event.preventDefault();
+					return;
+				}
+				localStorage.removeItem('token');
+				localStorage.removeItem('usuario');
+				event.preventDefault();
+				window.location.assign('/');
+			});
+		</script>
 		<main>
 
 			<div class="content-header">

@@ -35,7 +35,7 @@ body { font-family: 'Inter', sans-serif; display:flex; min-height:100vh; }
 /* ===== LEFT PANEL ===== */
 .login-left {
     flex:1.2; display:flex; align-items:center; justify-content:center;
-    background: linear-gradient(160deg, #070d1a 0%, #0B1736 35%, #0f1d35 65%, #070d1a 100%);
+    background: #351b69;
     position:relative; overflow:hidden;
 }
 
@@ -149,20 +149,35 @@ body { font-family: 'Inter', sans-serif; display:flex; min-height:100vh; }
 
 /* Logo */
 .login-logo {
-    position:absolute; top:36px; left:40px; z-index:10;
-    display:flex; align-items:center; gap:10px; animation:fadeIn .8s ease both;
+    position:absolute; top:50%; left:50%; z-index:10;
+    display:flex; align-items:center; gap:16px; transform:translate(-50%,-50%); animation:fadeIn .8s ease both;
 }
 .login-logo .logo-icon {
-    width:34px; height:34px; border-radius:10px;
+    width:96px; height:96px; flex:none; border-radius:25px;
     background: linear-gradient(135deg, #2563eb, #1d4ed8);
     display:flex; align-items:center; justify-content:center;
-    box-shadow: 0 4px 16px rgba(37,99,235,0.2);
+    box-shadow: 0 14px 36px rgba(37,99,235,0.34);
+    animation:logoMarkAssemble .5s cubic-bezier(.2,.8,.24,1) 2.68s both;
 }
-.login-logo .logo-icon svg { width:17px; height:17px; color:#fff; }
-.login-logo h2 { font-size:19px; font-weight:800; letter-spacing:-0.3px; color:#fff; }
-.login-logo h2 span { color:#60a5fa; }
+.login-logo .logo-icon svg { width:46px; height:46px; color:#fff; }
+.login-logo h2 { display:flex; margin:0; font-size:64px; font-weight:800; letter-spacing:-1.8px; color:#fff; }
+.login-logo h2 .logo-letter { display:inline-block; color:#fff; animation:logoLetterDrop 1.08s cubic-bezier(.2,.78,.24,1) both; }
+.login-logo h2 .logo-letter:nth-child(1) { --fall-x:-32px; --fall-tilt:-10deg; animation-delay:.95s; }
+.login-logo h2 .logo-letter:nth-child(2) { --fall-x:28px; --fall-tilt:8deg; animation-delay:.18s; }
+.login-logo h2 .logo-letter:nth-child(3) { --fall-x:-18px; --fall-tilt:12deg; animation-delay:1.22s; }
+.login-logo h2 .logo-letter:nth-child(4) { --fall-x:34px; --fall-tilt:-8deg; animation-delay:.45s; }
+.login-logo h2 .logo-letter:nth-child(5) { --fall-x:-28px; --fall-tilt:11deg; animation-delay:1.55s; }
+.login-logo h2 .logo-letter:nth-child(6) { --fall-x:14px; --fall-tilt:-12deg; animation-delay:.72s; }
+.login-logo h2 .logo-letter.is-accent { color:#60a5fa; }
+@keyframes logoLetterDrop {
+    0% { opacity:0; transform:translate(var(--fall-x),-110vh) rotate(var(--fall-tilt)); }
+    68% { opacity:1; transform:translate(0,9px) rotate(1.5deg); }
+    84% { transform:translate(0,-4px) rotate(-.6deg); }
+    100% { opacity:1; transform:translate(0,0) rotate(0); }
+}
+@keyframes logoMarkAssemble { from { opacity:0; transform:scale(.72) rotate(-8deg); } to { opacity:1; transform:scale(1) rotate(0); } }
 
-/* cubo en 3d*/
+/* Cubo 3D legado */
 .cube-center {
     position:relative; z-index:2;
     display:flex; align-items:center; justify-content:center;
@@ -347,7 +362,10 @@ body { font-family: 'Inter', sans-serif; display:flex; min-height:100vh; }
 @media (max-width:960px) {
     .login-wrap { flex-direction:column; }
     .login-left { flex:none; min-height:280px; }
-    .login-logo { top:20px; left:20px; }
+    .login-logo { gap:12px; }
+    .login-logo .logo-icon { width:72px; height:72px; border-radius:19px; }
+    .login-logo .logo-icon svg { width:36px; height:36px; }
+    .login-logo h2 { font-size:48px; }
     .cube-scene { width:140px; height:140px; }
     .cube .face { width:140px; height:140px; }
     .cube .face-front { transform:translateZ(70px); }
@@ -369,7 +387,7 @@ body { font-family: 'Inter', sans-serif; display:flex; min-height:100vh; }
 }
 
 @media (prefers-reduced-motion: reduce) {
-    .cube-center, .cube, .cube-halo, .cube-halo::after, .cube-shadow, .cube .tile::after, .service-showcase {
+    .login-logo h2 .logo-letter, .login-logo .logo-icon, .cube-center, .cube, .cube-halo, .cube-halo::after, .cube-shadow, .cube .tile::after, .service-showcase {
         animation:none !important;
     }
 }

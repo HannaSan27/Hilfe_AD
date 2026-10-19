@@ -103,8 +103,9 @@ const { variant = 'default' } = Astro.props;
     document.addEventListener('keydown', (event) => { if (event.key === 'Escape') setOpen(false); });
     root.querySelector('[data-user-logout]').addEventListener('click', (event) => {
       event.preventDefault();
+      if (!window.confirm('¿Estás seguro de que quieres cerrar sesión?')) return;
       try { localStorage.removeItem('token'); localStorage.removeItem('usuario'); } catch {}
-      window.location.href = '/login/login';
+      window.location.href = '/';
     });
   })();
 </script>

@@ -71,25 +71,16 @@ const mostrarRegistroExitoso = Astro.url.searchParams.get("vista") === "registro
               <line x1="7" y1="12" x2="17" y2="12"/>
             </svg>
           </div>
-          <h2>Hilf<span>'e</span></h2>
+          <h2 aria-label="Hilf'e">
+            <span class="logo-letter" aria-hidden="true">H</span>
+            <span class="logo-letter" aria-hidden="true">i</span>
+            <span class="logo-letter" aria-hidden="true">l</span>
+            <span class="logo-letter" aria-hidden="true">f</span>
+            <span class="logo-letter is-accent" aria-hidden="true">'</span>
+            <span class="logo-letter is-accent" aria-hidden="true">e</span>
+          </h2>
         </div>
 
-        {/* CUBO 3D  */}
-        <div class="cube-center">
-          <div class="cube-halo"></div>
-          <div class="cube-scene">
-            <div class="cube">
-              <div class="face face-front"><div class="tile"></div><div class="tile"></div><div class="tile"></div><div class="tile"></div></div>
-              <div class="face face-back"><div class="tile"></div><div class="tile"></div><div class="tile"></div><div class="tile"></div></div>
-              <div class="face face-left"><div class="tile"></div><div class="tile"></div><div class="tile"></div><div class="tile"></div></div>
-              <div class="face face-right"><div class="tile"></div><div class="tile"></div><div class="tile"></div><div class="tile"></div></div>
-              <div class="face face-top"><div class="tile"></div><div class="tile"></div><div class="tile"></div><div class="tile"></div></div>
-              <div class="face face-bottom"><div class="tile"></div><div class="tile"></div><div class="tile"></div><div class="tile"></div></div>
-            </div>
-          </div>
-          <div class="cube-shadow"></div>
-        </div>
-        {/* FIN CUBO 3D */}
       </div>
 
       {/* RIGHT - FORM */}
@@ -235,15 +226,13 @@ const mostrarRegistroExitoso = Astro.url.searchParams.get("vista") === "registro
             localStorage.setItem("token", data.token);
             localStorage.setItem("usuario", JSON.stringify(data.usuario));
 
-            const destinos = { 1: "/admin/admin", 2: "/trabajador", 3: "/cliente" };
-            const destino = destinos[data.usuario?.rol];
-
-            if (!destino) {
+            const rolesValidos = [1, 2, 3];
+            if (!rolesValidos.includes(Number(data.usuario?.rol))) {
               window.location.assign(errorUrl("El rol de usuario no es válido."));
               return;
             }
 
-            window.location.assign(destino);
+            window.location.assign("/");
           } catch {
             window.location.assign(errorUrl("No se pudo conectar con el servidor."));
           }
