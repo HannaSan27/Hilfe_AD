@@ -2,6 +2,7 @@
 import Layout from "../../layouts/Layout.astro";
 import "../../components/styles/design-system.css";
 import "../../components/styles/auth-premium.css";
+const apiBaseAuth = (import.meta.env.PUBLIC_API_BASE_URL ?? "http://127.0.0.1:8000/api").replace(/\/+$/, "");
 ---
 
 <Layout title="Únete a Hilf'e — Elige cómo deseas registrarte">
@@ -36,7 +37,7 @@ import "../../components/styles/auth-premium.css";
     </button>
   </div>
 
-  <main class="role-selection-wrapper">
+  <main class="role-selection-wrapper" data-google-api-base={apiBaseAuth}>
     <div class="role-selection-container">
       <div class="role-header">
         <div class="brand-badge">
@@ -138,4 +139,27 @@ import "../../components/styles/auth-premium.css";
       </div>
     </div>
   </main>
+
+  <script is:inline>
+    (() => {
+      let pendiente;
+      try {
+        pendiente = JSON.parse(sessionStorage.getItem('googlePendiente') || 'null');
+      } catch {
+        sessionStorage.removeItem('googlePendiente');
+      }
+      if (!pendiente?.registroToken) return;
+
+      const destinos = { 2: '/login/registrartrabajador', 3: '/login/registrarcliente' };
+      document.querySelectorAll('.role-choice-card').forEach((enlace) => {
+        enlace.addEventListener('click', async (evento) => {
+          const rol = enlace.classList.contains('card-worker') ? 2 : 3;
+          evento.preventDefault();
+          pendiente.rol = rol;
+          sessionStorage.setItem('googlePendiente', JSON.stringify(pendiente));
+          window.location.assign(destinos[rol]);
+        });
+      });
+    })();
+  </script>
 </Layout>
