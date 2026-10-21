@@ -18,6 +18,10 @@ const { active } = Astro.props;
   <a href="/admin/verificaciones" class={`admin-nav-item${active === 'verificaciones' ? ' active' : ''}`}>
     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></svg>
     Verificaciones
+    <span class="admin-verification-alert" id="adminVerificationAlert" title="Solicitudes pendientes de revisión" aria-label="Solicitudes pendientes de revisión">
+      <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"/><path d="M10 21h4"/></svg>
+      <span id="adminVerificationCount" aria-live="polite">0</span>
+    </span>
   </a>
   <a href="/admin/usuario" class={`admin-nav-item${active === 'usuario' ? ' active' : ''}`}>
     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
@@ -47,7 +51,63 @@ const { active } = Astro.props;
   </a>
 </aside>
 
+<style>
+  .admin-verification-alert {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    min-width: 36px;
+    height: 25px;
+    margin-left: auto;
+    padding: 0 7px;
+    border: 1px solid color-mix(in srgb, var(--danger, #dc2626) 20%, transparent);
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--danger, #dc2626) 9%, var(--bg-card, #fff));
+    color: var(--danger, #dc2626);
+    font-size: 11px;
+    font-weight: 750;
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .admin-verification-alert svg { flex: 0 0 auto; }
+</style>
+
 <script is:inline>
+  (function () {
+    const countElement = document.getElementById('adminVerificationCount');
+    const alertElement = document.getElementById('adminVerificationAlert');
+    if (!countElement || !alertElement) return;
+
+    async function actualizarSolicitudesPendientes() {
+      const token = localStorage.getItem('token');
+      let usuario = null;
+      try {
+        usuario = JSON.parse(localStorage.getItem('usuario') || 'null');
+      } catch {}
+      if (!token || Number(usuario?.rol) !== 1) return;
+
+      try {
+        const res = await fetch('http://127.0.0.1:8000/api/admin/verificaciones?estado=pendiente', {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (!res.ok) return;
+        const solicitudes = await res.json();
+        if (!Array.isArray(solicitudes)) return;
+        const pendientes = solicitudes.filter((solicitud) => solicitud.Estado === 'pendiente').length;
+        countElement.textContent = pendientes > 99 ? '99+' : String(pendientes);
+        alertElement.title = `${pendientes} solicitudes pendientes de revisión`;
+        alertElement.setAttribute('aria-label', `${pendientes} solicitudes pendientes de revisión`);
+      } catch {
+        // La navegación sigue disponible aunque la API no esté activa.
+      }
+    }
+
+    actualizarSolicitudesPendientes();
+    window.setInterval(actualizarSolicitudesPendientes, 60000);
+  })();
+
   document.getElementById('cerrarSesionAdmin')?.addEventListener('click', function (event) {
     if (!window.confirm('¿Estás seguro de que quieres cerrar sesión?')) {
       event.preventDefault();

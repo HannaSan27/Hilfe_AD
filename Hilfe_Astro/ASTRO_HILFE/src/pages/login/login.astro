@@ -19,6 +19,7 @@ const mostrarRegistroExitoso = Astro.url.searchParams.get("vista") === "registro
 
 // Client ID de Google (viene del .env del frontend: PUBLIC_GOOGLE_CLIENT_ID)
 const googleClientId = import.meta.env.PUBLIC_GOOGLE_CLIENT_ID ?? "";
+const apiBaseAuth = (import.meta.env.PUBLIC_API_BASE_URL ?? "http://127.0.0.1:8000/api").replace(/\/+$/, "");
 ---
 
 <Layout title="Hilf'e — Iniciar sesión">
@@ -166,7 +167,7 @@ const googleClientId = import.meta.env.PUBLIC_GOOGLE_CLIENT_ID ?? "";
 
             {/* INICIAR CON GOOGLE */}
             <div class="divider-o"><span>o</span></div>
-            <div id="googleBtn" data-client-id={googleClientId} style="display:flex;justify-content:center;min-height:44px;"></div>
+            <div id="googleBtn" data-client-id={googleClientId} data-api-base={apiBaseAuth} style="display:flex;justify-content:center;min-height:44px;"></div>
 
             <div class="register-link">
               ¿No tienes cuenta? <a href="/login/registrar">Registrarse</a>
@@ -214,7 +215,8 @@ const googleClientId = import.meta.env.PUBLIC_GOOGLE_CLIENT_ID ?? "";
           const errorUrl = (message) => `/login/login?error=${encodeURIComponent(message)}`;
 
           try {
-            const response = await fetch("http://127.0.0.1:8000/api/auth/login", {
+            const apiBase = document.getElementById("googleBtn")?.dataset.apiBase || "http://127.0.0.1:8000/api";
+            const response = await fetch(`${apiBase}/auth/login`, {
               method: "POST",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({
@@ -226,6 +228,20 @@ const googleClientId = import.meta.env.PUBLIC_GOOGLE_CLIENT_ID ?? "";
             const data = await response.json();
 
             if (!response.ok) {
+              const estadosVerificacion = [
+                "CUENTA_PENDIENTE",
+                "CUENTA_EN_REVISION",
+                "CUENTA_REQUIERE_INFO",
+                "CUENTA_RECHAZADO",
+                "CUENTA_RECHAZADA",
+                "CUENTA_NO_HABILITADA",
+              ];
+              if (data.token && data.usuario && estadosVerificacion.includes(data.codigo)) {
+                localStorage.setItem("token", data.token);
+                localStorage.setItem("usuario", JSON.stringify(data.usuario));
+                window.location.assign("/account/verificacion");
+                return;
+              }
               window.location.assign(errorUrl(data.mensaje || data.error || "No fue posible iniciar sesión."));
               return;
             }
@@ -247,12 +263,13 @@ const googleClientId = import.meta.env.PUBLIC_GOOGLE_CLIENT_ID ?? "";
 
         // ===== Iniciar con Google =====
         const googleBtn = document.getElementById("googleBtn");
+        const apiBaseGoogle = (googleBtn?.dataset.apiBase || "http://127.0.0.1:8000/api").replace(/\/+$/, "");
         const destinosGoogle = { 1: "/admin/admin", 2: "/trabajador", 3: "/cliente" };
 
         async function manejarGoogle(respuesta) {
           const errorGoogle = (m) => `/login/login?error=${encodeURIComponent(m)}`;
           try {
-            const response = await fetch("http://127.0.0.1:8000/api/auth/google", {
+            const response = await fetch(`${apiBaseGoogle}/auth/google`, {
               method: "POST",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({ credential: respuesta.credential }),
@@ -260,6 +277,20 @@ const googleClientId = import.meta.env.PUBLIC_GOOGLE_CLIENT_ID ?? "";
             const data = await response.json();
 
             if (!response.ok) {
+              const estadosVerificacion = [
+                "CUENTA_PENDIENTE",
+                "CUENTA_EN_REVISION",
+                "CUENTA_REQUIERE_INFORMACION",
+                "CUENTA_RECHAZADO",
+                "CUENTA_RECHAZADA",
+                "CUENTA_NO_HABILITADA",
+              ];
+              if (data.token && data.usuario && estadosVerificacion.includes(data.codigo)) {
+                localStorage.setItem("token", data.token);
+                localStorage.setItem("usuario", JSON.stringify(data.usuario));
+                window.location.assign("/account/verificacion");
+                return;
+              }
               window.location.assign(errorGoogle(data.mensaje || "No se pudo iniciar con Google."));
               return;
             }
@@ -273,13 +304,23 @@ const googleClientId = import.meta.env.PUBLIC_GOOGLE_CLIENT_ID ?? "";
               return;
             }
 
-            // Cuenta nueva: guardar datos temporales y elegir rol
-            sessionStorage.setItem("googlePendiente", JSON.stringify({
+            // Cuenta nueva o cuenta antigua sin documento: completar identidad antes de revisión.
+            const googlePendiente = {
               registroToken: data.registroToken,
               correo: data.correo,
               nombre: data.nombre,
+              rol: data.rol ?? null,
               creado: Date.now(),
-            }));
+            };
+            sessionStorage.setItem("googlePendiente", JSON.stringify(googlePendiente));
+            if (data.requiereVerificacion && Number(data.rol) === 2) {
+              window.location.assign("/login/registrartrabajador");
+              return;
+            }
+            if (data.requiereVerificacion && Number(data.rol) === 3) {
+              window.location.assign("/login/registrarcliente");
+              return;
+            }
             window.location.assign("/login/registrar");
           } catch {
             window.location.assign(errorGoogle("No se pudo conectar con el servidor."));

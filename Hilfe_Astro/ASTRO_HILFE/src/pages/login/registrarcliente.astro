@@ -586,6 +586,13 @@ import "../../components/styles/auth-premium.css";
       let currentStep = 1;
       let formEnviado = false;
       const apiBase = `${window.location.protocol}//${window.location.hostname}:8000/api`;
+      let googlePendiente = null;
+      try {
+        googlePendiente = JSON.parse(sessionStorage.getItem("googlePendiente") || "null");
+      } catch {
+        sessionStorage.removeItem("googlePendiente");
+      }
+      const registroConGoogle = Boolean(googlePendiente?.registroToken && Number(googlePendiente.rol) === 3);
 
       // Estado en memoria (nunca en localStorage para contraseñas ni documentos completos)
       const state = {
@@ -600,6 +607,23 @@ import "../../components/styles/auth-premium.css";
         ciudad: "",
         aceptaciones: ["terminos_condiciones", "condiciones_cliente", "politica_privacidad", "autorizacion_datos"]
       };
+
+      if (registroConGoogle) {
+        const partesNombre = String(googlePendiente.nombre || "").trim().split(/\s+/).filter(Boolean);
+        const apellido = partesNombre.length > 1 ? partesNombre.pop() : "";
+        const nombres = partesNombre.join(" ");
+        document.getElementById("nombresInput").value = nombres;
+        document.getElementById("apellidosInput").value = apellido;
+        const correoGoogle = document.getElementById("correoInput");
+        correoGoogle.value = String(googlePendiente.correo || "");
+        correoGoogle.readOnly = true;
+        const contrasena = document.getElementById("passwordInput");
+        const confirmarContrasena = document.getElementById("confirmPasswordInput");
+        if (contrasena) contrasena.required = false;
+        if (confirmarContrasena) confirmarContrasena.required = false;
+        contrasena?.closest(".form-grid-2")?.setAttribute("hidden", "");
+        document.getElementById("passwordMeter")?.setAttribute("hidden", "");
+      }
 
       // Inicializar selectores de días y años
       const diaSelect = document.getElementById("expDiaSelect");
@@ -759,17 +783,21 @@ import "../../components/styles/auth-premium.css";
           errTel.style.display = "none";
         }
 
-        // Contraseña
+        // Las cuentas de Google usan autenticación Google; no se exige contraseña local.
         const errConfirm = document.getElementById("err-confirmPassword");
-        const rulesPassed = rules.filter((r) => r.test(pw)).length;
-        if (rulesPassed < 4) {
-          errConfirm.textContent = "La contraseña debe cumplir con los requisitos mínimos de seguridad.";
-          errConfirm.style.display = "flex";
-          valid = false;
-        } else if (pw !== confirmPw) {
-          errConfirm.textContent = "Las contraseñas no coinciden.";
-          errConfirm.style.display = "flex";
-          valid = false;
+        if (!registroConGoogle) {
+          const rulesPassed = rules.filter((r) => r.test(pw)).length;
+          if (rulesPassed < 4) {
+            errConfirm.textContent = "La contraseña debe cumplir con los requisitos mínimos de seguridad.";
+            errConfirm.style.display = "flex";
+            valid = false;
+          } else if (pw !== confirmPw) {
+            errConfirm.textContent = "Las contraseñas no coinciden.";
+            errConfirm.style.display = "flex";
+            valid = false;
+          } else {
+            errConfirm.style.display = "none";
+          }
         } else {
           errConfirm.style.display = "none";
         }
@@ -779,7 +807,7 @@ import "../../components/styles/auth-premium.css";
           state.apellidos = apellidos;
           state.correo = correo;
           state.telefono = telefono;
-          state.contrasena = pw;
+          state.contrasena = registroConGoogle ? "" : pw;
         }
 
         return valid;
@@ -950,11 +978,26 @@ import "../../components/styles/auth-premium.css";
           aceptacionesLegales: state.aceptaciones.map((codigo) => ({ codigo, version: docMap?.[codigo]?.version })),
         };
 
+        const payloadSolicitud = registroConGoogle
+          ? {
+              registroToken: googlePendiente.registroToken,
+              rol: 3,
+              nombre: payload.nombre,
+              telefono: payload.telefono,
+              ubicacion: payload.ubicacion,
+              tipoDocumento: payload.tipoDocumento,
+              numeroDocumento: payload.numeroDocumento,
+              fechaExpedicionDocumento: payload.fechaExpedicionDocumento,
+              aceptacionesLegales: payload.aceptacionesLegales,
+            }
+          : payload;
+
         try {
-          const response = await fetch(`${apiBase}/auth/registro`, {
+          const endpointRegistro = registroConGoogle ? `${apiBase}/auth/google/completar` : `${apiBase}/auth/registro`;
+          const response = await fetch(endpointRegistro, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(payload),
+            body: JSON.stringify(payloadSolicitud),
           });
 
           const data = await response.json().catch(() => ({}));
@@ -962,6 +1005,8 @@ import "../../components/styles/auth-premium.css";
           if (!response.ok) {
             throw new Error(data.mensaje || data.error || "No fue posible completar el registro.");
           }
+
+          if (registroConGoogle) sessionStorage.removeItem("googlePendiente");
 
           // Éxito: Ocultar pasos y mostrar confirmación pendiente
           document.querySelectorAll(".wizard-step-panel").forEach((p) => (p.style.display = "none"));

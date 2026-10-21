@@ -22,6 +22,50 @@ const {
 			rel="stylesheet"
 		/>
 		<title>{title}</title>
+		<script is:inline>
+			(function () {
+				var ruta = window.location.pathname.replace(/\/+$/, '') || '/';
+				var rutasProtegidas = [
+					{ prefijo: '/admin', rol: 1, destino: '/admin/admin' },
+					{ prefijo: '/cliente', rol: 3, destino: '/cliente/' },
+					{ prefijo: '/trabajador', rol: 2, destino: '/trabajador/' },
+				];
+				// El perfil público del trabajador es visible sin iniciar sesión.
+				if (ruta === '/trabajador/perfil') return;
+
+				var regla = rutasProtegidas.find(function (item) {
+					return ruta === item.prefijo || ruta.indexOf(item.prefijo + '/') === 0;
+				});
+				if (!regla) return;
+
+				var token = '';
+				var usuario = null;
+				try {
+					token = localStorage.getItem('token') || '';
+					usuario = JSON.parse(localStorage.getItem('usuario') || 'null');
+				} catch (error) {}
+
+				var tokenValido = false;
+				try {
+					var partes = token.split('.');
+					if (partes.length === 3) {
+						var payload = JSON.parse(atob(partes[1].replace(/-/g, '+').replace(/_/g, '/')));
+						var expirado = payload.exp && Number(payload.exp) * 1000 <= Date.now();
+						tokenValido = !expirado && Number(payload.id) === Number(usuario && usuario.id) && Number(payload.rol) === Number(usuario && usuario.rol);
+					}
+				} catch (error) {}
+
+				if (!tokenValido || !usuario || Number(usuario.rol) !== regla.rol) {
+					if (!tokenValido || (usuario && Number(usuario.rol) !== regla.rol)) {
+						try { localStorage.removeItem('token'); localStorage.removeItem('usuario'); } catch (error) {}
+					}
+					window.location.replace('/login/login?error=' + encodeURIComponent('Inicia sesión con una cuenta autorizada para continuar.'));
+					return;
+				}
+
+				if (ruta === '/admin') window.location.replace(regla.destino);
+			})();
+		</script>
 		<slot name="head" />
 	</head>
 	<body>

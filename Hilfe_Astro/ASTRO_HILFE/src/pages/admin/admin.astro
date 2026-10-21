@@ -70,6 +70,10 @@ const cards = [
       </a>
       <a href="/admin/verificaciones" class="sidebar-item">
         <i data-lucide="shield-check"></i> Verificaciones
+        <span class="admin-verification-alert" id="adminVerificationAlert" title="Solicitudes pendientes de revisión" aria-label="Solicitudes pendientes de revisión">
+          <i data-lucide="bell" aria-hidden="true"></i>
+          <span id="adminVerificationCount" aria-live="polite">0</span>
+        </span>
       </a>
       <a href="/admin/usuario" class="sidebar-item">
         <i data-lucide="users"></i> Usuarios
@@ -214,9 +218,40 @@ const cards = [
   </div>
 
   <script is:inline src="https://unpkg.com/lucide@latest"></script>
+  <style>
+    .admin-verification-alert { display:inline-flex; align-items:center; justify-content:center; gap:4px; min-width:36px; height:25px; margin-left:auto; padding:0 7px; border:1px solid color-mix(in srgb,var(--danger,#dc2626) 20%,transparent); border-radius:999px; background:color-mix(in srgb,var(--danger,#dc2626) 9%,var(--bg-card,#fff)); color:var(--danger,#dc2626); font-size:11px; font-weight:750; line-height:1; font-variant-numeric:tabular-nums; }
+    .admin-verification-alert svg { width:14px; height:14px; }
+  </style>
   <script is:inline>
     // Iconos Lucide
     if (window.lucide) lucide.createIcons();
+
+    (function () {
+      const countElement = document.getElementById('adminVerificationCount');
+      const alertElement = document.getElementById('adminVerificationAlert');
+      if (!countElement || !alertElement) return;
+
+      async function actualizarSolicitudesPendientes() {
+        const token = localStorage.getItem('token');
+        let usuario = null;
+        try { usuario = JSON.parse(localStorage.getItem('usuario') || 'null'); } catch {}
+        if (!token || Number(usuario?.rol) !== 1) return;
+        try {
+          const res = await fetch('http://127.0.0.1:8000/api/admin/verificaciones?estado=pendiente', {
+            headers: { Authorization: `Bearer ${token}` },
+          });
+          if (!res.ok) return;
+          const solicitudes = await res.json();
+          if (!Array.isArray(solicitudes)) return;
+          const pendientes = solicitudes.filter((solicitud) => solicitud.Estado === 'pendiente').length;
+          countElement.textContent = pendientes > 99 ? '99+' : String(pendientes);
+          alertElement.title = `${pendientes} solicitudes pendientes de revisión`;
+          alertElement.setAttribute('aria-label', `${pendientes} solicitudes pendientes de revisión`);
+        } catch {}
+      }
+      actualizarSolicitudesPendientes();
+      window.setInterval(actualizarSolicitudesPendientes, 60000);
+    })();
 
     document.getElementById('cerrarSesionAdmin')?.addEventListener('click', function (event) {
       if (!window.confirm('¿Estás seguro de que quieres cerrar sesión?')) {

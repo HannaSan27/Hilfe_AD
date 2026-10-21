@@ -52,7 +52,7 @@ export async function verificarTokenGoogle(idToken: string): Promise<UsuarioGoog
   };
 }
 
-// Token temporal (10 min) para completar el registro tras elegir rol
+// Token temporal (30 min) para completar los datos de identidad y el registro.
 export async function crearTokenRegistroGoogle(g: UsuarioGoogle) {
   return await create(
     { alg: "HS512", typ: "JWT" },
@@ -61,7 +61,7 @@ export async function crearTokenRegistroGoogle(g: UsuarioGoogle) {
       googleId: g.googleId,
       correo: g.correo,
       nombre: g.nombre,
-      exp: Math.floor(Date.now() / 1000) + 600,
+      exp: Math.floor(Date.now() / 1000) + 1800,
     },
     llaveRegistroGoogle,
   );

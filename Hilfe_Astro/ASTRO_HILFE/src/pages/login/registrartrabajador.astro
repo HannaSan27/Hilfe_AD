@@ -671,6 +671,13 @@ import "../../components/styles/auth-premium.css";
       let formEnviado = false;
       let selectedPhotoFile = null;
       const apiBase = `${window.location.protocol}//${window.location.hostname}:8000/api`;
+      let googlePendiente = null;
+      try {
+        googlePendiente = JSON.parse(sessionStorage.getItem("googlePendiente") || "null");
+      } catch {
+        sessionStorage.removeItem("googlePendiente");
+      }
+      const registroConGoogle = Boolean(googlePendiente?.registroToken && Number(googlePendiente.rol) === 2);
 
       // Estado en memoria
       const state = {
@@ -689,6 +696,22 @@ import "../../components/styles/auth-premium.css";
         descripcion: "",
         aceptaciones: ["terminos_condiciones", "condiciones_trabajador", "politica_privacidad", "autorizacion_datos"]
       };
+
+      if (registroConGoogle) {
+        const partesNombre = String(googlePendiente.nombre || "").trim().split(/\s+/).filter(Boolean);
+        const apellido = partesNombre.length > 1 ? partesNombre.pop() : "";
+        document.getElementById("nombresInput").value = partesNombre.join(" ");
+        document.getElementById("apellidosInput").value = apellido;
+        const correoGoogle = document.getElementById("correoInput");
+        correoGoogle.value = String(googlePendiente.correo || "");
+        correoGoogle.readOnly = true;
+        const contrasena = document.getElementById("passwordInput");
+        const confirmarContrasena = document.getElementById("confirmPasswordInput");
+        if (contrasena) contrasena.required = false;
+        if (confirmarContrasena) confirmarContrasena.required = false;
+        contrasena?.closest(".form-grid-2")?.setAttribute("hidden", "");
+        document.getElementById("passwordMeter")?.setAttribute("hidden", "");
+      }
 
       // Inicializar selectores de días y años
       const diaSelect = document.getElementById("expDiaSelect");
@@ -900,15 +923,17 @@ import "../../components/styles/auth-premium.css";
         } else errTel.style.display = "none";
 
         const errConfirm = document.getElementById("err-confirmPassword");
-        const rulesPassed = rules.filter((r) => r.test(pw)).length;
-        if (rulesPassed < 4) {
-          errConfirm.textContent = "La contraseña debe cumplir con los requisitos mínimos de seguridad.";
-          errConfirm.style.display = "flex";
-          valid = false;
-        } else if (pw !== confirmPw) {
-          errConfirm.textContent = "Las contraseñas no coinciden.";
-          errConfirm.style.display = "flex";
-          valid = false;
+        if (!registroConGoogle) {
+          const rulesPassed = rules.filter((r) => r.test(pw)).length;
+          if (rulesPassed < 4) {
+            errConfirm.textContent = "La contraseña debe cumplir con los requisitos mínimos de seguridad.";
+            errConfirm.style.display = "flex";
+            valid = false;
+          } else if (pw !== confirmPw) {
+            errConfirm.textContent = "Las contraseñas no coinciden.";
+            errConfirm.style.display = "flex";
+            valid = false;
+          } else errConfirm.style.display = "none";
         } else errConfirm.style.display = "none";
 
         if (valid) {
@@ -916,7 +941,7 @@ import "../../components/styles/auth-premium.css";
           state.apellidos = apellidos;
           state.correo = correo;
           state.telefono = telefono;
-          state.contrasena = pw;
+          state.contrasena = registroConGoogle ? "" : pw;
         }
 
         return valid;
@@ -1116,18 +1141,38 @@ import "../../components/styles/auth-premium.css";
           aceptacionesLegales: state.aceptaciones.map((codigo) => ({ codigo, version: docMap?.[codigo]?.version })),
         };
 
+        const payloadSolicitud = registroConGoogle
+          ? {
+              registroToken: googlePendiente.registroToken,
+              rol: 2,
+              nombre: payload.nombre,
+              telefono: payload.telefono,
+              ubicacion: payload.ubicacion,
+              idCategoriaProfesional: payload.idCategoriaProfesional,
+              experiencia: payload.experiencia,
+              descripcionProfesional: payload.descripcionProfesional,
+              tipoDocumento: payload.tipoDocumento,
+              numeroDocumento: payload.numeroDocumento,
+              fechaExpedicionDocumento: payload.fechaExpedicionDocumento,
+              aceptacionesLegales: payload.aceptacionesLegales,
+            }
+          : payload;
+
         try {
           // 1. Registro del usuario y verificación
-          const regRes = await fetch(`${apiBase}/auth/registro`, {
+          const endpointRegistro = registroConGoogle ? `${apiBase}/auth/google/completar` : `${apiBase}/auth/registro`;
+          const regRes = await fetch(endpointRegistro, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(payload),
+            body: JSON.stringify(payloadSolicitud),
           });
           const regData = await regRes.json().catch(() => ({}));
 
           if (!regRes.ok) {
             throw new Error(regData.mensaje || regData.error || "No fue posible crear la cuenta de trabajador.");
           }
+
+          if (registroConGoogle) sessionStorage.removeItem("googlePendiente");
 
           const userId = regData.idUsuario;
           const token = regData.token;
