@@ -1,0 +1,321 @@
+/* ============================================================
+   Modal "Calificar servicio" (panel cliente)
+   Usa las variables del tema con valores de respaldo.
+   ============================================================ */
+
+#modalCalificar {
+  --cal-text: var(--text, #0f172a);
+  --cal-text-soft: var(--text-secondary, #64748b);
+  --cal-text-muted: var(--text-muted, #94a3b8);
+  --cal-border: var(--border, #e2e8f0);
+  --cal-surface: var(--surface, #ffffff);
+  --cal-surface-soft: var(--surface-2, #f8fafc);
+  --cal-primary: var(--primary, #2563eb);
+  --cal-star: #f59e0b;
+  --cal-danger: var(--danger, #ef4444);
+}
+
+/* ---------- Contenedor ---------- */
+#modalCalificar .cal-modal {
+  width: 100%;
+  max-width: 540px;
+  max-height: 92vh;
+  padding: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  border-radius: 22px;
+  background: var(--cal-surface);
+  border: 1px solid var(--cal-border);
+  box-shadow: 0 25px 60px -12px rgba(15, 23, 42, 0.35);
+  scrollbar-width: thin;
+}
+
+#modalCalificar.active .cal-modal {
+  animation: cal-pop 0.22s cubic-bezier(0.2, 0.9, 0.3, 1.2);
+}
+
+@keyframes cal-pop {
+  from { opacity: 0; transform: translateY(14px) scale(0.97); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* ---------- Encabezado ---------- */
+#modalCalificar .cal-header {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 24px 28px 18px;
+  border-bottom: 1px solid var(--cal-border);
+}
+
+#modalCalificar .cal-header-icon {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 46px;
+  height: 46px;
+  border-radius: 14px;
+  color: var(--cal-star);
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.18), rgba(245, 158, 11, 0.06));
+}
+
+#modalCalificar .cal-header-text { flex: 1; min-width: 0; }
+
+#modalCalificar .cal-header h3 {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--cal-text);
+}
+
+#modalCalificar .cal-sub {
+  margin: 3px 0 0;
+  font-size: 14px;
+  color: var(--cal-text-soft);
+}
+
+#modalCalificar .cal-sub strong { color: var(--cal-text); font-weight: 700; }
+
+#modalCalificar .cal-close {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border: none;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--cal-text-muted);
+  font-size: 22px;
+  line-height: 1;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+#modalCalificar .cal-close:hover { background: var(--cal-surface-soft); color: var(--cal-text); }
+
+/* ---------- Cuerpo ---------- */
+#modalCalificar .cal-body {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+  padding: 24px 28px 8px;
+}
+
+#modalCalificar .cal-section { display: flex; flex-direction: column; gap: 8px; }
+
+#modalCalificar .cal-label {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--cal-text);
+}
+
+#modalCalificar .cal-opt { font-weight: 400; color: var(--cal-text-muted); }
+
+/* ---------- Estrellas ---------- */
+#modalCalificar .cal-rating {
+  align-items: center;
+  gap: 10px;
+  padding: 20px 16px 16px;
+  border-radius: 18px;
+  background:
+    radial-gradient(120% 120% at 50% 0%, rgba(245, 158, 11, 0.10), transparent 60%),
+    var(--cal-surface-soft);
+  border: 1px solid var(--cal-border);
+}
+
+#modalCalificar .cal-stars { display: flex; gap: 6px; }
+
+#modalCalificar .cal-stars .star {
+  font-size: 42px;
+  line-height: 1;
+  color: #d5dbe5;
+  cursor: pointer;
+  user-select: none;
+  transition: color 0.15s ease, transform 0.15s ease, filter 0.15s ease;
+}
+
+#modalCalificar .cal-stars .star:hover { transform: translateY(-2px) scale(1.12); }
+
+#modalCalificar .cal-stars .star.is-active {
+  color: var(--cal-star);
+  filter: drop-shadow(0 3px 8px rgba(245, 158, 11, 0.45));
+}
+
+#modalCalificar .cal-rating-text {
+  min-height: 26px;
+  padding: 4px 14px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--cal-text-muted);
+  background: var(--cal-surface);
+  border: 1px solid var(--cal-border);
+  transition: color 0.15s ease, border-color 0.15s ease;
+}
+
+#modalCalificar .cal-rating-text.has-value {
+  color: #b45309;
+  border-color: rgba(245, 158, 11, 0.45);
+  background: rgba(245, 158, 11, 0.10);
+}
+
+/* ---------- Comentario ---------- */
+#modalCalificar .cal-textarea {
+  width: 100%;
+  min-height: 100px;
+  box-sizing: border-box;
+  padding: 13px 15px;
+  border: 1.5px solid var(--cal-border);
+  border-radius: 14px;
+  background: var(--cal-surface);
+  color: var(--cal-text);
+  font: inherit;
+  font-size: 14px;
+  line-height: 1.5;
+  resize: vertical;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+#modalCalificar .cal-textarea::placeholder { color: var(--cal-text-muted); }
+
+#modalCalificar .cal-textarea:focus {
+  outline: none;
+  border-color: var(--cal-primary);
+  box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.14);
+}
+
+#modalCalificar .cal-counter {
+  font-size: 12px;
+  color: var(--cal-text-muted);
+  text-align: right;
+}
+
+/* ---------- Fotos ---------- */
+#modalCalificar .cal-photos-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+#modalCalificar .cal-photos-head .cal-counter {
+  padding: 2px 10px;
+  border-radius: 999px;
+  background: var(--cal-surface-soft);
+  border: 1px solid var(--cal-border);
+  font-weight: 600;
+}
+
+#modalCalificar .cal-photo-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+}
+
+#modalCalificar .cal-photo-grid[hidden] { display: none; }
+
+#modalCalificar .cal-photo {
+  position: relative;
+  aspect-ratio: 1 / 1;
+  border-radius: 14px;
+  overflow: hidden;
+  border: 1px solid var(--cal-border);
+  background: var(--cal-surface-soft);
+  box-shadow: 0 4px 12px -4px rgba(15, 23, 42, 0.25);
+  animation: cal-pop 0.2s ease;
+}
+
+#modalCalificar .cal-photo img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+#modalCalificar .cal-photo-remove {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: rgba(15, 23, 42, 0.72);
+  color: #fff;
+  font-size: 17px;
+  line-height: 1;
+  cursor: pointer;
+  backdrop-filter: blur(4px);
+  transition: background 0.15s ease, transform 0.15s ease;
+}
+
+#modalCalificar .cal-photo-remove:hover { background: var(--cal-danger); transform: scale(1.1); }
+
+#modalCalificar .cal-dropzone {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  padding: 16px 18px;
+  border: 2px dashed var(--cal-border);
+  border-radius: 16px;
+  background: var(--cal-surface-soft);
+  color: var(--cal-text-soft);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease, transform 0.15s ease;
+}
+
+#modalCalificar .cal-dropzone[hidden] { display: none; }
+
+#modalCalificar .cal-dropzone:hover {
+  border-color: var(--cal-primary);
+  background: rgba(37, 99, 235, 0.06);
+  transform: translateY(-1px);
+}
+
+#modalCalificar .cal-dropzone-icon {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  color: var(--cal-primary);
+  background: rgba(37, 99, 235, 0.10);
+}
+
+#modalCalificar .cal-dropzone-text { display: flex; flex-direction: column; gap: 2px; }
+#modalCalificar .cal-dropzone-text strong { font-size: 14px; color: var(--cal-text); }
+#modalCalificar .cal-dropzone-text small { font-size: 12px; color: var(--cal-text-muted); }
+
+/* ---------- Pie ---------- */
+#modalCalificar .cal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 18px 28px 24px;
+  border: none;
+}
+
+#modalCalificar .cal-footer .btn { min-width: 120px; padding-top: 11px; padding-bottom: 11px; border-radius: 12px; }
+
+#modalCalificar .cal-footer .btn-primary:disabled { opacity: 0.65; cursor: wait; }
+
+/* ---------- Móvil ---------- */
+@media (max-width: 560px) {
+  #modalCalificar .cal-modal { max-width: 100%; border-radius: 18px; }
+  #modalCalificar .cal-header,
+  #modalCalificar .cal-body,
+  #modalCalificar .cal-footer { padding-left: 18px; padding-right: 18px; }
+  #modalCalificar .cal-stars .star { font-size: 34px; }
+  #modalCalificar .cal-photo-grid { gap: 8px; }
+  #modalCalificar .cal-footer { flex-direction: column-reverse; }
+  #modalCalificar .cal-footer .btn { width: 100%; }
+}
