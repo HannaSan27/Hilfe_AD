@@ -55,7 +55,7 @@ import UserMenu from './UserMenu.astro';
 			<button type="button" class="help-chat-close" id="helpChatClose" aria-label="Cerrar chat">×</button>
 		</header>
 		<div class="help-chat-messages" id="helpChatMessages" aria-live="polite">
-			<div class="help-chat-message bot">¡Hola! Puedo ayudarte con dudas sobre cómo buscar servicios, contactar profesionales o usar tu cuenta. ¿Qué necesitas?</div>
+			<div class="help-chat-message bot">¡Hola! Puedo responder tus preguntas, buscar profesionales, consultar sus horarios y ayudarte a agendar. ¿Qué necesitas?</div>
 		</div>
 		<div class="help-chat-prompts" id="helpChatPrompts">
 			<button type="button">¿Cómo encuentro un profesional?</button>
@@ -130,10 +130,22 @@ import UserMenu from './UserMenu.astro';
 		var helpToggle = document.getElementById('helpChatToggle');
 		var helpInput = document.getElementById('helpChatInput');
 		var helpMessages = document.getElementById('helpChatMessages');
+		var temporizadorInactividadAyuda = null;
+		var temporizadorCierreChatAyuda = null;
+		var esperaDecisionInactividad = false;
+		var conversacionFinalizadaAyuda = false;
+		var accionesAyudaActuales = [];
+		var accionesAntesInactividad = [];
+		var bienvenidaChatAyuda = '¡Hola! Puedo responder tus preguntas, buscar profesionales, consultar sus horarios y ayudarte a agendar. ¿Qué necesitas?';
 		function toggleHelpChat(open) {
 			helpPanel.hidden = !open;
 			helpToggle.setAttribute('aria-expanded', String(open));
-			if (open) helpInput.focus();
+			if (open) {
+				if (conversacionFinalizadaAyuda) iniciarNuevaConversacionChat();
+				helpInput.focus();
+				programarTemporizadorInactividad();
+			}
+			else { window.clearTimeout(temporizadorInactividadAyuda); temporizadorInactividadAyuda = null; }
 		}
 		helpToggle.addEventListener('click', function () { toggleHelpChat(helpPanel.hidden); });
 		document.getElementById('helpChatClose').addEventListener('click', function () { toggleHelpChat(false); });
@@ -148,16 +160,167 @@ import UserMenu from './UserMenu.astro';
 		});
 		var apiAyuda = 'http://127.0.0.1:8000/api';
 		var flujoReserva = null;
-		var historialAyuda = [{ role: 'assistant', content: '¡Hola! Puedo ayudarte con dudas sobre cómo buscar servicios, contactar profesionales o usar tu cuenta. ¿Qué necesitas?', reserva: false }];
+		var busquedaProfesional = null;
+		var historialAyuda = [{ role: 'assistant', content: bienvenidaChatAyuda, reserva: false }];
 		var listaAcciones = document.getElementById('helpChatPrompts');
 		function normalizarAyuda(texto) { return String(texto || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, ''); }
+		function diaSolicitado(q) {
+			var dias = ['domingo', 'lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado'];
+			for (var i = 0; i < dias.length; i++) if (new RegExp('\\b' + dias[i] + 's?\\b').test(q)) return i;
+			return -1;
+		}
+		function fechaProximoDia(dia) {
+			var fecha = new Date();
+			var diferencia = (dia - fecha.getDay() + 7) % 7 || 7;
+			fecha.setDate(fecha.getDate() + diferencia);
+			return [fecha.getFullYear(), String(fecha.getMonth() + 1).padStart(2, '0'), String(fecha.getDate()).padStart(2, '0')].join('-');
+		}
+		async function consultarDisponibilidadChat(pregunta) {
+			var q = normalizarAyuda(pregunta);
+			var dia = diaSolicitado(q);
+			if (dia < 0 || !(/disponib|quien.*(atiende|trabaja|puede|libre)|hay.*profesional|busco.*profesional/.test(q))) return false;
+			var nombresDias = ['domingo', 'lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado'];
+			var fecha = fechaProximoDia(dia);
+			try {
+				var respuesta = await fetch(apiAyuda + '/servicios');
+				if (!respuesta.ok) throw new Error();
+				var servicios = await respuesta.json();
+				if (!Array.isArray(servicios)) servicios = servicios.value || [];
+				var stop = /^(quien|esta|estan|disponible|disponibles|para|el|la|los|las|este|esta|proximo|proxima|hay|algun|alguna|profesional|profesionales|trabajador|trabajadores|atiende|trabaja|puede|libre|busco|servicio|servicios|de|en|por|favor|me|pueden|puede|lunes|martes|miercoles|jueves|viernes|sabado|domingo)$/;
+				var terminos = q.replace(/\b(lunes|martes|miercoles|jueves|viernes|sabado|domingo)\b/g, ' ').split(/\s+/).filter(function (p) { return p.length > 2 && !stop.test(p); });
+				if (terminos.length) {
+					var coinciden = servicios.filter(function (s) {
+						var datos = normalizarAyuda([s.Titulo, s.Nombre_Categoria, s.Nombre_Trabajador, s.Ubicacion].join(' '));
+						return terminos.some(function (p) { return datos.includes(p); });
+					});
+					if (coinciden.length) servicios = coinciden;
+				}
+				var respuestaHorarios = await fetch(apiAyuda + '/disponibilidad');
+				if (!respuestaHorarios.ok) throw new Error();
+				var horarios = await respuestaHorarios.json();
+				if (!Array.isArray(horarios)) horarios = horarios.value || [];
+				var resultados = servicios.map(function (s) {
+					var coincidencias = horarios.filter(function (h) {
+						return String(h.Id_Servicio) === String(s.Id_Servicio) && normalizarAyuda(h.Dia_Semana) === nombresDias[dia];
+					});
+					if (!coincidencias.length) return null;
+					return { servicio: s, horas: coincidencias.map(function (h) {
+						var inicio = String(h.Hora_Inicio || '').slice(0, 5), fin = String(h.Hora_Fin || '').slice(0, 5);
+						return String(h.Hora_Fin) === '23:59:59' ? 'todo el día' : inicio + ' a ' + fin;
+					}).join(', ') };
+				});
+				resultados = resultados.filter(Boolean).slice(0, 6);
+				if (!resultados.length) {
+					addHelpMessage('No encontré servicios con horario publicado para el ' + nombresDias[dia] + ' ' + fecha + (terminos.length ? ' que coincidan con lo que buscas.' : '.') + ' Si me dices qué servicio y ciudad necesitas, puedo afinar la búsqueda.', 'bot');
+					accionesAyuda([{ label: 'Ver categorías', action: 'categories' }]);
+					return true;
+				}
+				addHelpMessage('Para el ' + nombresDias[dia] + ' ' + fecha + ' encontré estos horarios publicados:\n' + resultados.map(function (r) {
+					var s = r.servicio;
+					return '• ' + (s.Nombre_Trabajador || 'Profesional') + ' — ' + (s.Titulo || s.Nombre_Categoria || 'Servicio') + ' (' + (s.Ubicacion || 'ubicación no indicada') + '): ' + r.horas;
+				}).join('\n') + '\n\nEl horario publicado no confirma que cada hora siga libre; la disponibilidad exacta se verifica al enviar la solicitud.', 'bot');
+				accionesAyuda(resultados.map(function (r) {
+					return { label: 'Ver perfil: ' + (r.servicio.Nombre_Trabajador || 'Profesional'), action: 'profile', value: '/trabajador/perfil/?id=' + encodeURIComponent(r.servicio.Id_Trabajador) + '&servicioId=' + encodeURIComponent(r.servicio.Id_Servicio) };
+				}));
+				return true;
+			} catch (_) {
+				addHelpMessage('No pude consultar los horarios ahora. Intenta de nuevo en un momento.', 'bot');
+				return true;
+			}
+		}
+		async function buscarProfesionalesChat(pregunta) {
+			var q = normalizarAyuda(pregunta);
+			var ultimaRespuesta = '';
+			for (var i = historialAyuda.length - 2; i >= 0; i--) {
+				if (historialAyuda[i].role === 'assistant') { ultimaRespuesta = normalizarAyuda(historialAyuda[i].content); break; }
+			}
+			var esperandoCiudadPorContexto = /ciudad|barrio|zona/.test(ultimaRespuesta) && /profesional|servicio|busc/.test(ultimaRespuesta);
+			var stop = /^(quiero|busco|buscar|necesito|necesitamos|un|una|unos|unas|el|la|los|las|de|del|en|por|favor|profesional|profesionales|trabajador|trabajadores|servicio|servicios|alguien|que|me|ayude|ayuda|para|con|tienes|tienen|hay|puedes|puede|como|contactar|contacto|ver|encontrar|ciudad|barrio|zona|esta|estoy|vivo|disponible|disponibles|lunes|martes|miercoles|jueves|viernes|sabado|domingo)$/;
+			var terminos = q.split(/[^a-z0-9]+/).filter(function (p) { return p.length > 2 && !stop.test(p); });
+			var servicioDirecto = /\b(manicure|manicura|peluqueria|plomeria|aseo|limpieza|belleza|electricista|carpinteria|pintura|jardineria|cerrajeria|mudanza|domicilio|mandados)\b/.test(q);
+			var inicioExplicito = /\b(busca|buscar|busco|necesito|quiero|encuentra|encontrar|contactar|ver perfil)\b/.test(q) && /\b(profesional|trabajador|servicio|manicure|manicura|plomer|aseo|belleza|electric|carpinter|pintor|jardin|tecnico)\w*/.test(q);
+			var busquedaDirecta = servicioDirecto && !/[?¿]/.test(pregunta) && terminos.length <= 4;
+			if (!busquedaProfesional && !inicioExplicito && !busquedaDirecta && !esperandoCiudadPorContexto) return false;
+			if (!inicioExplicito && !busquedaDirecta && (/[?¿]/.test(pregunta) || /^(como|que|quien|cuando|donde|por que|cuanto|cual)\b/.test(q))) return false;
+			try {
+				var respuesta = await fetch(apiAyuda + '/servicios');
+				if (!respuesta.ok) throw new Error();
+				var servicios = await respuesta.json();
+				if (!Array.isArray(servicios)) servicios = servicios.value || [];
+				var ubicacionConocida = servicios.map(function (s) { return String(s.Ubicacion || '').trim(); }).filter(Boolean).find(function (ubicacion) {
+					var ubicacionNormalizada = normalizarAyuda(ubicacion);
+					return q.includes(ubicacionNormalizada) || ubicacionNormalizada.split(/[^a-z0-9]+/).some(function (parte) { return parte.length > 3 && q.split(/[^a-z0-9]+/).includes(parte); });
+				});
+				if (busquedaProfesional && busquedaProfesional.paso === 'ciudad') {
+					busquedaProfesional.ubicacion = ubicacionConocida || pregunta.trim();
+					busquedaProfesional.paso = 'resultados';
+				} else {
+					var terminosServicio = terminos.filter(function (p) { return !ubicacionConocida || !normalizarAyuda(ubicacionConocida).includes(p); });
+					var candidatos = terminosServicio.length ? servicios.filter(function (s) {
+						var datos = normalizarAyuda([s.Titulo, s.Nombre_Categoria].join(' '));
+						return terminosServicio.some(function (p) { return datos.includes(p); });
+					}) : [];
+					if (!candidatos.length && esperandoCiudadPorContexto && terminosServicio.length) {
+						candidatos = servicios.filter(function (s) {
+							var datos = normalizarAyuda([s.Titulo, s.Nombre_Categoria].join(' '));
+							return terminosServicio.some(function (p) { return datos.includes(p); });
+						});
+					}
+					if (terminosServicio.length && !candidatos.length) {
+						addHelpMessage('No encontré servicios publicados que coincidan con «' + terminosServicio.join(' ') + '» en el catálogo actual. Prueba con otro servicio o revisa las categorías.', 'bot');
+						accionesAyuda([{ label: 'Ver categorías', action: 'categories' }]);
+						busquedaProfesional = null;
+						return true;
+					}
+					if (!candidatos.length && !inicioExplicito && !esperandoCiudadPorContexto) return false;
+					busquedaProfesional = { terminos: terminosServicio, ubicacion: ubicacionConocida || '', paso: ubicacionConocida ? 'resultados' : 'ciudad' };
+					if (!busquedaProfesional.terminos.length && !ubicacionConocida) {
+						busquedaProfesional.paso = 'servicio';
+						addHelpMessage('¿Qué servicio necesitas y en qué ciudad? Así busco profesionales concretos en el catálogo.', 'bot');
+						accionesAyuda([]);
+						return true;
+					}
+					if (candidatos.length) busquedaProfesional.terminos = terminosServicio;
+				}
+				if (busquedaProfesional.paso === 'servicio') {
+					busquedaProfesional.terminos = terminos;
+					busquedaProfesional.paso = 'ciudad';
+				}
+				var encontrados = servicios.filter(function (s) {
+					var datosServicio = normalizarAyuda([s.Titulo, s.Nombre_Categoria].join(' '));
+					var coincideServicio = !busquedaProfesional.terminos.length || busquedaProfesional.terminos.some(function (p) { return datosServicio.includes(p); });
+					var coincideUbicacion = !busquedaProfesional.ubicacion || normalizarAyuda(s.Ubicacion).includes(normalizarAyuda(busquedaProfesional.ubicacion));
+					return coincideServicio && coincideUbicacion;
+				}).slice(0, 6);
+				if (!busquedaProfesional.ubicacion) {
+					addHelpMessage('Encontré ' + (encontrados.length ? encontrados.length + (encontrados.length === 1 ? ' opción' : ' opciones') : 'servicios relacionados') + ' para ' + (busquedaProfesional.terminos.join(' ') || 'tu búsqueda') + '. ¿En qué ciudad o barrio los necesitas?', 'bot');
+					return true;
+				}
+				if (!encontrados.length) {
+					addHelpMessage('No encontré profesionales con ese servicio en ' + busquedaProfesional.ubicacion + '. Puedes probar con otra ciudad o decirme otro servicio.', 'bot');
+					busquedaProfesional.paso = 'ciudad';
+					return true;
+				}
+				addHelpMessage('Encontré estas opciones de ' + (busquedaProfesional.terminos.join(' ') || 'servicio') + ' en ' + busquedaProfesional.ubicacion + ':\n' + encontrados.map(function (s) {
+					return '• ' + (s.Nombre_Trabajador || 'Profesional') + ' — ' + (s.Titulo || s.Nombre_Categoria || 'Servicio') + (s.Precio ? ' · $' + Number(s.Precio).toLocaleString('es-CO') : '');
+				}).join('\n') + '\n\nAbre un perfil para revisar los detalles y contactar al profesional.', 'bot');
+				accionesAyuda(encontrados.map(function (s) {
+					return { label: 'Ver perfil: ' + (s.Nombre_Trabajador || 'Profesional'), action: 'profile', value: '/trabajador/perfil/?id=' + encodeURIComponent(s.Id_Trabajador) + '&servicioId=' + encodeURIComponent(s.Id_Servicio) };
+				}));
+				busquedaProfesional = null;
+				return true;
+			} catch (_) {
+				addHelpMessage('No pude consultar el catálogo ahora. Intenta de nuevo en un momento.', 'bot');
+				return true;
+			}
+		}
 		async function consultarIAChat(pregunta) {
 			try {
 				var response = await fetch(apiAyuda + '/chat-ayuda', {
 					method: 'POST', headers: { 'Content-Type': 'application/json' },
 					body: JSON.stringify({
 						mensaje: pregunta,
-						historial: flujoReserva ? [] : historialAyuda.filter(function (turno) { return !turno.reserva; }).slice(-10, -1)
+						historial: historialAyuda.filter(function (turno) { return !turno.reserva; }).slice(-10, -1)
 					})
 				});
 				var data = await response.json().catch(function () { return {}; });
@@ -175,15 +338,68 @@ import UserMenu from './UserMenu.astro';
 			historialAyuda.push({ role: kind === 'user' ? 'user' : 'assistant', content: String(text), reserva: Boolean(flujoReserva) });
 			if (historialAyuda.length > 20) historialAyuda.splice(1, historialAyuda.length - 20);
 			helpMessages.scrollTop = helpMessages.scrollHeight;
+			programarTemporizadorInactividad();
 		}
 		function accionesAyuda(items) {
+			accionesAyudaActuales = (items || []).slice();
 			listaAcciones.replaceChildren();
-			(items || []).forEach(function (item) {
+			accionesAyudaActuales.forEach(function (item) {
 				var button = document.createElement('button'); button.type = 'button'; button.textContent = item.label;
 				button.dataset.helpAction = item.action || ''; button.dataset.helpValue = item.value || '';
 				listaAcciones.appendChild(button);
 			});
 		}
+		function programarTemporizadorInactividad() {
+			window.clearTimeout(temporizadorInactividadAyuda);
+			temporizadorInactividadAyuda = null;
+			if (helpPanel.hidden || esperaDecisionInactividad || conversacionFinalizadaAyuda) return;
+			temporizadorInactividadAyuda = window.setTimeout(function () {
+				temporizadorInactividadAyuda = null;
+				esperaDecisionInactividad = true;
+				accionesAntesInactividad = accionesAyudaActuales.slice();
+				addHelpMessage('Ha pasado un minuto sin actividad. ¿Quieres seguir chateando o finalizar la conversación?', 'bot');
+				accionesAyuda([
+					{ label: 'Seguir chateando', action: 'continue-chat' },
+					{ label: 'Finalizar conversación', action: 'end-chat' }
+				]);
+			}, 60000);
+		}
+		function registrarActividadChat() {
+			if (esperaDecisionInactividad) {
+				esperaDecisionInactividad = false;
+				accionesAyuda(accionesAntesInactividad);
+				accionesAntesInactividad = [];
+			}
+			programarTemporizadorInactividad();
+		}
+		function finalizarConversacionChat() {
+			window.clearTimeout(temporizadorInactividadAyuda);
+			temporizadorInactividadAyuda = null;
+			esperaDecisionInactividad = false;
+			conversacionFinalizadaAyuda = true;
+			flujoReserva = null;
+			busquedaProfesional = null;
+			historialAyuda = [];
+			helpMessages.replaceChildren();
+			accionesAyuda([]);
+			addHelpMessage('Conversación finalizada. Puedes cerrar este chat o escribir cuando necesites iniciar otra.', 'bot');
+			temporizadorCierreChatAyuda = window.setTimeout(function () {
+				temporizadorCierreChatAyuda = null;
+				toggleHelpChat(false);
+			}, 2500);
+		}
+		function iniciarNuevaConversacionChat() {
+			if (!conversacionFinalizadaAyuda) return;
+			window.clearTimeout(temporizadorCierreChatAyuda);
+			temporizadorCierreChatAyuda = null;
+			conversacionFinalizadaAyuda = false;
+			flujoReserva = null;
+			busquedaProfesional = null;
+			historialAyuda = [];
+			helpMessages.replaceChildren();
+			addHelpMessage(bienvenidaChatAyuda, 'bot');
+		}
+		helpInput.addEventListener('input', registrarActividadChat);
 		function agregarMensajeUsuario(clean) {
 			addHelpMessage(clean, 'user');
 		}
@@ -255,6 +471,38 @@ import UserMenu from './UserMenu.astro';
 				accionesAyuda(opciones.map(function (s, i) { return { label: (s.Titulo || s.Nombre_Categoria || 'Servicio') + ' · ' + (s.Nombre_Trabajador || 'Profesional'), action: 'service', value: String(i) }; }));
 			} catch (_) { addHelpMessage('No pude cargar otros profesionales en este momento. Intenta de nuevo.', 'bot'); }
 		}
+		function textoHorarioPublicado(horarios) {
+			return horarios.map(function (h) {
+				var inicio = String(h.Hora_Inicio || '').slice(0, 5), fin = String(h.Hora_Fin || '').slice(0, 5);
+				return h.Dia_Semana + ': ' + (String(h.Hora_Fin) === '23:59:59' ? 'todo el día' : inicio + ' a ' + fin);
+			});
+		}
+		async function mostrarDisponibilidadParaAgendar() {
+			if (!flujoReserva || !flujoReserva.servicio) return;
+			try {
+				var servicio = flujoReserva.servicio;
+				var response = await fetch(apiAyuda + '/disponibilidad?servicio=' + encodeURIComponent(servicio.Id_Servicio));
+				if (!response.ok) throw new Error();
+				var horarios = await response.json(); if (!Array.isArray(horarios)) horarios = horarios.value || [];
+				horarios = horarios.filter(function (h) { return String(h.Id_Servicio) === String(servicio.Id_Servicio); });
+				flujoReserva.horarios = horarios;
+				if (!horarios.length) {
+					flujoReserva.paso = 'servicio';
+					addHelpMessage('Elegiste ' + (servicio.Titulo || 'este servicio') + ' con ' + (servicio.Nombre_Trabajador || 'el profesional') + ', pero todavía no ha publicado días y horarios disponibles para este servicio. Elige otro profesional o inténtalo más tarde.', 'bot');
+					accionesAyuda((flujoReserva.servicios || []).filter(function (s) { return String(s.Id_Servicio) !== String(servicio.Id_Servicio); }).map(function (s) {
+						var i = flujoReserva.servicios.indexOf(s);
+						return { label: (s.Titulo || 'Servicio') + ' · ' + (s.Nombre_Trabajador || 'Profesional'), action: 'service', value: String(i) };
+					}).concat([{ label: 'Cancelar', action: 'cancel' }]));
+					return;
+				}
+				flujoReserva.paso = 'fecha';
+				addHelpMessage('Elegiste ' + (servicio.Titulo || 'este servicio') + ' con ' + (servicio.Nombre_Trabajador || 'el profesional') + '. Estos son sus días y horarios publicados:\n• ' + textoHorarioPublicado(horarios).join('\n• ') + '\n\nElige una fecha que corresponda a uno de esos días y escríbela como AAAA-MM-DD (por ejemplo, 2026-10-22).', 'bot');
+				accionesAyuda([]);
+			} catch (_) {
+				addHelpMessage('No pude consultar los días y horarios de este profesional ahora. Puedes volver a intentarlo.', 'bot');
+				accionesAyuda([{ label: 'Volver a consultar', action: 'retry-schedule' }, { label: 'Cancelar', action: 'cancel' }]);
+			}
+		}
 		async function reservarServicio(servicio, fecha, hora, direccion) {
 			var diaNombre = new Intl.DateTimeFormat('es-CO', { weekday: 'long', timeZone: 'UTC' }).format(new Date(fecha + 'T12:00:00Z'));
 			var diaNormal = normalizarAyuda(diaNombre);
@@ -298,18 +546,28 @@ import UserMenu from './UserMenu.astro';
 			if (/cancel|empezar de nuevo/.test(q)) { flujoReserva = null; accionesAyuda([{ label: 'Agendar un servicio', action: 'book' }]); return 'Cancelé el agendamiento. Cuando quieras, empezamos de nuevo.'; }
 			if (/como funciona|que pasa|confirm|solicitud/.test(q)) return 'Al confirmar, se envía una solicitud al profesional. Quedará pendiente hasta que la acepte. Puedes revisar su estado en “Mis citas”.';
 			if (/direccion|donde/.test(q) && flujoReserva.paso === 'direccion') return 'Escribe la dirección donde se realizará el servicio. Solo se incluirá en la solicitud que verá el profesional.';
-			var respuestaIA = await consultarIAChat(pregunta);
-			return respuestaIA + '\n\n' + (flujoReserva.paso === 'fecha' ? 'Cuando estés listo, indícame una fecha como AAAA-MM-DD.' : flujoReserva.paso === 'hora' ? 'Cuando estés listo, indícame una hora como HH:MM.' : flujoReserva.paso === 'direccion' ? 'Cuando estés listo, indícame la dirección.' : 'Puedes responder “sí” para continuar o cancelar el agendamiento.');
+			return await consultarIAChat(pregunta);
 		}
 		async function procesarAccionAyuda(action, value) {
+			registrarActividadChat();
+			if (action === 'continue-chat') {
+				esperaDecisionInactividad = false;
+				accionesAntesInactividad = [];
+				addHelpMessage('¡Claro, seguimos! ¿Qué más necesitas?', 'bot');
+				return;
+			}
+			if (action === 'end-chat') { finalizarConversacionChat(); return; }
 			if (action === 'login') { window.location.href = '/login/login'; return; }
 			if (action === 'register') { window.location.href = '/login/registrar'; return; }
+			if (action === 'profile') { window.location.href = value; return; }
+			if (action === 'categories') { window.location.href = '/categorias/'; return; }
+			if (action === 'cancel-search') { busquedaProfesional = null; accionesAyuda([]); addHelpMessage('Listo, cancelé la búsqueda.', 'bot'); return; }
 			if (action === 'cancel') { flujoReserva = null; accionesAyuda([{ label: 'Quiero agendar un servicio', action: 'book' }]); addHelpMessage('Listo, cancelé la solicitud. Si quieres, podemos empezar de nuevo.', 'bot'); return; }
+			if (action === 'retry-schedule' && flujoReserva) { await mostrarDisponibilidadParaAgendar(); return; }
 			if (action === 'service' && flujoReserva) {
-				flujoReserva.servicio = flujoReserva.servicios[Number(value)]; flujoReserva.paso = 'fecha';
+				flujoReserva.servicio = flujoReserva.servicios[Number(value)]; flujoReserva.paso = 'horario';
 				flujoReserva.fecha = ''; flujoReserva.hora = ''; flujoReserva.direccion = '';
-				addHelpMessage('Elegiste ' + flujoReserva.servicio.Titulo + ' con ' + (flujoReserva.servicio.Nombre_Trabajador || 'el profesional') + '. ¿Qué fecha quieres? Escríbela como AAAA-MM-DD (por ejemplo, 2026-10-22).', 'bot');
-				accionesAyuda([]); return;
+				await mostrarDisponibilidadParaAgendar(); return;
 			}
 			if (action === 'confirm' && flujoReserva) {
 				try {
@@ -331,7 +589,10 @@ import UserMenu from './UserMenu.astro';
 		async function sendHelpQuestion(question) {
 			var clean = question.trim();
 			if (!clean) return;
+			iniciarNuevaConversacionChat();
+			registrarActividadChat();
 			agregarMensajeUsuario(clean);
+			if (await consultarDisponibilidadChat(clean)) return;
 			if (flujoReserva) {
 				var preguntaNormalizada = normalizarAyuda(clean);
 				if (flujoReserva.paso !== 'alternativa' && /otro(s)? profesional|otro(s)? trabajador|otra(s)? opcion|alternativa|cambiar profesional/.test(preguntaNormalizada)) {
@@ -357,9 +618,23 @@ import UserMenu from './UserMenu.astro';
 						var fecha = new Date(clean + 'T12:00:00'); var hoy = new Date();
 						var fechaLocal = [hoy.getFullYear(), String(hoy.getMonth() + 1).padStart(2, '0'), String(hoy.getDate()).padStart(2, '0')].join('-');
 						if (Number.isNaN(fecha.getTime()) || fecha < new Date(fechaLocal + 'T00:00:00') || fecha.toISOString().slice(0, 10) !== clean) throw new Error('Esa fecha no es válida o ya pasó. Intenta con AAAA-MM-DD.');
-						flujoReserva.fecha = clean; flujoReserva.paso = 'hora'; addHelpMessage('¿A qué hora? Usa formato de 24 horas, por ejemplo 09:30.', 'bot');
+						var diaFecha = normalizarAyuda(new Intl.DateTimeFormat('es-CO', { weekday: 'long', timeZone: 'UTC' }).format(new Date(clean + 'T12:00:00Z')));
+						var horariosDia = (flujoReserva.horarios || []).filter(function (h) { return normalizarAyuda(h.Dia_Semana) === diaFecha; });
+						if (!horariosDia.length) {
+							var diasDisponibles = Array.from(new Set((flujoReserva.horarios || []).map(function (h) { return h.Dia_Semana; })));
+							addHelpMessage('Ese día no aparece en el horario publicado por ' + (flujoReserva.servicio.Nombre_Trabajador || 'el profesional') + '. Sus días disponibles son: ' + diasDisponibles.join(', ') + '. Elige otra fecha con formato AAAA-MM-DD.', 'bot');
+							return;
+						}
+						flujoReserva.fecha = clean; flujoReserva.paso = 'hora'; addHelpMessage('Para ' + horariosDia[0].Dia_Semana + ', el horario publicado es: ' + textoHorarioPublicado(horariosDia).join(' y ') + '. ¿A qué hora quieres el servicio? Escríbela como HH:MM.', 'bot');
 					} else if (flujoReserva.paso === 'hora') {
 						if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(clean)) { addHelpMessage(await responderDudaDuranteReserva(clean), 'bot'); return; }
+						var diaHora = normalizarAyuda(new Intl.DateTimeFormat('es-CO', { weekday: 'long', timeZone: 'UTC' }).format(new Date(flujoReserva.fecha + 'T12:00:00Z')));
+						var rangosHora = (flujoReserva.horarios || []).filter(function (h) { return normalizarAyuda(h.Dia_Semana) === diaHora; });
+						var horaPermitida = rangosHora.some(function (h) {
+							var fin = String(h.Hora_Fin || '').slice(0, 5);
+							return clean >= String(h.Hora_Inicio || '').slice(0, 5) && (String(h.Hora_Fin) === '23:59:59' ? clean <= '23:59' : clean < fin);
+						});
+						if (!horaPermitida) { addHelpMessage('Esa hora está fuera del horario publicado para ese día. Puedes elegir: ' + textoHorarioPublicado(rangosHora).join(' o ') + '. Indica otra hora como HH:MM.', 'bot'); return; }
 						flujoReserva.hora = clean; flujoReserva.paso = 'direccion'; addHelpMessage('¿En qué dirección se realizará el servicio?', 'bot');
 					} else if (flujoReserva.paso === 'direccion') {
 						if (clean.length < 5) throw new Error('Escribe una dirección más completa para que el profesional ubique el lugar.');
@@ -377,6 +652,7 @@ import UserMenu from './UserMenu.astro';
 			if (/(quiero|ayudame|necesito|vamos a).{0,35}(agendar|reservar|solicitar)|^(agendar|reservar|solicitar servicio)$/.test(q)) {
 				await iniciarAgendamiento(clean); return;
 			}
+			if (await buscarProfesionalesChat(clean)) return;
 			var answerFinal = await consultarIAChat(clean);
 			window.setTimeout(function () { addHelpMessage(answerFinal, 'bot'); accionesAyuda([{ label: 'Quiero agendar un servicio', action: 'book' }]); }, 200);
 		}
@@ -389,6 +665,7 @@ import UserMenu from './UserMenu.astro';
 			var button = e.target.closest('button');
 			if (!button) return;
 			if (button.dataset.helpAction) {
+				registrarActividadChat();
 				if (button.dataset.helpAction === 'book') iniciarAgendamiento('');
 				else procesarAccionAyuda(button.dataset.helpAction, button.dataset.helpValue);
 			} else sendHelpQuestion(button.textContent || '');
