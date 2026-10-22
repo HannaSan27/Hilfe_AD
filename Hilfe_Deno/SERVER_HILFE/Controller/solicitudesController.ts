@@ -11,8 +11,8 @@ const TRANSICIONES_VALIDAS: Record<EstadoSolicitud, EstadoSolicitud[]> = {
   rechazado: [],
   finalizado: [],
   cancelada: [],
-};    
-   
+};
+
 export const getSolicitudes = async (ctx: Context) => {
   try {
     const url = ctx.request.url;
@@ -24,7 +24,10 @@ export const getSolicitudes = async (ctx: Context) => {
       SELECT
         sol.*, s.Titulo AS Titulo_Servicio,
         uc.Nombre AS Nombre_Cliente,
-        ut.Nombre AS Nombre_Trabajador
+        ut.Nombre AS Nombre_Trabajador,
+        CASE WHEN EXISTS (
+          SELECT 1 FROM calificaciones c WHERE c.Id_Solicitud = sol.Id_Solicitud
+        ) THEN 1 ELSE 0 END AS Calificada
       FROM solicitudes sol
       JOIN servicios s ON sol.Id_Servicio = s.Id_Servicio
       JOIN usuarios uc ON sol.Id_Cliente = uc.Id_Usuario

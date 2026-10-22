@@ -19,4 +19,5 @@ export interface Solicitud {
   Direccion: string | null;
   Telefono: string | null;
   Descripcion_Solicitud: string | null;
+  Calificada?: number;
 }
