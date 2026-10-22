@@ -1,7 +1,7 @@
 import { Context, hash, verificarContrasena } from "./../Dependencies/dependencies.ts";
 import { buscarUsuarioPorCorreo, crearUsuario, actualizarContrasena } from "./../Models/usuariosModel.ts";
 import { generarToken, generarTokenVerificacion } from "./../Helpers/jwtHelper.ts";
-import { enviarCodigoRecuperacion } from "./../Helpers/correoHelper.ts";
+import { enviarCodigoRecuperacionBonito } from "./../Helpers/correoHelper.ts";
 import { guardarCodigo, verificarCodigoGuardado, borrarCodigo } from "./../Helpers/codigosRecuperacion.ts";
 import {
   validarTipoDocumento,
@@ -255,11 +255,12 @@ export async function login(ctx: Context) {
   // Verificación de estado de autorización
   const esAdmin = Number(usuario.Id_Rol) === 1;
   const estadoVerif = usuario.Estado_Verificacion || (usuario.Verificado === 1 ? "aprobado" : "pendiente");
-  const tokenVerificacion = !esAdmin && estadoVerif !== "aprobado"
+  const requiereVerificacion = false;
+  const tokenVerificacion = requiereVerificacion
     ? await generarTokenVerificacion(Number(usuario.Id_Usuario), Number(usuario.Id_Rol))
     : null;
 
-  if (!esAdmin && estadoVerif !== "aprobado") {
+  if (!esAdmin && requiereVerificacion) {
     const solicitud = await obtenerSolicitudPorUsuarioId(Number(usuario.Id_Usuario));
 
     if (estadoVerif === "pendiente") {
@@ -380,7 +381,7 @@ export async function solicitarRecuperacion(ctx: Context) {
   }
 
   const codigo = guardarCodigo(correo);
-  await enviarCodigoRecuperacion(correo, codigo);
+  await enviarCodigoRecuperacionBonito(correo, codigo);
 
   ctx.response.status = 200;
   ctx.response.body = { mensaje: "Si el correo existe, se envió un código" };
