@@ -1,10 +1,10 @@
 import { Context, hash } from "./../Dependencies/dependencies.ts";
-import { buscarUsuarioPorCorreo, crearUsuario } from "./../Models/usuariosModel.ts";
+import { buscarUsuarioPorCorreo, crearUsuario, actualizarContrasena } from "./../Models/usuariosModel.ts";
 import { generarToken, generarTokenVerificacion } from "./../Helpers/jwtHelper.ts";
 import { verificarTokenGoogle, crearTokenRegistroGoogle, leerTokenRegistroGoogle} from "./../Helpers/googlehelpers.ts";
 import { crearSolicitudVerificacion, obtenerSolicitudPorUsuarioId } from "../Models/verificacionesModel.ts";
 import { obtenerDocumentosLegalesVigentes, registrarAceptacionLegal } from "../Models/legalesModel.ts";
-import { validarTipoDocumento, validarNumeroDocumento, validarFechaExpedicion } from "../Helpers/validaciones.ts";
+import { validarTipoDocumento, validarNumeroDocumento, validarFechaExpedicion, validarFortalezaContrasena } from "../Helpers/validaciones.ts";
 import client from "../Models/conexion.ts";
 
 function respuestaSesion(usuario: Record<string, unknown>, token: string) {
@@ -58,7 +58,8 @@ export async function loginGoogle(ctx: Context) {
 
     const esAdmin = Number(usuario.Id_Rol) === 1;
     const estadoVerificacion = usuario.Estado_Verificacion || (usuario.Verificado === 1 ? "aprobado" : "pendiente");
-    if (!esAdmin && estadoVerificacion !== "aprobado") {
+    const requiereVerificacion = false;
+    if (!esAdmin && requiereVerificacion) {
       const solicitud = await obtenerSolicitudPorUsuarioId(Number(usuario.Id_Usuario));
 
       // Las cuentas Google anteriores a la verificación pueden no tener documento ni solicitud.
@@ -146,6 +147,7 @@ export async function completarGoogle(ctx: Context) {
   const usuarioExistente = await buscarUsuarioPorCorreo(datosGoogle.correo);
 
   const nombre = String(body.nombre || "").trim();
+  const contrasena = String(body.contrasena || "");
   const telefono = String(body.telefono || "").trim();
   const ubicacion = String(body.ubicacion || "").trim();
   const tipoDocumento = String(body.tipoDocumento || "").trim().toUpperCase();
@@ -156,6 +158,13 @@ export async function completarGoogle(ctx: Context) {
   if (nombre.length < 3 || telefono.length < 7 || telefono.length > 10 || !/^\d+$/.test(telefono) || !ubicacion) {
     ctx.response.status = 400;
     ctx.response.body = { mensaje: "Completa tu nombre, teléfono y ubicación para continuar." };
+    return;
+  }
+
+  const contrasenaValida = validarFortalezaContrasena(contrasena);
+  if (!contrasenaValida.valido) {
+    ctx.response.status = 400;
+    ctx.response.body = { mensaje: contrasenaValida.mensaje };
     return;
   }
 
@@ -232,11 +241,11 @@ export async function completarGoogle(ctx: Context) {
     return;
   }
 
-  // Contraseña aleatoria con hash: la columna queda llena y nadie puede
-  // entrar con contraseña a esta cuenta (solo con Google o recuperándola).
+  const contrasenaEncriptada = await hash(contrasena);
   let idUsuario: number;
   if (usuarioExistente) {
     idUsuario = Number(usuarioExistente.Id_Usuario);
+    await actualizarContrasena(datosGoogle.correo, contrasenaEncriptada);
     await client.execute(
       `UPDATE usuarios
        SET Nombre = ?, Telefono = ?, Ubicacion = ?, Tipo_Documento = ?, Numero_Documento = ?,
@@ -248,12 +257,11 @@ export async function completarGoogle(ctx: Context) {
         perfilProfesional?.descripcion ?? null, idUsuario]
     );
   } else {
-    const contrasenaAleatoria = await hash(crypto.randomUUID() + crypto.randomUUID());
     const resultado = await crearUsuario(
       rol,
       nombre,
       datosGoogle.correo,
-      contrasenaAleatoria,
+      contrasenaEncriptada,
       telefono,
       ubicacion,
       tipoDocumento,

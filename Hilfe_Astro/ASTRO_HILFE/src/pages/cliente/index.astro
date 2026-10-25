@@ -4,6 +4,7 @@ import ClienteSidebar from "../../components/clientesidebar.astro";
 import ClienteTopbar from "../../components/clientetopbar.astro";
 import "../../components/styles/indexcliente.css";
 import "../../components/styles/panelcliente.css";
+import "../../components/styles/calificarcliente.css";
 
 interface Calificacion {
   puntaje: number;
@@ -59,11 +60,11 @@ const porCalificar = solicitudes.filter((s) => s.estado === "finalizado" && s.ca
           <p>Bienvenido, <a id="nombreBienvenidaCliente" href="/cliente/editarperfil">{nombre}</a></p>
         </div>
         <div class="cliente-dashboard-actions">
-          <button id="calificacionesPendientes" class="btn btn-secondary btn-sm" hidden={porCalificar === 0} onclick="var b=document.querySelector('.btn-calificar');if(b){b.scrollIntoView({behavior:'smooth',block:'center'});b.click()}" style="position:relative;padding:8px 14px">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
-              Calificar
-              <span id="contadorCalificaciones" style="position:absolute;top:-6px;right:-6px;background:var(--danger);color:#fff;font-size:11px;font-weight:700;width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center">{porCalificar}</span>
-          </button>
+          <span id="calificacionesPendientes" class="btn btn-secondary btn-sm" role="status" hidden={porCalificar === 0} style="position:relative;padding:8px 14px;cursor:default;pointer-events:none">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+            Calificar
+            <span id="contadorCalificaciones" style="position:absolute;top:-6px;right:-6px;background:var(--danger);color:#fff;font-size:11px;font-weight:700;width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center">{porCalificar}</span>
+          </span>
           <a href="/categorias/" class="btn btn-primary">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
             Nuevo servicio
@@ -187,48 +188,63 @@ const porCalificar = solicitudes.filter((s) => s.estado === "finalizado" && s.ca
 
   <!-- Rating Modal -->
   <div class="modal-overlay" id="modalCalificar">
-    <div class="modal">
-      <div class="modal-header">
-        <h3>Calificar servicio</h3>
-        <button class="btn-modal-close" id="modalClose" aria-label="Cerrar">&times;</button>
+    <div class="modal cal-modal">
+      <div class="cal-header">
+        <span class="cal-header-icon">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+        </span>
+        <div class="cal-header-text">
+          <h3>Calificar servicio</h3>
+          <p class="cal-sub">¿Cómo te fue con <strong id="modalServicio"></strong>?</p>
+        </div>
+        <button type="button" class="cal-close" id="modalClose" aria-label="Cerrar">&times;</button>
       </div>
-      <form id="formCalificar">
-        <div class="modal-body">
-          <input type="hidden" name="idSolicitud" id="inputIdSolicitud" value="" />
-          <p style="font-size:14px;color:var(--text-secondary);margin-bottom:16px">
-            ¿Cómo calificas el servicio de <strong id="modalServicio" style="color:var(--text)"></strong>?
-          </p>
 
-          <div style="text-align:center;font-size:13px;color:var(--text-muted);margin-bottom:8px;font-weight:500">Tu calificación</div>
-          <div style="display:flex;gap:6px;justify-content:center;margin-bottom:20px;font-size:32px;cursor:pointer" id="starRating">
-            <span class="star" data-value="1" style="color:#ddd;transition:color .2s ease">&#9733;</span>
-            <span class="star" data-value="2" style="color:#ddd;transition:color .2s ease">&#9733;</span>
-            <span class="star" data-value="3" style="color:#ddd;transition:color .2s ease">&#9733;</span>
-            <span class="star" data-value="4" style="color:#ddd;transition:color .2s ease">&#9733;</span>
-            <span class="star" data-value="5" style="color:#ddd;transition:color .2s ease">&#9733;</span>
-          </div>
+      <form id="formCalificar">
+        <div class="cal-body">
+          <input type="hidden" name="idSolicitud" id="inputIdSolicitud" value="" />
           <input type="hidden" name="puntaje" id="inputPuntaje" value="0" />
 
-          <div style="margin-bottom:16px">
-            <label class="form-label" for="comentario">Comentario <span style="color:var(--text-muted);font-weight:400">(opcional)</span></label>
-            <textarea class="form-textarea" id="comentario" name="comentario" placeholder="Cuéntanos tu experiencia con este servicio..." maxlength="500" style="min-height:80px"></textarea>
-            <div class="textarea-char-counter" id="charCounter">0/500</div>
+          <div class="cal-section cal-rating">
+            <span class="cal-label">Tu calificación</span>
+            <div class="cal-stars" id="starRating" role="radiogroup" aria-label="Calificación de 1 a 5 estrellas">
+              <span class="star" data-value="1" role="radio" aria-label="1 estrella">&#9733;</span>
+              <span class="star" data-value="2" role="radio" aria-label="2 estrellas">&#9733;</span>
+              <span class="star" data-value="3" role="radio" aria-label="3 estrellas">&#9733;</span>
+              <span class="star" data-value="4" role="radio" aria-label="4 estrellas">&#9733;</span>
+              <span class="star" data-value="5" role="radio" aria-label="5 estrellas">&#9733;</span>
+            </div>
+            <span class="cal-rating-text" id="ratingTexto">Toca una estrella</span>
           </div>
 
-          <div style="margin-bottom:8px">
-            <label class="form-label">Fotos del trabajo realizado <span style="color:var(--text-muted);font-weight:400">(opcional, máx. 3)</span></label>
-            <div id="fotoList" style="display:flex;flex-direction:column;gap:8px"></div>
-            <button type="button" class="btn btn-secondary btn-sm" id="btnAgregarFoto" style="margin-top:8px">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
-              Agregar foto
+          <div class="cal-section">
+            <label class="cal-label" for="comentario">Comentario <span class="cal-opt">(opcional)</span></label>
+            <textarea class="cal-textarea" id="comentario" name="comentario" placeholder="Cuéntanos tu experiencia con este servicio..." maxlength="500"></textarea>
+            <div class="cal-counter" id="charCounter">0/500</div>
+          </div>
+
+          <div class="cal-section">
+            <div class="cal-photos-head">
+              <span class="cal-label">Fotos del trabajo realizado <span class="cal-opt">(opcional)</span></span>
+              <span class="cal-counter" id="fotoContador">0/3</span>
+            </div>
+            <div class="cal-photo-grid" id="fotoList" hidden></div>
+            <input type="file" id="inputFotos" accept="image/jpeg,image/png,image/webp" multiple hidden />
+            <button type="button" class="cal-dropzone" id="btnAgregarFoto">
+              <span class="cal-dropzone-icon">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+              </span>
+              <span class="cal-dropzone-text">
+                <strong>Agregar fotos</strong>
+                <small>JPG, PNG o WEBP · máx. 5 MB cada una</small>
+              </span>
             </button>
           </div>
         </div>
-        <div class="modal-footer">
+
+        <div class="cal-footer">
           <button type="button" class="btn btn-secondary" id="modalCancel">Cancelar</button>
-          <button type="submit" class="btn btn-primary" id="btnSubmitCalificar">
-            Enviar calificación
-          </button>
+          <button type="submit" class="btn btn-primary" id="btnSubmitCalificar">Enviar calificación</button>
         </div>
       </form>
     </div>
@@ -380,50 +396,85 @@ const porCalificar = solicitudes.filter((s) => s.estado === "finalizado" && s.ca
     /* ========== CALIFICAR ========== */
     const modalCalificar = document.getElementById("modalCalificar");
     const cerrarModalCalificar = () => modalCalificar?.classList.remove("active");
+
     document.addEventListener("click", (event) => {
       const target = event.target;
       if (!(target instanceof Element)) return;
+
+      if (target.closest("#btnAgregarFoto")) {
+        if (fotosCalificacion.length >= MAX_FOTOS) return mostrarErrorCliente(`Máximo ${MAX_FOTOS} fotos.`);
+        inputFotos?.click();
+        return;
+      }
+      const quitarFoto = target.closest("[data-quitar-foto]");
+      if (quitarFoto) {
+        fotosCalificacion.splice(Number(quitarFoto.dataset.quitarFoto), 1);
+        renderFotosCalificacion();
+        return;
+      }
+
       const boton = target.closest(".btn-calificar");
       if (boton) {
         document.getElementById("inputIdSolicitud").value = boton.dataset.id || "";
         document.getElementById("modalServicio").textContent = boton.dataset.servicio || "";
-        document.getElementById("inputPuntaje").value = "0";
-        document.querySelectorAll("#starRating .star").forEach((estrella) => estrella.style.color = "#ddd");
+        document.getElementById("comentario").value = "";
+        document.getElementById("charCounter").textContent = "0/500";
+        fijarPuntaje(0);
+        fotosCalificacion = [];
+        renderFotosCalificacion();
         modalCalificar?.classList.add("active");
       }
       if (target.closest("#modalClose, #modalCancel")) cerrarModalCalificar();
       if (target === modalCalificar) cerrarModalCalificar();
       const estrella = target.closest("#starRating .star");
-      if (estrella) {
-        const puntaje = Number(estrella.dataset.value);
-        document.getElementById("inputPuntaje").value = String(puntaje);
-        document.querySelectorAll("#starRating .star").forEach((item) => item.style.color = Number(item.dataset.value) <= puntaje ? "#f59e0b" : "#ddd");
-      }
+      if (estrella) fijarPuntaje(Number(estrella.dataset.value));
     });
+
     document.getElementById("comentario")?.addEventListener("input", (event) => {
       document.getElementById("charCounter").textContent = `${event.target.value.length}/500`;
     });
+
+    // ---------- Envío ----------
     const formCalificar = document.getElementById("formCalificar");
     formCalificar?.addEventListener("submit", async (event) => {
       event.preventDefault();
-      const usuario = JSON.parse(localStorage.getItem("usuario") || "null");
+      let usuario;
+      try { usuario = JSON.parse(localStorage.getItem("usuario") || "null"); } catch { usuario = null; }
       const token = localStorage.getItem("token");
-      const idSolicitud = document.getElementById("inputIdSolicitud").value;
+      const idSolicitud = Number(document.getElementById("inputIdSolicitud").value);
       const puntaje = Number(document.getElementById("inputPuntaje").value);
       if (!token || !usuario?.id) return mostrarErrorCliente("Inicia sesión para enviar una calificación.");
       if (!puntaje) return mostrarErrorCliente("Selecciona una calificación de 1 a 5 estrellas.");
+
+      const btn = document.getElementById("btnSubmitCalificar");
+      btn.disabled = true;
+      btn.textContent = "Enviando...";
       try {
+        // FormData: NO se pone Content-Type, el navegador lo agrega con el boundary
+        const formData = new FormData();
+        formData.append("idSolicitud", String(idSolicitud));
+        formData.append("puntaje", String(puntaje));
+        formData.append("comentario", document.getElementById("comentario").value.trim());
+        fotosCalificacion.forEach((archivo) => formData.append("fotos", archivo));
+
         const response = await fetch(`${apiCliente}/api/calificaciones`, {
-          method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-          body: JSON.stringify({ idSolicitud, puntaje, comentario: document.getElementById("comentario").value.trim() }),
+          method: "POST",
+          headers: { Authorization: `Bearer ${token}` },
+          body: formData,
         });
-        const data = await response.json().catch(() => ({}));
-        if (!response.ok) throw new Error(data.mensaje || "No se pudo enviar la calificación.");
+        const texto = await response.text();
+        console.log("Calificar →", response.status, texto);
+        let data = {};
+        try { data = JSON.parse(texto); } catch {}
+        if (!response.ok) throw new Error(data.mensaje || `Error ${response.status} al enviar la calificación.`);
         cerrarModalCalificar();
         window.alert(data.mensaje || "Calificación enviada correctamente.");
         await cargarSolicitudesCliente();
       } catch (error) {
         window.alert(error instanceof Error ? error.message : "No se pudo enviar la calificación.");
+      } finally {
+        btn.disabled = false;
+        btn.textContent = "Enviar calificación";
       }
     });
   </script>

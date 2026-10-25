@@ -181,10 +181,11 @@ import "../../components/styles/auth-premium.css";
                 <input
                   type="email"
                   id="correoInput"
+                  name="correo"
                   class="field-control"
                   placeholder="tu.correo@ejemplo.com"
                   required
-                  autocomplete="email"
+                  autocomplete="username"
                 />
               </div>
               <div class="field-error-msg" id="err-correo" style="display:none;"></div>
@@ -199,6 +200,7 @@ import "../../components/styles/auth-premium.css";
                 <input
                   type="tel"
                   id="telefonoInput"
+                  name="telefono"
                   class="field-control"
                   placeholder="Ej. 3209876543"
                   maxlength="10"
@@ -220,8 +222,10 @@ import "../../components/styles/auth-premium.css";
                 <input
                   type="password"
                   id="passwordInput"
+                  name="contrasena"
                   class="field-control"
                   placeholder="Mínimo 8 caracteres"
+                  minlength="8"
                   required
                   autocomplete="new-password"
                 />
@@ -240,6 +244,7 @@ import "../../components/styles/auth-premium.css";
                 <input
                   type="password"
                   id="confirmPasswordInput"
+                  name="confirmarContrasena"
                   class="field-control"
                   placeholder="Repite tu contraseña"
                   required
@@ -479,6 +484,17 @@ import "../../components/styles/auth-premium.css";
               style="padding-left:1rem;resize:vertical;"
               required
             ></textarea>
+            <div class="description-assistant" aria-label="Sugerencias para la descripción profesional">
+              <div class="description-assistant-head">
+                <span><i class="bi bi-lightbulb"></i> ¿No sabes qué escribir? Elige una sugerencia:</span>
+                <span id="descripcionCounter" aria-live="polite">0 / 30 caracteres</span>
+              </div>
+              <div class="description-suggestions" id="descripcionSuggestions">
+                <button type="button" class="description-suggestion" data-template="responsable">Trabajo responsable y puntual</button>
+                <button type="button" class="description-suggestion" data-template="experiencia">Experiencia y atención al detalle</button>
+                <button type="button" class="description-suggestion" data-template="confianza">Servicio confiable y cercano</button>
+              </div>
+            </div>
             <div class="field-error-msg" id="err-descripcion" style="display:none;"></div>
           </div>
 
@@ -633,7 +649,7 @@ import "../../components/styles/auth-premium.css";
           </p>
           <p id="workerPhotoNotice" class="worker-photo-notice" hidden>Tu cuenta quedó creada. La foto no se pudo subir ahora; podrás agregarla desde tu perfil.</p>
           <div style="display:flex;justify-content:center;gap:1rem;flex-wrap:wrap;">
-            <a href="/login/login" class="btn-nav-next" style="text-decoration:none;background:var(--primary);">
+            <a id="workerLoginLink" href="/login/login" class="btn-nav-next" style="text-decoration:none;background:var(--primary);">
               <i class="bi bi-box-arrow-in-right"></i>
               <span>Ir al Inicio de Sesión</span>
             </a>
@@ -664,6 +680,18 @@ import "../../components/styles/auth-premium.css";
     </div>
   </div>
 
+  <style>
+    .description-assistant { margin-top:.15rem; padding:.7rem .8rem; border:1px solid #dbe7ff; border-radius:10px; background:#f7faff; }
+    .description-assistant-head { display:flex; justify-content:space-between; gap:.8rem; color:var(--text-secondary); font-size:.76rem; }
+    .description-assistant-head i { color:var(--accent,var(--primary)); }
+    #descripcionCounter { color:var(--text-muted); font-variant-numeric:tabular-nums; white-space:nowrap; }
+    #descripcionCounter.is-complete { color:#16834a; font-weight:700; }
+    .description-suggestions { display:flex; flex-wrap:wrap; gap:.45rem; margin-top:.6rem; }
+    .description-suggestion { border:1px solid #cbdcfb; border-radius:999px; padding:.38rem .65rem; background:#fff; color:var(--primary); font:600 .74rem var(--font,Inter,sans-serif); cursor:pointer; transition:background .15s ease,border-color .15s ease; }
+    .description-suggestion:hover, .description-suggestion:focus-visible { border-color:var(--primary); background:#eaf1ff; outline:none; }
+    @media (max-width:560px) { .description-assistant-head { align-items:flex-start; flex-direction:column; gap:.25rem; } }
+  </style>
+
   <!-- SCRIPT CLIENT-SIDE DEL ASISTENTE DE TRABAJADOR -->
   <script is:inline>
     (function () {
@@ -671,6 +699,15 @@ import "../../components/styles/auth-premium.css";
       let formEnviado = false;
       let selectedPhotoFile = null;
       const apiBase = `${window.location.protocol}//${window.location.hostname}:8000/api`;
+      async function fetchConTiempoLimite(url, opciones, milisegundos = 20000) {
+        const controlador = new AbortController();
+        const temporizador = window.setTimeout(() => controlador.abort(), milisegundos);
+        try {
+          return await fetch(url, { ...opciones, signal: controlador.signal });
+        } finally {
+          window.clearTimeout(temporizador);
+        }
+      }
       let googlePendiente = null;
       try {
         googlePendiente = JSON.parse(sessionStorage.getItem("googlePendiente") || "null");
@@ -705,12 +742,6 @@ import "../../components/styles/auth-premium.css";
         const correoGoogle = document.getElementById("correoInput");
         correoGoogle.value = String(googlePendiente.correo || "");
         correoGoogle.readOnly = true;
-        const contrasena = document.getElementById("passwordInput");
-        const confirmarContrasena = document.getElementById("confirmPasswordInput");
-        if (contrasena) contrasena.required = false;
-        if (confirmarContrasena) confirmarContrasena.required = false;
-        contrasena?.closest(".form-grid-2")?.setAttribute("hidden", "");
-        document.getElementById("passwordMeter")?.setAttribute("hidden", "");
       }
 
       // Inicializar selectores de días y años
@@ -762,6 +793,42 @@ import "../../components/styles/auth-premium.css";
         `;
       }
       cargarCategorias();
+
+      // Sugerencias para que el trabajador pueda completar su presentación sin
+      // tener que empezar desde cero. El texto siempre se puede editar.
+      const descripcionInput = document.getElementById("descripcionInput");
+      const descripcionCounter = document.getElementById("descripcionCounter");
+      const sugerenciasDescripcion = {
+        responsable: (categoria) => `Ofrezco servicios de ${categoria} con trabajo responsable, puntual y cuidadoso. Me adapto a las necesidades de cada cliente.`,
+        experiencia: (categoria) => `Tengo experiencia en ${categoria} y realizo cada servicio con atención al detalle, buena comunicación y compromiso.`,
+        confianza: (categoria) => `Brindo servicios de ${categoria} con trato amable, responsabilidad y soluciones confiables para mis clientes.`,
+      };
+
+      function categoriaSeleccionada() {
+        const opcion = categoriaSelect?.options[categoriaSelect.selectedIndex];
+        return opcion?.value ? opcion.textContent.trim() : "mi especialidad";
+      }
+
+      function actualizarContadorDescripcion() {
+        if (!descripcionInput || !descripcionCounter) return;
+        const cantidad = descripcionInput.value.trim().length;
+        descripcionCounter.textContent = `${cantidad} / 30 caracteres`;
+        descripcionCounter.classList.toggle("is-complete", cantidad >= 30);
+      }
+
+      descripcionInput?.addEventListener("input", actualizarContadorDescripcion);
+      document.getElementById("descripcionSuggestions")?.addEventListener("click", (event) => {
+        const boton = event.target.closest("[data-template]");
+        const plantilla = boton?.dataset.template;
+        if (!plantilla || !sugerenciasDescripcion[plantilla] || !descripcionInput) return;
+        const sugerencia = sugerenciasDescripcion[plantilla](categoriaSeleccionada());
+        descripcionInput.value = descripcionInput.value.trim()
+          ? `${descripcionInput.value.trim()}\n\n${sugerencia}`
+          : sugerencia;
+        actualizarContadorDescripcion();
+        descripcionInput.focus();
+      });
+      actualizarContadorDescripcion();
 
       // Password strength tester
       const pwInput = document.getElementById("passwordInput");
@@ -923,9 +990,9 @@ import "../../components/styles/auth-premium.css";
         } else errTel.style.display = "none";
 
         const errConfirm = document.getElementById("err-confirmPassword");
-        if (!registroConGoogle) {
+        {
           const rulesPassed = rules.filter((r) => r.test(pw)).length;
-          if (rulesPassed < 4) {
+          if (pw.length < 8 || rulesPassed < 4) {
             errConfirm.textContent = "La contraseña debe cumplir con los requisitos mínimos de seguridad.";
             errConfirm.style.display = "flex";
             valid = false;
@@ -934,14 +1001,13 @@ import "../../components/styles/auth-premium.css";
             errConfirm.style.display = "flex";
             valid = false;
           } else errConfirm.style.display = "none";
-        } else errConfirm.style.display = "none";
-
+        }
         if (valid) {
           state.nombres = nombres;
           state.apellidos = apellidos;
           state.correo = correo;
           state.telefono = telefono;
-          state.contrasena = registroConGoogle ? "" : pw;
+          state.contrasena = pw;
         }
 
         return valid;
@@ -1145,6 +1211,7 @@ import "../../components/styles/auth-premium.css";
           ? {
               registroToken: googlePendiente.registroToken,
               rol: 2,
+              contrasena: payload.contrasena,
               nombre: payload.nombre,
               telefono: payload.telefono,
               ubicacion: payload.ubicacion,
@@ -1161,7 +1228,7 @@ import "../../components/styles/auth-premium.css";
         try {
           // 1. Registro del usuario y verificación
           const endpointRegistro = registroConGoogle ? `${apiBase}/auth/google/completar` : `${apiBase}/auth/registro`;
-          const regRes = await fetch(endpointRegistro, {
+          const regRes = await fetchConTiempoLimite(endpointRegistro, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(payloadSolicitud),
@@ -1173,6 +1240,11 @@ import "../../components/styles/auth-premium.css";
           }
 
           if (registroConGoogle) sessionStorage.removeItem("googlePendiente");
+
+          const enlaceInicio = document.getElementById("workerLoginLink");
+          if (enlaceInicio && payload.correo) {
+            enlaceInicio.href = `/login/login?correoRecordado=${encodeURIComponent(payload.correo)}`;
+          }
 
           const userId = regData.idUsuario;
           const token = regData.token;
@@ -1222,8 +1294,10 @@ import "../../components/styles/auth-premium.css";
       let docMap = null;
       async function cargarDocumentosLegales() {
         if (docMap) return;
+        const controlador = new AbortController();
+        const temporizador = window.setTimeout(() => controlador.abort(), 10000);
         try {
-          const res = await fetch(`${apiBase}/legal/documentos`);
+          const res = await fetch(`${apiBase}/legal/documentos`, { signal: controlador.signal });
           if (res.ok) {
             const list = await res.json();
             docMap = {};
@@ -1231,7 +1305,9 @@ import "../../components/styles/auth-premium.css";
               docMap[doc.codigo] = doc;
             });
           }
-        } catch {}
+        } catch {} finally {
+          window.clearTimeout(temporizador);
+        }
       }
 
       function renderizarDocumentoLegal(contenido) {

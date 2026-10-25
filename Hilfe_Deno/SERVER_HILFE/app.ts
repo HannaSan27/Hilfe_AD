@@ -10,6 +10,7 @@ import disponibilidadRoutes from "./Routes/disponibilidadRoutes.ts";
 import imagenesTrabajosRoutes from "./Routes/imagenesTrabajosRoutes.ts";
 import solicitudesRoutes from "./Routes/solicitudesRoutes.ts";
 import verificacionesRoutes from "./Routes/verificacionesRoutes.ts";
+import chatAyudaRoutes from "./Routes/chatAyudaRoutes.ts";
 import { sincronizarDocumentosLegales } from "./Models/legalesModel.ts";
 
 const app = new Application();
@@ -46,6 +47,9 @@ app.use(solicitudesRoutes.allowedMethods());
 
 app.use(verificacionesRoutes.routes());
 app.use(verificacionesRoutes.allowedMethods());
+
+app.use(chatAyudaRoutes.routes());
+app.use(chatAyudaRoutes.allowedMethods());
 
 try {
   await sincronizarDocumentosLegales();

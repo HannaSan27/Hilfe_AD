@@ -169,10 +169,11 @@ import "../../components/styles/auth-premium.css";
                 <input
                   type="email"
                   id="correoInput"
+                  name="correo"
                   class="field-control"
                   placeholder="tu.correo@ejemplo.com"
                   required
-                  autocomplete="email"
+                  autocomplete="username"
                 />
               </div>
               <div class="field-error-msg" id="err-correo" style="display:none;"></div>
@@ -187,6 +188,7 @@ import "../../components/styles/auth-premium.css";
                 <input
                   type="tel"
                   id="telefonoInput"
+                  name="telefono"
                   class="field-control"
                   placeholder="Ej. 3101234567"
                   maxlength="10"
@@ -208,8 +210,10 @@ import "../../components/styles/auth-premium.css";
                 <input
                   type="password"
                   id="passwordInput"
+                  name="contrasena"
                   class="field-control"
                   placeholder="Mínimo 8 caracteres"
+                  minlength="8"
                   required
                   autocomplete="new-password"
                 />
@@ -228,6 +232,7 @@ import "../../components/styles/auth-premium.css";
                 <input
                   type="password"
                   id="confirmPasswordInput"
+                  name="confirmarContrasena"
                   class="field-control"
                   placeholder="Repite tu contraseña"
                   required
@@ -586,6 +591,15 @@ import "../../components/styles/auth-premium.css";
       let currentStep = 1;
       let formEnviado = false;
       const apiBase = `${window.location.protocol}//${window.location.hostname}:8000/api`;
+      async function fetchConTiempoLimite(url, opciones, milisegundos = 20000) {
+        const controlador = new AbortController();
+        const temporizador = window.setTimeout(() => controlador.abort(), milisegundos);
+        try {
+          return await fetch(url, { ...opciones, signal: controlador.signal });
+        } finally {
+          window.clearTimeout(temporizador);
+        }
+      }
       let googlePendiente = null;
       try {
         googlePendiente = JSON.parse(sessionStorage.getItem("googlePendiente") || "null");
@@ -617,12 +631,6 @@ import "../../components/styles/auth-premium.css";
         const correoGoogle = document.getElementById("correoInput");
         correoGoogle.value = String(googlePendiente.correo || "");
         correoGoogle.readOnly = true;
-        const contrasena = document.getElementById("passwordInput");
-        const confirmarContrasena = document.getElementById("confirmPasswordInput");
-        if (contrasena) contrasena.required = false;
-        if (confirmarContrasena) confirmarContrasena.required = false;
-        contrasena?.closest(".form-grid-2")?.setAttribute("hidden", "");
-        document.getElementById("passwordMeter")?.setAttribute("hidden", "");
       }
 
       // Inicializar selectores de días y años
@@ -783,11 +791,10 @@ import "../../components/styles/auth-premium.css";
           errTel.style.display = "none";
         }
 
-        // Las cuentas de Google usan autenticación Google; no se exige contraseña local.
         const errConfirm = document.getElementById("err-confirmPassword");
-        if (!registroConGoogle) {
+        {
           const rulesPassed = rules.filter((r) => r.test(pw)).length;
-          if (rulesPassed < 4) {
+          if (pw.length < 8 || rulesPassed < 4) {
             errConfirm.textContent = "La contraseña debe cumplir con los requisitos mínimos de seguridad.";
             errConfirm.style.display = "flex";
             valid = false;
@@ -798,16 +805,13 @@ import "../../components/styles/auth-premium.css";
           } else {
             errConfirm.style.display = "none";
           }
-        } else {
-          errConfirm.style.display = "none";
         }
-
         if (valid) {
           state.nombres = nombres;
           state.apellidos = apellidos;
           state.correo = correo;
           state.telefono = telefono;
-          state.contrasena = registroConGoogle ? "" : pw;
+          state.contrasena = pw;
         }
 
         return valid;
@@ -982,6 +986,7 @@ import "../../components/styles/auth-premium.css";
           ? {
               registroToken: googlePendiente.registroToken,
               rol: 3,
+              contrasena: payload.contrasena,
               nombre: payload.nombre,
               telefono: payload.telefono,
               ubicacion: payload.ubicacion,
@@ -994,7 +999,7 @@ import "../../components/styles/auth-premium.css";
 
         try {
           const endpointRegistro = registroConGoogle ? `${apiBase}/auth/google/completar` : `${apiBase}/auth/registro`;
-          const response = await fetch(endpointRegistro, {
+          const response = await fetchConTiempoLimite(endpointRegistro, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(payloadSolicitud),
@@ -1007,11 +1012,14 @@ import "../../components/styles/auth-premium.css";
           }
 
           if (registroConGoogle) sessionStorage.removeItem("googlePendiente");
-
-          // Éxito: Ocultar pasos y mostrar confirmación pendiente
-          document.querySelectorAll(".wizard-step-panel").forEach((p) => (p.style.display = "none"));
-          document.querySelector(".wizard-progress-bar").style.display = "none";
-          document.getElementById("stepSuccessPanel").style.display = "block";
+          localStorage.setItem("token", data.token);
+          localStorage.setItem("usuario", JSON.stringify(data.usuario || {
+            id: data.idUsuario,
+            nombre: payload.nombre,
+            correo: payload.correo,
+            rol: 3,
+          }));
+          window.location.assign("/cliente");
         } catch (error) {
           generalErrorText.textContent = error instanceof TypeError
             ? "No se pudo conectar con la API de Hilf'e en el puerto 8000. Inicia el servidor Deno y verifica que XAMPP MySQL siga activo."
@@ -1036,8 +1044,10 @@ import "../../components/styles/auth-premium.css";
 
       async function cargarDocumentosLegales() {
         if (docMap) return;
+        const controlador = new AbortController();
+        const temporizador = window.setTimeout(() => controlador.abort(), 10000);
         try {
-          const res = await fetch(`${apiBase}/legal/documentos`);
+          const res = await fetch(`${apiBase}/legal/documentos`, { signal: controlador.signal });
           if (res.ok) {
             const list = await res.json();
             docMap = {};
@@ -1047,6 +1057,8 @@ import "../../components/styles/auth-premium.css";
           }
         } catch {
           // fallback
+        } finally {
+          window.clearTimeout(temporizador);
         }
       }
 

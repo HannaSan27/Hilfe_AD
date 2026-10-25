@@ -2,10 +2,12 @@
 Hilfe_Astro/ASTRO_HILFE/node_modules/
 Hilfe_Astro/ASTRO_HILFE/dist/
 Hilfe_Astro/ASTRO_HILFE/.astro/
+Hilfe_Astro/ASTRO_HILFE/.env
 
 # Deno
 Hilfe_Deno/SERVER_HILFE/.env
 Hilfe_Deno/SERVER_HILFE/node_modules/
+Hilfe_Deno/SERVER_HILFE/uploads/
 
 # Sistema operativo / editor
 .DS_Store

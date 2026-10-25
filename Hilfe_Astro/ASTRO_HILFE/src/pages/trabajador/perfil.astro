@@ -16,18 +16,27 @@ import '../../components/styles/design-system.css';
 					<div class="summary-copy"><h1 id="trabajadorNombre"></h1><p id="trabajadorUbicacion"></p><strong id="servicioResumen"></strong><div class="summary-tags"><span id="badgeVerificacion" style="display:inline-flex;align-items:center;gap:4px;font-size:0.8rem;padding:3px 9px;border-radius:12px;font-weight:700;"></span><span id="trabajadorCategoria"></span><span id="totalResenas"></span><span id="promedioResumen"></span></div></div>
 				</section>
 				<section class="profile-card"><h2>Descripción profesional</h2><p id="perfilProfesionalDescripcion" hidden></p><h3 id="servicioTitulo"></h3><p id="servicioDescripcion"></p><div class="summary-tags"><span id="categoriaDescripcion"></span><span id="experienciaProfesional"></span><span id="disponibilidadResumen"></span></div></section>
-				<section class="profile-card"><h2>Trabajos realizados</h2><div class="work-gallery" id="galeriaTrabajos"><p>Cargando fotos...</p></div></section>
-				<section class="profile-card"><h2 id="calificacionesTitulo">Calificaciones</h2><div class="rating-summary"><strong id="promedioCalificaciones">0.0</strong><span id="estrellasResumen">☆☆☆☆☆</span><small id="cantidadCalificaciones">0 reseñas</small></div><div id="listaCalificaciones"></div></section>
+						<section class="profile-card"><div class="gallery-heading"><div><h2>Trabajos realizados</h2><p>Conoce algunos de los proyectos de este trabajador.</p></div><span id="galleryCount" class="gallery-count" hidden></span></div><div class="work-gallery" id="galeriaTrabajos"><p class="gallery-state">Cargando fotos...</p></div></section>
+				<section class="profile-card"><h2 id="calificacionesTitulo">Calificaciones</h2><div class="rating-summary"><strong id="promedioCalificaciones">0.0</strong><span id="estrellasResumen">☆☆☆☆☆</span><small id="cantidadCalificaciones">0 reseñas</small></div><div id="ratingBreakdown" class="rating-breakdown" aria-label="Distribución de calificaciones"></div><div id="listaCalificaciones"></div></section>
 			</div>
 			<aside class="profile-card booking-card">
-				<div class="booking-price"><strong id="precioServicio"></strong><small id="tipoServicio"></small><div><span id="estrellasLateral">☆☆☆☆☆</span><small id="calificacionLateral"></small></div></div>
-				<div class="booking-details"><p><b>Ubicación</b><span id="ubicacionLateral"></span></p><p><b>Contacto</b><span id="telefonoLateral"></span></p><p><b>Disponibilidad</b><span id="horariosLateral"></span></p></div>
-				<button type="button" class="booking-open" id="abrirAgendamiento">▣ Agendar servicio</button>
+				<div class="booking-price"><strong id="precioServicio"></strong><small class="booking-price-label">Precio del servicio</small><div class="booking-rating"><span id="estrellasLateral" aria-label="Calificación">☆☆☆☆☆</span><small id="calificacionLateral"></small></div><p id="bookingServiceTitle" class="booking-service-title"></p></div>
+				<div class="booking-details"><p><b>Ubicación</b><span id="ubicacionLateral"></span></p><p><b>Contacto</b><span id="telefonoLateral"></span></p><p><b>Especialidad</b><span id="especialidadLateral"></span></p><p><b>Experiencia</b><span id="experienciaLateral"></span></p><p><b>Disponibilidad</b><span id="horariosLateral"></span></p></div>
+				<button type="button" class="booking-open" id="abrirAgendamiento"><svg aria-hidden="true" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 10h18"/></svg> Agendar servicio</button>
 				<p class="booking-note">Servicio disponible en tu zona</p>
 			</aside>
 		</div>
 	</main>
 	<div id="solicitudConfirmada" class="booking-success-toast" role="status" aria-live="polite" hidden></div>
+	<div class="gallery-lightbox" id="galleryLightbox" hidden>
+		<section class="gallery-lightbox-dialog" role="dialog" aria-modal="true" aria-label="Vista de fotos de trabajos">
+			<button type="button" class="gallery-lightbox-close" id="galleryClose" aria-label="Cerrar vista de fotos">×</button>
+			<button type="button" class="gallery-lightbox-nav gallery-lightbox-prev" id="galleryPrev" aria-label="Foto anterior">‹</button>
+			<figure class="gallery-lightbox-figure"><figcaption id="galleryLightboxCaption"></figcaption></figure>
+			<button type="button" class="gallery-lightbox-nav gallery-lightbox-next" id="galleryNext" aria-label="Foto siguiente">›</button>
+			<p class="gallery-lightbox-position" id="galleryPosition" aria-live="polite"></p>
+		</section>
+	</div>
 	<div class="booking-overlay" id="modalAgendamiento" hidden>
 		<section class="booking-modal" role="dialog" aria-modal="true" aria-labelledby="tituloAgendamiento">
 			<header><h2 id="tituloAgendamiento">Agendar servicio</h2><button type="button" id="cerrarAgendamiento" aria-label="Cerrar">×</button></header>
@@ -41,8 +50,8 @@ import '../../components/styles/design-system.css';
 				<p id="iniciarSesionAviso" class="form-message" hidden><a href="/login/login">Inicia sesión como cliente para agendar este servicio.</a></p>
 				<form id="solicitudForm">
 					<label class="modal-field full-field" for="servicioId">Servicio<select id="servicioId" required></select></label>
-					<label class="modal-field full-field" for="descripcion">¿Qué necesitas?<textarea id="descripcion" rows="3" maxlength="500" placeholder="Describe lo que necesitas..."></textarea></label>
-					<div class="suggestions"><span>Sugerencias:</span><button type="button" data-sugerencia="Reparación">Reparación</button><button type="button" data-sugerencia="Instalación">Instalación</button><button type="button" data-sugerencia="Diagnóstico">Diagnóstico</button><button type="button" data-sugerencia="Limpieza">Limpieza</button></div>
+					<label class="modal-field full-field" for="descripcion">¿Qué necesitas?<textarea id="descripcion" rows="4" maxlength="500" placeholder="Cuéntale al trabajador qué necesitas..."></textarea><small class="description-count"><span id="descripcionCount">0</span> / 500</small></label>
+					<div class="suggestions"><span>Elige una sugerencia para empezar:</span><button type="button" data-sugerencia="Reparación">Reparación</button><button type="button" data-sugerencia="Instalación">Instalación</button><button type="button" data-sugerencia="Diagnóstico">Diagnóstico</button><button type="button" data-sugerencia="Limpieza">Limpieza</button></div>
 					<label class="modal-field" for="fechaServicio">Fecha<input id="fechaServicio" type="date" required /></label>
 					<label class="modal-field" for="horaServicio">Hora<input id="horaServicio" type="time" required /></label>
 					<div id="avisoHorario" class="booking-slot-notice full-field" role="status" hidden></div>
@@ -66,6 +75,9 @@ import '../../components/styles/design-system.css';
 			var horariosActuales = [];
 			var horariosOcupados = [];
 			var solicitudOcupados = 0;
+			var fotosGaleria = [];
+			var indiceFoto = 0;
+			var focoGaleriaAnterior = null;
 			var modal = document.getElementById('modalAgendamiento');
 			var form = document.getElementById('solicitudForm');
 			var mensaje = document.getElementById('solicitudMensaje');
@@ -159,30 +171,70 @@ import '../../components/styles/design-system.css';
 			}
 			function cargarGaleria(servicio) {
 				var galeria = document.getElementById('galeriaTrabajos');
+				var contador = document.getElementById('galleryCount');
 				galeria.replaceChildren();
+				fotosGaleria = [];
+				contador.hidden = true;
 				var carga = document.createElement('p');
-				carga.textContent = 'Cargando fotos...';
+				carga.className = 'gallery-state';
+				carga.textContent = 'Cargando fotos…';
 				galeria.appendChild(carga);
 				return fetch(api + '/imagenes-trabajos?servicio=' + encodeURIComponent(servicio.Id_Servicio))
 					.then(function (r) { if (!r.ok) throw new Error('No fue posible cargar las fotos.'); return r.json(); })
 					.then(function (data) {
 						var imagenes = listaDe(data);
 						galeria.replaceChildren();
-						if (!imagenes.length) { var vacia = document.createElement('p'); vacia.textContent = 'Este trabajador aún no ha publicado fotos de este servicio.'; galeria.appendChild(vacia); return; }
-						var cargadas = 0;
-						imagenes.forEach(function (imagen) {
+						if (!imagenes.length) {
+							var vacia = document.createElement('div'); vacia.className = 'gallery-empty';
+							vacia.innerHTML = '<span class="gallery-empty-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/></svg></span><strong>Aún no hay fotos publicadas</strong><span>Este trabajador podrá mostrar aquí sus próximos trabajos.</span>';
+							galeria.appendChild(vacia); return;
+						}
+						imagenes.forEach(function (imagen, indice) {
+							var boton = document.createElement('button'); boton.type = 'button'; boton.className = 'gallery-tile';
+							boton.setAttribute('aria-label', 'Ver foto ' + (indice + 1) + ' de ' + imagenes.length);
 							var foto = document.createElement('img');
 							foto.alt = 'Trabajo realizado: ' + (servicio.Titulo || 'servicio');
 							foto.src = api + '/imagenes-trabajos/' + encodeURIComponent(imagen.Id_Imagen) + '/archivo';
-							foto.addEventListener('load', function () { cargadas++; }, { once: true });
+							foto.loading = 'lazy';
+							foto.decoding = 'async';
+							boton.addEventListener('click', function () { abrirFoto(indice, boton); });
 							foto.addEventListener('error', function () {
-								foto.remove();
-								if (!galeria.querySelector('img')) { var aviso = document.createElement('p'); aviso.textContent = 'Las fotos están registradas, pero sus archivos no están disponibles en el servidor.'; galeria.appendChild(aviso); }
+								boton.remove();
+								fotosGaleria = fotosGaleria.filter(function (registrada) { return registrada.src !== foto.src; });
+								var restantes = galeria.querySelectorAll('.gallery-tile').length;
+								if (restantes) contador.textContent = restantes + (restantes === 1 ? ' foto' : ' fotos');
+								else { contador.hidden = true; var aviso = document.createElement('p'); aviso.className = 'gallery-state'; aviso.textContent = 'Las fotos registradas no están disponibles en este momento.'; galeria.appendChild(aviso); }
 							}, { once: true });
-							galeria.appendChild(foto);
+							boton.appendChild(foto); galeria.appendChild(boton);
 						});
+						fotosGaleria = Array.from(galeria.querySelectorAll('.gallery-tile img')).map(function (foto) { return { src: foto.src, alt: foto.alt }; });
+						contador.textContent = imagenes.length + (imagenes.length === 1 ? ' foto' : ' fotos'); contador.hidden = false;
 					});
 			}
+			function mostrarFoto() {
+				if (!fotosGaleria.length) return;
+				var foto = fotosGaleria[indiceFoto];
+				var figura = document.querySelector('.gallery-lightbox-figure');
+				var imagen = document.getElementById('galleryLightboxImage');
+				if (!imagen) { imagen = document.createElement('img'); imagen.id = 'galleryLightboxImage'; figura.insertBefore(imagen, figura.firstChild); }
+				imagen.src = foto.src;
+				imagen.alt = foto.alt;
+				document.getElementById('galleryLightboxCaption').textContent = foto.alt;
+				document.getElementById('galleryPosition').textContent = (indiceFoto + 1) + ' / ' + fotosGaleria.length;
+			}
+			function abrirFoto(indice, activador) {
+				if (!fotosGaleria.length) return;
+				indiceFoto = indice; focoGaleriaAnterior = activador;
+				var visor = document.getElementById('galleryLightbox'); visor.hidden = false;
+				document.body.style.overflow = 'hidden'; mostrarFoto(); document.getElementById('galleryClose').focus();
+			}
+			function cerrarFoto() {
+				var visor = document.getElementById('galleryLightbox'); if (visor.hidden) return;
+				visor.hidden = true; document.body.style.overflow = '';
+				var imagen = document.getElementById('galleryLightboxImage'); if (imagen) imagen.remove();
+				if (focoGaleriaAnterior && focoGaleriaAnterior.isConnected) focoGaleriaAnterior.focus();
+			}
+			function moverFoto(delta) { if (!fotosGaleria.length) return; indiceFoto = (indiceFoto + delta + fotosGaleria.length) % fotosGaleria.length; mostrarFoto(); }
 			function dibujarCalificaciones() {
 				var promedio = calificaciones.length ? calificaciones.reduce(function (suma, c) { return suma + (Number(c.Puntaje) || 0); }, 0) / calificaciones.length : 0;
 				document.getElementById('promedioCalificaciones').textContent = promedio.toFixed(1);
@@ -192,6 +244,18 @@ import '../../components/styles/design-system.css';
 				document.getElementById('promedioResumen').textContent = promedio.toFixed(1) + ' ★';
 				document.getElementById('estrellasLateral').textContent = estrellas(promedio);
 				document.getElementById('calificacionLateral').textContent = promedio.toFixed(1) + ' (' + calificaciones.length + ')';
+				var distribucion = document.getElementById('ratingBreakdown');
+				distribucion.replaceChildren();
+				distribucion.hidden = calificaciones.length === 0;
+				for (var puntaje = 5; puntaje >= 1; puntaje--) {
+					var cantidad = calificaciones.filter(function (c) { return Math.round(Number(c.Puntaje) || 0) === puntaje; }).length;
+					var fila = document.createElement('div'); fila.className = 'rating-breakdown-row';
+					var etiqueta = document.createElement('span'); etiqueta.textContent = puntaje + ' ★';
+					var pista = document.createElement('span'); pista.className = 'rating-bar-track'; pista.setAttribute('aria-hidden', 'true');
+					var barra = document.createElement('span'); barra.className = 'rating-bar-fill'; barra.style.width = (calificaciones.length ? cantidad / calificaciones.length * 100 : 0) + '%'; pista.appendChild(barra);
+					var total = document.createElement('small'); total.textContent = String(cantidad);
+					fila.append(etiqueta, pista, total); distribucion.appendChild(fila);
+				}
 				var lista = document.getElementById('listaCalificaciones');
 				lista.replaceChildren();
 				if (!calificaciones.length) { var vacia = document.createElement('p'); vacia.textContent = 'Este trabajador aún no tiene calificaciones.'; lista.appendChild(vacia); return; }
@@ -214,7 +278,9 @@ import '../../components/styles/design-system.css';
 				document.getElementById('servicioDescripcion').textContent = servicio.Descripcion || 'Sin descripción disponible.';
 				document.getElementById('categoriaDescripcion').textContent = categoria;
 				document.getElementById('precioServicio').textContent = precioDe(servicio);
-				document.getElementById('tipoServicio').textContent = servicio.TipoServicio || 'Por servicio';
+				document.getElementById('bookingServiceTitle').textContent = titulo;
+				document.getElementById('especialidadLateral').textContent = categoria;
+				document.getElementById('experienciaLateral').textContent = trabajador.Experiencia || 'No especificada';
 				document.getElementById('modalServicio').textContent = titulo;
 				document.getElementById('modalPrecio').textContent = 'Desde ' + precioDe(servicio);
 				document.getElementById('ubicacionLateral').textContent = trabajador.Ubicacion || 'No especificada';
@@ -253,14 +319,36 @@ import '../../components/styles/design-system.css';
 			document.getElementById('cerrarAgendamiento').addEventListener('click', cerrarModal);
 			document.getElementById('cancelarAgendamiento').addEventListener('click', cerrarModal);
 			modal.addEventListener('click', function (event) { if (event.target === modal) cerrarModal(); });
-			document.addEventListener('keydown', function (event) { if (event.key === 'Escape' && !modal.hidden) cerrarModal(); });
+			document.addEventListener('keydown', function (event) {
+				var visor = document.getElementById('galleryLightbox');
+				if (!visor.hidden) {
+					if (event.key === 'Escape') cerrarFoto();
+					else if (event.key === 'ArrowRight') { event.preventDefault(); moverFoto(1); }
+					else if (event.key === 'ArrowLeft') { event.preventDefault(); moverFoto(-1); }
+					return;
+				}
+				if (event.key === 'Escape' && !modal.hidden) cerrarModal();
+			});
+			document.getElementById('galleryClose').addEventListener('click', cerrarFoto);
+			document.getElementById('galleryPrev').addEventListener('click', function () { moverFoto(-1); });
+			document.getElementById('galleryNext').addEventListener('click', function () { moverFoto(1); });
+			document.getElementById('galleryLightbox').addEventListener('click', function (event) { if (event.target.id === 'galleryLightbox') cerrarFoto(); });
 			document.querySelectorAll('[data-sugerencia]').forEach(function (boton) {
 				boton.addEventListener('click', function () {
 					var campo = document.getElementById('descripcion');
-					campo.value = campo.value ? campo.value + ' ' + boton.dataset.sugerencia : boton.dataset.sugerencia;
+					var plantillas = {
+						'Reparación': 'Necesito reparar [equipo o elemento]. El problema que presenta es [describe la falla] y comenzó [cuándo].',
+						'Instalación': 'Necesito instalar [equipo o elemento] en [lugar]. Ya cuento con [materiales o equipo] / necesito asesoría para conseguirlos.',
+						'Diagnóstico': 'Necesito revisar [equipo o elemento] porque [describe qué ocurre]. El problema empezó [cuándo o en qué situación].',
+						'Limpieza': 'Necesito una limpieza de [espacio, equipo o superficie]. El área aproximada es [tamaño] y requiere atención en [detalle].'
+					};
+					campo.value = plantillas[boton.dataset.sugerencia] || '';
+					document.getElementById('descripcionCount').textContent = String(campo.value.length);
+					document.querySelectorAll('[data-sugerencia]').forEach(function (otra) { var activa = otra === boton; otra.classList.toggle('is-selected', activa); otra.setAttribute('aria-pressed', String(activa)); });
 					campo.focus();
 				});
 			});
+			document.getElementById('descripcion').addEventListener('input', function (event) { document.getElementById('descripcionCount').textContent = String(event.target.value.length); });
 			selector.addEventListener('change', function () {
 				limpiarErrorSolicitud();
 				var seleccionado = servicios.find(function (s) { return String(s.Id_Servicio) === selector.value; });
@@ -387,7 +475,7 @@ import '../../components/styles/design-system.css';
 		})();
 	</script>
 	<style>
-		.booking-error-alert{display:flex;align-items:flex-start;gap:12px;margin:0 0 14px;padding:14px 16px;border:1px solid #fecaca;border-left:5px solid #dc2626;border-radius:10px;background:#fff1f2;color:#991b1b;box-shadow:0 4px 12px rgba(185,28,28,.12)}.booking-error-alert[hidden]{display:none!important}.booking-error-icon{display:grid;place-items:center;flex:0 0 24px;width:24px;height:24px;border-radius:50%;background:#dc2626;color:#fff;font-size:16px;font-weight:800;line-height:1}.booking-error-copy{display:grid;gap:4px;padding-top:1px}.booking-error-copy strong{font-size:14px;line-height:1.35}.booking-error-copy p{margin:0;color:#7f1d1d;font-size:12px;line-height:1.5}
+		.booking-error-alert{display:flex;align-items:flex-start;gap:12px;margin:0 0 14px;padding:14px 16px;border:1px solid #fecaca;border-radius:10px;background:#fff1f2;color:#991b1b;box-shadow:0 4px 12px rgba(185,28,28,.12)}.booking-error-alert[hidden]{display:none!important}.booking-error-icon{display:grid;place-items:center;flex:0 0 24px;width:24px;height:24px;border-radius:50%;background:#dc2626;color:#fff;font-size:16px;font-weight:800;line-height:1}.booking-error-copy{display:grid;gap:4px;padding-top:1px}.booking-error-copy strong{font-size:14px;line-height:1.35}.booking-error-copy p{margin:0;color:#7f1d1d;font-size:12px;line-height:1.5}
 		.booking-slot-notice{padding:9px 11px;border-radius:8px;background:#eff6ff;color:#355b91;font-size:12px;line-height:1.45}.booking-slot-notice.is-error{background:#fff1f2;color:#b42336}.booking-slot-notice[hidden]{display:none!important}
 		.profile-page{max-width:1060px;margin:0 auto;padding:28px 20px 56px;color:#172033}.profile-layout{display:grid;grid-template-columns:minmax(0,2fr) minmax(270px,.95fr);gap:16px;align-items:start}.profile-main{display:grid;gap:14px}.profile-card{background:#fff;border:1px solid #e4eaf2;border-radius:14px;box-shadow:0 2px 8px rgba(15,35,65,.04);padding:18px}.profile-card h2{font-size:16px;margin:0 0 14px;color:#1c2a40}.profile-card h3{font-size:15px;margin:0 0 8px}.profile-card p{color:#65748b;line-height:1.55;margin:0 0 12px;font-size:14px}.worker-summary{display:flex;align-items:center;gap:16px}.worker-avatar{width:64px;height:64px;border-radius:50%;overflow:hidden;flex:none;background:#635bdb;display:grid;place-items:center}.worker-avatar .photo-placeholder{color:#fff;font-size:26px;font-weight:700}.worker-avatar img{width:100%;height:100%;object-fit:cover}.summary-copy h1{font-size:23px;margin:0 0 3px}.summary-copy p{font-size:12px;margin:0 0 5px}.summary-copy>strong{font-size:13px;color:#2563eb}.summary-tags{display:flex;gap:7px;flex-wrap:wrap;margin-top:8px}.summary-tags span{background:#eff5ff;border-radius:20px;color:#3269bd;padding:4px 9px;font-size:11px}.work-gallery{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}.work-gallery img{width:100%;height:130px;object-fit:cover;border-radius:8px}.work-gallery p{grid-column:1/-1}.rating-summary{display:flex;align-items:center;gap:10px;background:#f7f8fa;padding:12px;border-radius:8px;margin-bottom:12px}.rating-summary strong{font-size:28px;color:#f4aa00}.rating-summary span,.booking-price div span{color:#f2ac00;letter-spacing:2px}.rating-summary small{color:#718096}.review-item{padding:12px 0;border-bottom:1px solid #e8edf3}.review-item:last-child{border:0}.review-item strong{color:#f3ad00}.review-item p{margin:5px 0 0}.review-date{font-size:11px;color:#8793a5}.booking-card{padding:0;overflow:hidden;position:sticky;top:20px}.booking-price{background:linear-gradient(120deg,#2563eb,#1450a5);color:white;text-align:center;padding:18px 12px}.booking-price>strong{display:block;font-size:30px}.booking-price>small{display:block;font-size:11px;margin:1px 0 8px}.booking-price div{display:flex;justify-content:center;align-items:center;gap:6px}.booking-price div span{color:#ffca28}.booking-price div small{font-size:10px;color:#fff}.booking-details{padding:12px}.booking-details p{background:#f6f8fb;border-radius:7px;padding:9px 10px;margin:0 0 7px;display:grid;gap:3px;font-size:11px}.booking-details b{font-size:9px;color:#8793a5;text-transform:uppercase}.booking-details span{color:#3b4960}.booking-open,.booking-confirm{border:0;border-radius:24px;background:#2563eb;color:#fff;font-weight:700;padding:12px 18px;cursor:pointer}.booking-open{display:block;width:calc(100% - 24px);margin:0 12px;box-shadow:0 4px 12px #2563eb40}.booking-note{text-align:center;font-size:10px!important;margin:8px!important}.booking-overlay{position:fixed;inset:0;z-index:2000;background:rgba(18,24,33,.56);backdrop-filter:blur(5px);display:grid;place-items:center;padding:16px}.booking-overlay[hidden]{display:none}.booking-modal{background:#fff;width:min(100%,520px);max-height:min(92vh,720px);border-radius:14px;overflow:hidden;box-shadow:0 20px 70px #0b122040;display:flex;flex-direction:column}.booking-modal>header{display:flex;align-items:center;justify-content:space-between;padding:15px 19px;border-bottom:1px solid #e7ecf2}.booking-modal>header h2{font-size:16px;margin:0}.booking-modal>header button{width:30px;height:30px;border:0;border-radius:50%;background:#f1f4f8;color:#607085;font-size:22px;cursor:pointer}.booking-modal-content{padding:16px 19px;overflow:auto}.selected-worker{display:flex;align-items:center;gap:10px;background:#f7f9fc;border:1px solid #e0e7f0;border-radius:10px;padding:10px 12px;margin-bottom:12px}.modal-avatar{width:34px;height:34px;border-radius:50%;background:#2866ec;color:#fff;display:grid;place-items:center;font-weight:700}.selected-worker div{display:grid;gap:3px;flex:1}.selected-worker strong{font-size:12px}.selected-worker small{font-size:10px;color:#7a879a}.selected-worker>b{color:#2563eb;font-size:14px}.modal-availability{background:#f7f9fc;border:1px solid #e0e7f0;border-radius:10px;padding:11px 13px;margin-bottom:13px}.modal-availability strong{display:block;font-size:11px;color:#718096;margin-bottom:7px;text-transform:uppercase}.modal-availability span{display:inline-block;border:1px solid #dbe5f3;border-radius:20px;padding:5px 8px;margin:2px;font-size:10px;color:#48648d}.modal-field{display:flex;flex-direction:column;gap:6px;font-size:12px;color:#53627a}.modal-field input,.modal-field textarea,.modal-field select{width:100%;border:1px solid #dce4ef;border-radius:8px;padding:10px 11px;font:inherit;color:#27364c;background:#fff}.modal-field textarea{resize:vertical;min-height:74px}.modal-field input:focus,.modal-field textarea:focus,.modal-field select:focus{outline:2px solid #c9dbff;border-color:#7fa8ff}.profile-layout[hidden],.profile-error[hidden],.booking-modal form[hidden],.form-message[hidden]{display:none!important}.booking-modal form{display:grid;grid-template-columns:1fr 1fr;gap:12px}.full-field,.suggestions,.booking-modal form footer{grid-column:1/-1}.suggestions{display:flex;gap:6px;align-items:center;flex-wrap:wrap;font-size:10px;color:#8190a6}.suggestions button{border:1px solid #dce4ef;border-radius:18px;background:#fff;padding:5px 9px;color:#667891;font-size:10px;cursor:pointer}.booking-modal form footer{position:sticky;bottom:-16px;background:#fff;border-top:1px solid #e3e9f0;margin:2px -19px -16px;padding:12px 19px;display:flex;justify-content:flex-end;gap:8px}.booking-cancel{border:1px solid #dce4ef;background:#fff;color:#53627a;border-radius:8px;padding:10px 16px;cursor:pointer}.booking-confirm{border-radius:8px;padding:10px 16px}.booking-confirm:disabled{opacity:.6;cursor:wait}.form-message{padding:10px;background:#f0f6ff;border-radius:8px;color:#355b91;font-size:13px;margin:0 0 12px}.profile-error{max-width:1060px;margin:24px auto;padding:14px;background:#fff2f2;color:#a33;border-radius:10px}@media(max-width:760px){.profile-layout{grid-template-columns:1fr}.booking-card{position:static;grid-row:1}.profile-page{padding:18px 12px 40px}.work-gallery{grid-template-columns:repeat(2,minmax(0,1fr))}.work-gallery img{height:120px}.booking-modal{max-height:94vh}.booking-modal-content{padding:14px}}
 	</style>
@@ -432,11 +520,19 @@ import '../../components/styles/design-system.css';
 		.summary-copy > strong { display: inline-block; font-size: 15px; line-height: 1.5; }
 		.summary-tags { gap: 8px; margin-top: 12px; }
 		.summary-tags span { padding: 6px 11px; font-size: 12px; }
-		.work-gallery { grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 14px; align-items: start; }
-		.work-gallery img { height: auto; aspect-ratio: 4 / 3; max-height: 250px; border-radius: 14px; }
+		.work-gallery { grid-template-columns: repeat(auto-fit, minmax(min(100%, 250px), 1fr)); gap: 14px; align-items: start; }
+		.work-gallery img { display: block; width: 100%; height: auto; aspect-ratio: 4 / 3; max-height: none; object-fit: cover; border-radius: 14px; }
 		.work-gallery img:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(24, 45, 78, .14); }
 		.rating-summary { flex-wrap: wrap; gap: 12px 18px; padding: 16px 18px; border-radius: 12px; }
 		.rating-summary strong { font-size: 36px; }
+		.rating-summary { margin-bottom: 14px; }
+		.rating-breakdown { display: grid; gap: 8px; margin: 0 2px 15px; }
+		.rating-breakdown[hidden] { display: none !important; }
+		.rating-breakdown-row { display: grid; grid-template-columns: 38px minmax(0, 1fr) 24px; align-items: center; gap: 10px; color: #78869b; font-size: 11px; }
+		.rating-breakdown-row > span:first-child { color: #52627a; font-weight: 700; }
+		.rating-breakdown-row small { color: #8793a5; text-align: right; font-size: 10px; }
+		.rating-bar-track { height: 7px; overflow: hidden; border-radius: 99px; background: #edf0f5; }
+		.rating-bar-fill { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, #f6b81c, #ffd76b); }
 		.review-item { padding: 18px 2px; }
 		.review-item p { margin-top: 8px; }
 		.booking-card { padding: 0; top: 96px; border-radius: 20px; }
@@ -480,5 +576,12 @@ import '../../components/styles/design-system.css';
 			.work-gallery { grid-template-columns: minmax(0, 1fr); }
 			.booking-open { width: calc(100% - 28px); margin-inline: 14px; }
 		}
+		.gallery-heading{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:16px}.gallery-heading h2{margin:0 0 5px!important}.gallery-heading p{margin:0!important;color:var(--text-secondary,#64748b);font-size:13px!important;line-height:1.5!important}.gallery-count{flex:none;padding:6px 10px;border-radius:99px;background:var(--primary-soft,#eff6ff);color:var(--primary-dark,#1d4ed8);font-size:12px;font-weight:700}.gallery-count[hidden]{display:none!important}
+		.work-gallery{grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}.gallery-tile{position:relative;display:block;width:100%;padding:0;overflow:hidden;aspect-ratio:4/3;border:0;border-radius:12px;background:var(--gray-100,#f1f5f9);cursor:zoom-in}.gallery-tile img{display:block;width:100%;height:100%;max-height:none;object-fit:cover;transition:transform .25s ease,filter .25s ease}.gallery-tile:hover img{transform:scale(1.04);filter:saturate(1.06)}.gallery-tile:focus-visible,.gallery-lightbox button:focus-visible{outline:3px solid var(--primary,#2563eb);outline-offset:3px}.gallery-state{grid-column:1/-1;margin:0!important;padding:26px 18px;border:1px dashed var(--border,#dce4ef);border-radius:12px;color:var(--text-secondary,#64748b);text-align:center}.gallery-empty{grid-column:1/-1;min-height:210px;display:grid;justify-items:center;align-content:center;gap:9px;padding:25px;border-radius:14px;background:linear-gradient(145deg,var(--bg-card-alt,#f8fafc),var(--primary-soft,#eff6ff));text-align:center}.gallery-empty-icon{display:grid;place-items:center;width:46px;height:46px;border-radius:14px;background:var(--bg-card,#fff);color:var(--primary,#2563eb)}.gallery-empty-icon svg{width:23px;height:23px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}.gallery-empty strong{color:var(--text,#172033);font-size:15px}.gallery-empty>span:last-child{max-width:38ch;color:var(--text-secondary,#64748b);font-size:13px;line-height:1.5}
+		.gallery-lightbox{position:fixed;inset:0;z-index:3200;display:grid;place-items:center;padding:24px;background:rgba(8,13,24,.92)}.gallery-lightbox[hidden]{display:none!important}.gallery-lightbox-dialog{position:relative;display:grid;grid-template-columns:48px minmax(0,1fr) 48px;grid-template-rows:minmax(0,1fr) auto;align-items:center;gap:14px;width:min(100%,1120px);height:min(88vh,820px)}.gallery-lightbox figure{grid-column:2;grid-row:1;display:grid;justify-items:center;align-content:center;gap:12px;min-width:0;min-height:0;margin:0}.gallery-lightbox figure img{display:block;max-width:100%;max-height:calc(88vh - 90px);object-fit:contain;border-radius:8px}.gallery-lightbox figcaption{max-width:70ch;color:#e2e8f0;font-size:13px;text-align:center}.gallery-lightbox-close,.gallery-lightbox-nav{display:grid;place-items:center;border:1px solid rgba(255,255,255,.24);background:rgba(255,255,255,.1);color:#fff;cursor:pointer}.gallery-lightbox-close{position:absolute;top:0;right:0;width:42px;height:42px;border-radius:50%;font-size:27px}.gallery-lightbox-nav{grid-row:1;width:44px;height:44px;border-radius:50%;font-size:32px;line-height:1}.gallery-lightbox-prev{grid-column:1}.gallery-lightbox-next{grid-column:3}.gallery-lightbox-position{grid-column:2;grid-row:2;margin:0;color:#cbd5e1;font-size:12px;text-align:center;font-variant-numeric:tabular-nums}
+		.booking-price-label{margin:2px 0 10px!important;font-size:12px!important;opacity:.88}.booking-rating{display:flex;justify-content:center;align-items:center;gap:8px}.booking-rating>span{color:#ffca28!important;letter-spacing:2px}.booking-rating small{font-size:12px!important}.booking-service-title{margin:10px 0 0!important;color:#fff!important;font-size:14px!important;font-weight:700;line-height:1.4!important}.booking-details{display:grid;gap:8px}.booking-details p{margin:0!important;padding:12px 14px!important;border:1px solid var(--border-light,#f1f5f9);background:var(--bg-card-alt,#f8fafc)!important}.booking-details b{letter-spacing:.07em}.booking-details span{font-size:13px;line-height:1.45;overflow-wrap:anywhere}.booking-open{display:flex;align-items:center;justify-content:center;gap:10px;border-radius:12px!important;font-size:15px;transition:transform .18s ease,box-shadow .18s ease}.booking-open:hover{transform:translateY(-1px);box-shadow:0 9px 22px rgba(37,99,235,.24)}.booking-open svg{width:19px;height:19px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+		.modal-field textarea{resize:none!important;min-height:108px;height:108px;line-height:1.55}.description-count{align-self:flex-end;margin-top:-2px;color:var(--text-muted,#94a3b8);font-size:11px;font-variant-numeric:tabular-nums}.suggestions{gap:8px}.suggestions>span{margin-right:2px;font-size:12px}.suggestions button{padding:7px 11px;font-size:12px;transition:background .15s ease,border-color .15s ease,color .15s ease}.suggestions button:hover,.suggestions button.is-selected{border-color:var(--primary,#2563eb);background:var(--primary-soft,#eff6ff);color:var(--primary-dark,#1d4ed8)}.suggestions button:focus-visible{outline:2px solid var(--primary,#2563eb);outline-offset:2px}
+		@media(max-width:760px){.work-gallery{grid-template-columns:repeat(2,minmax(0,1fr))}.booking-details{grid-template-columns:repeat(2,minmax(0,1fr))}.booking-details p:last-child{grid-column:1/-1}}
+		@media(max-width:600px){.gallery-lightbox{padding:14px}.gallery-lightbox-dialog{grid-template-columns:36px minmax(0,1fr) 36px;gap:6px;width:100%;height:82vh}.gallery-lightbox-nav{width:34px;height:34px;font-size:25px}.gallery-lightbox figure img{max-height:calc(82vh - 90px)}.gallery-lightbox-close{top:-8px;right:-3px;width:38px;height:38px}.booking-details{grid-template-columns:minmax(0,1fr)}.booking-details p:last-child{grid-column:auto}.modal-field textarea{height:112px;min-height:112px}}
 	</style>
 </Layout>
