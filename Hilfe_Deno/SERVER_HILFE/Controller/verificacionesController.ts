@@ -14,6 +14,7 @@ import {
 } from "../Models/legalesModel.ts";
 import { nuevaConexion } from "../Models/conexion.ts";
 import { validarTipoDocumento, validarNumeroDocumento, validarFechaExpedicion } from "../Helpers/validaciones.ts";
+import { enviarCorreoBienvenidaAprobadaAscii } from "../Helpers/correoHelper.ts";
 
 function esAdmin(ctx: Context): boolean {
   const usuario = ctx.state.usuario as { id?: number; rol?: number } | undefined;
@@ -88,6 +89,13 @@ export async function aprobarSolicitudAdmin(ctx: RouterContext<string>) {
     // notas opcionales
   }
 
+  const solicitud = await obtenerSolicitudVerificacionPorId(id);
+  if (!solicitud) {
+    ctx.response.status = 404;
+    ctx.response.body = { mensaje: "Solicitud de verificaciÃ³n no encontrada" };
+    return;
+  }
+
   const exito = await aprobarVerificacion(id, adminId, body.notas);
   if (!exito) {
     ctx.response.status = 404;
@@ -95,11 +103,24 @@ export async function aprobarSolicitudAdmin(ctx: RouterContext<string>) {
     return;
   }
 
+  let correoEnviado = false;
+  try {
+    await enviarCorreoBienvenidaAprobadaAscii(
+      String(solicitud.Correo_Usuario),
+      String(solicitud.Nombre_Usuario),
+      Number(solicitud.Id_Rol),
+    );
+    correoEnviado = true;
+  } catch (error) {
+    console.error("No se pudo enviar el correo de bienvenida al aprobar la verificaciÃ³n:", error);
+  }
+
   ctx.response.status = 200;
   ctx.response.body = {
     mensaje: "Identidad del usuario verificada y aprobada correctamente.",
     idSolicitud: id,
     estado: "aprobado",
+    correoEnviado,
   };
 }
 
