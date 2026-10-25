@@ -442,7 +442,7 @@ const nombre = usuario.nombre;
 	<div class="modal-overlay" id="modalEditarServicio">
 		<div class="modal service-editor-modal">
 			<div class="modal-header">
-				<h3 id="tituloModalServicio">Editar servicio</h3>
+				<div class="service-modal-heading"><h3 id="tituloModalServicio">Editar servicio</h3><p>Cuéntales a tus clientes qué haces y cuándo pueden reservarte.</p></div>
 				<button type="button" class="btn-modal-close" id="cerrarEditarServicio" aria-label="Cerrar">&times;</button>
 			</div>
 			<form id="formEditarServicio">
@@ -453,7 +453,6 @@ const nombre = usuario.nombre;
 					<div class="form-group"><label for="editarCategoria">Categoría</label><select class="form-control" id="editarCategoria" required></select></div>
 					<div class="form-group"><label for="editarDescripcion">Descripción</label><textarea class="form-control" id="editarDescripcion" rows="3"></textarea></div>
 					<div class="form-group"><label for="editarPrecio">Precio</label><input class="form-control" id="editarPrecio" type="number" min="0" step="1" required /></div>
-					<div class="form-group"><label for="editarTipoServicio">Tipo de servicio</label><input class="form-control" id="editarTipoServicio" /></div>
 					</div>
 					<div class="form-group">
 						<div class="schedule-heading"><div><label>Disponibilidad</label><small>Define cuándo pueden reservar tus servicios.</small></div></div>
@@ -768,7 +767,6 @@ const nombre = usuario.nombre;
 				document.getElementById('editarTitulo').value = servicio.Titulo || '';
 				document.getElementById('editarDescripcion').value = servicio.Descripcion || '';
 				document.getElementById('editarPrecio').value = Number(servicio.Precio) || 0;
-				document.getElementById('editarTipoServicio').value = servicio.TipoServicio || '';
 				var selector = document.getElementById('editarCategoria');
 				selector.replaceChildren();
 				categorias.forEach(function (categoria) {
@@ -795,7 +793,6 @@ const nombre = usuario.nombre;
 				document.getElementById('editarTitulo').value = '';
 				document.getElementById('editarDescripcion').value = '';
 				document.getElementById('editarPrecio').value = '';
-				document.getElementById('editarTipoServicio').value = '';
 				pintarEditorHorarios([]);
 				var selector = document.getElementById('editarCategoria');
 				selector.replaceChildren();
@@ -855,7 +852,6 @@ const nombre = usuario.nombre;
 						Titulo: document.getElementById('editarTitulo').value.trim(),
 						Descripcion: document.getElementById('editarDescripcion').value.trim() || null,
 						Precio: Number(document.getElementById('editarPrecio').value),
-						TipoServicio: document.getElementById('editarTipoServicio').value.trim() || null
 					};
 					if (modoCreacion) {
 						if (!usuario?.id || Number(usuario.rol) !== 2) throw new Error('Inicia sesión como trabajador para agregar un servicio.');
@@ -1156,6 +1152,7 @@ const nombre = usuario.nombre;
 	</script>
 	<style>
 		.service-editor-modal{max-width:680px!important;max-height:min(90vh,860px)!important}.service-editor-modal #formEditarServicio{display:flex;flex-direction:column;min-height:0;flex:1}.service-editor-modal .modal-body{min-height:0;padding:22px 28px;overscroll-behavior:contain}.service-editor-modal .form-group{margin-bottom:16px}.service-editor-modal .form-group>label{display:block;margin-bottom:7px;font-weight:600}.service-editor-modal .schedule-heading{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}.service-editor-modal .schedule-heading label{margin:0!important;font-size:15px}.schedule-heading small,.schedule-help,.availability-247-option small{display:block;color:var(--text-secondary,#64748b);font-size:12px;font-weight:400}.availability-247-option{display:flex!important;align-items:center;gap:12px;padding:13px 15px;border:1px solid #cfe0ff;border-radius:12px;background:linear-gradient(120deg,#f4f8ff,#fff);cursor:pointer}.availability-247-option input{width:18px;height:18px;accent-color:#2563eb}.availability-247-option span{display:grid;gap:3px}.availability-247-option strong{color:var(--text,#172033);font-size:14px}.availability-247-message{margin:10px 0 0;padding:12px 14px;border:1px solid #b9e7ce;border-radius:10px;background:#effbf4;color:#187343;font-size:13px}.availability-247-message[hidden],.weekly-schedule-editor[hidden]{display:none!important}.weekly-schedule-editor{display:grid;gap:0;margin-top:12px;overflow:hidden;border:1px solid var(--border,#dce4ef);border-radius:12px;background:var(--bg-card,#fff)}.weekly-schedule-header,.weekly-schedule-row{display:grid;grid-template-columns:minmax(150px,1.2fr) minmax(140px,1fr) minmax(140px,1fr);gap:14px;align-items:center;padding:9px 16px}.weekly-schedule-header{background:var(--bg-body,#f5f7fb);color:var(--text-secondary,#64748b);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em}.weekly-schedule-row+.weekly-schedule-row{border-top:1px solid var(--border,#e5eaf1)}.weekly-schedule-day{display:flex;gap:10px;align-items:center;font-weight:500}.weekly-schedule-day input{width:17px;height:17px;accent-color:#2563eb}.weekly-schedule-row input[type="time"]{min-width:0;width:100%;min-height:38px;padding:6px 10px;border:1px solid #dce4ef;border-radius:8px;background:var(--bg-card,#fff);color:var(--text,#172033);font:inherit}.weekly-schedule-row input:disabled{opacity:.7}.schedule-help{margin-top:8px}.service-editor-modal .modal-footer{flex:0 0 auto;padding:14px 28px}.service-editor-modal .modal-header{padding:20px 28px 12px}.service-editor-modal .btn{min-height:42px}@media(max-width:600px){.service-editor-modal{max-height:94vh!important}.service-editor-modal .modal-body{padding:18px 16px}.service-editor-modal .modal-header{padding:16px 16px 10px}.service-editor-modal .modal-footer{padding:12px 16px}.weekly-schedule-header,.weekly-schedule-row{grid-template-columns:minmax(95px,1fr) minmax(96px,1fr) minmax(96px,1fr);gap:7px;padding:9px 8px}.weekly-schedule-day{gap:6px;font-size:12px}.weekly-schedule-row input[type="time"]{padding:5px;font-size:12px}}
+		.service-modal-heading{display:grid;gap:5px}.service-modal-heading h3{margin:0}.service-modal-heading p{margin:0;color:var(--text-secondary,#64748b);font-size:13px;line-height:1.45}
 		.weekly-time-field{display:grid;gap:4px;color:var(--text-secondary,#64748b);font-size:10px}.weekly-time-field span{font-weight:600}
 		@media(max-width:600px){.weekly-schedule-header{display:none}.weekly-schedule-row{grid-template-columns:1fr 1fr;gap:10px;padding:12px}.weekly-schedule-day{grid-column:1/-1;gap:8px;font-size:13px}.weekly-time-field input[type="time"]{padding:6px;font-size:13px}}
 		.worker-profile-heading { align-items: flex-end; margin-bottom: 22px; }
