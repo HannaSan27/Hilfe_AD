@@ -10,3 +10,4 @@ Hilfe_Deno/SERVER_HILFE/node_modules/
 # Sistema operativo / editor
 .DS_Store
 Thumbs.db
+.env

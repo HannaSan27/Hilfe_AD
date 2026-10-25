@@ -1,6 +1,7 @@
 ---
 import './styles/homenav.css';
 import UserMenu from './UserMenu.astro';
+import BotonBilletera from './BotonBilletera.astro';
 ---
 
 <nav class="navbar-hilfe" id="navbar">
@@ -40,6 +41,7 @@ import UserMenu from './UserMenu.astro';
 			</button>
 			<a href="/login/login" class="btn-login">Iniciar sesión</a>
 			<a href="/login/registrar" class="btn-register">Registrarse</a>
+			<BotonBilletera />
 			<UserMenu variant="nav" />
 		</div>
 		<button class="nav-toggle" id="navToggle" aria-label="Menú">
@@ -395,3 +397,7 @@ import UserMenu from './UserMenu.astro';
 		});
 	})();
 </script>
+<style is:global>
+  .nav-actions .btn-login[hidden],
+  .nav-actions .btn-register[hidden] { display: none !important; }
+</style>

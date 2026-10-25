@@ -4,6 +4,7 @@ import UserMenu from '../../components/UserMenu.astro';
 import '../../components/styles/design-system.css';
 import '../../components/styles/trabajador-index.css';
 import '../../components/styles/trabajador-panel-polish.css';
+import BotonBilletera from '../../components/BotonBilletera.astro';
 
 const usuario = { nombre: 'Trabajador', inicial: 'T', rol: 'Trabajador' };
 
@@ -49,65 +50,97 @@ const nombre = usuario.nombre;
 	</slot>
 
 	<nav class="navbar-hilfe" id="mainNav">
-		<div class="nav-inner">
-			<a href="/" class="logo">Hilf<span class="logo-accent">'e</span></a>
-			<div class="nav-actions">
-				<button type="button" class="theme-toggle" aria-label="Toggle theme">
-					<svg class="theme-icon-light" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
-					<svg class="theme-icon-dark" style="display:none" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
-				</button>
-				<UserMenu />
-			</div>
-		</div>
-	</nav>
+  <div class="nav-inner">
+    <a href="/" class="logo">Hilf<span class="logo-accent">'e</span></a>
+    <div class="nav-actions">
+      <button type="button" class="theme-toggle" aria-label="Toggle theme">
+        <svg class="theme-icon-light" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="5"/>
+          <line x1="12" y1="1" x2="12" y2="3"/>
+          <line x1="12" y1="21" x2="12" y2="23"/>
+          <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/>
+          <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
+          <line x1="1" y1="12" x2="3" y2="12"/>
+          <line x1="21" y1="12" x2="23" y2="12"/>
+          <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/>
+          <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+        </svg>
+        <svg class="theme-icon-dark" style="display:none" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+        </svg>
+      </button>
+      <BotonBilletera />
+      <UserMenu />
+    </div>
+  </div>
+</nav>
 
-	<div class="page-layout page-layout-offset">
-		<aside class="sidebar">
-			<div class="sidebar-section">General</div>
-			<button class="sidebar-item active" id="nav-dashboard" onclick="showSection('dashboard')">
-				<i class="bi bi-grid-1x2-fill"></i> Dashboard
-			</button>
+<div class="page-layout page-layout-offset">
+  <aside class="sidebar">
+    <div class="sidebar-section">General</div>
+    <button class="sidebar-item active" id="nav-dashboard" onclick="showSection('dashboard')">
+      <i class="bi bi-grid-1x2-fill"></i> Dashboard
+    </button>
 
-			<div class="sidebar-section">Mis Servicios</div>
-			<button class="sidebar-item" id="nav-servicios" onclick="showSection('servicios')">
-				<i class="bi bi-briefcase-fill"></i> Mis Servicios
-			</button>
-			<button type="button" class="sidebar-item" onclick="abrirAgregarServicio()">
-				<i class="bi bi-plus-circle-fill"></i> Agregar Servicio
-			</button>
+    <div class="sidebar-section">Mis Servicios</div>
+    <button class="sidebar-item" id="nav-servicios" onclick="showSection('servicios')">
+      <i class="bi bi-briefcase-fill"></i> Mis Servicios
+    </button>
+    <button type="button" class="sidebar-item" onclick="abrirAgregarServicio()">
+      <i class="bi bi-plus-circle-fill"></i> Agregar Servicio
+    </button>
 
-			<div class="sidebar-section">Solicitudes</div>
-			<button class="sidebar-item" id="nav-solicitudes" onclick="showSection('solicitudes')" aria-label="Solicitudes, 0 pendientes">
-				<i class="bi bi-calendar-check-fill"></i><span>Solicitudes</span>
-				<span class="solicitudes-bell-area" aria-hidden="true"><i class="bi bi-bell-fill"></i><span id="campanaSolicitudesPendientes" class="solicitudes-badge" hidden>0</span></span>
-			</button>
+    <div class="sidebar-section">Solicitudes</div>
+    <button class="sidebar-item" id="nav-solicitudes" onclick="showSection('solicitudes')" aria-label="Solicitudes, 0 pendientes">
+      <i class="bi bi-calendar-check-fill"></i><span>Solicitudes</span>
+      <span class="solicitudes-bell-area" aria-hidden="true">
+        <i class="bi bi-bell-fill"></i>
+        <span id="campanaSolicitudesPendientes" class="solicitudes-badge" hidden>0</span>
+      </span>
+    </button>
 
-			<div class="sidebar-section">Calificaciones</div>
-			<button class="sidebar-item" id="nav-calificaciones" onclick="showSection('calificaciones')">
-				<i class="bi bi-star-fill"></i> Calificaciones
-			</button>
+    <div class="sidebar-section">Calificaciones</div>
+    <button class="sidebar-item" id="nav-calificaciones" onclick="showSection('calificaciones')">
+      <i class="bi bi-star-fill"></i> Calificaciones
+    </button>
 
-			<div class="sidebar-section">Cuenta</div>
-			<a href="/trabajador/?section=perfil" class="sidebar-item" id="nav-perfil">
-				<i class="bi bi-person-fill"></i> Mi Perfil
-			</a>
-			<a href="/" class="sidebar-item danger" id="cerrarSesionTrabajador">
-				<i class="bi bi-box-arrow-right"></i> Cerrar sesión
-			</a>
-		</aside>
-		<script is:inline>
-			document.getElementById('cerrarSesionTrabajador')?.addEventListener('click', (event) => {
-				if (!window.confirm('¿Estás seguro de que quieres cerrar sesión?')) {
-					event.preventDefault();
-					return;
-				}
-				localStorage.removeItem('token');
-				localStorage.removeItem('usuario');
-				event.preventDefault();
-				window.location.assign('/');
-			});
-		</script>
-		<main>
+    <div class="sidebar-section">Cuenta</div>
+    <a href="/billetera" class="sidebar-item" id="nav-billetera">
+      <i class="bi bi-wallet2"></i> Mi Billetera
+    </a>
+    <a href="/trabajador/?section=perfil" class="sidebar-item" id="nav-perfil">
+      <i class="bi bi-person-fill"></i> Mi Perfil
+    </a>
+    <a href="/" class="sidebar-item danger" id="cerrarSesionTrabajador">
+      <i class="bi bi-box-arrow-right"></i> Cerrar sesión
+    </a>
+  </aside>
+
+  <script is:inline>
+    document.getElementById('cerrarSesionTrabajador')?.addEventListener('click', (event) => {
+      if (!window.confirm('¿Estás seguro de que quieres cerrar sesión?')) {
+        event.preventDefault();
+        return;
+      }
+      localStorage.removeItem('token');
+      localStorage.removeItem('usuario');
+      document.cookie = 'usuario_id=; path=/; max-age=0';
+      event.preventDefault();
+      window.location.assign('/');
+    });
+
+    (function syncCookie() {
+      try {
+        const usuario = JSON.parse(localStorage.getItem('usuario') || 'null');
+        const token = localStorage.getItem('token');
+        if (usuario && usuario.id && token) {
+          document.cookie = 'usuario_id=' + usuario.id + '; path=/; max-age=' + (60 * 60 * 24 * 7) + '; SameSite=Lax';
+        }
+      } catch (e) {}
+    })();
+  </script>
+
+  <main>
 
 			<div class="content-header">
 				<h2 id="page-title" class="section-title-page">Dashboard</h2>

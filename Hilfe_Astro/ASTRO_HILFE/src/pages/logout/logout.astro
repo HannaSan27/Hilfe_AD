@@ -1,0 +1,17 @@
+---
+export const prerender = false;
+Astro.cookies.delete('usuario_id', { path: '/' });
+---
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <title>Cerrando sesión…</title>
+  </head>
+  <body>
+    <p>Cerrando sesión…</p>
+    <script is:inline>
+      try { localStorage.clear(); sessionStorage.clear(); } catch (e) {}
+      window.location.replace('/login/login');
+    </script>
+  </body>
+</html>

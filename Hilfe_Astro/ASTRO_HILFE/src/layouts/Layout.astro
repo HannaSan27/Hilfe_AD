@@ -22,50 +22,47 @@ const {
 			rel="stylesheet"
 		/>
 		<title>{title}</title>
-		<script is:inline>
-			(function () {
-				var ruta = window.location.pathname.replace(/\/+$/, '') || '/';
-				var rutasProtegidas = [
-					{ prefijo: '/admin', rol: 1, destino: '/admin/admin' },
-					{ prefijo: '/cliente', rol: 3, destino: '/cliente/' },
-					{ prefijo: '/trabajador', rol: 2, destino: '/trabajador/' },
-				];
-				// El perfil público del trabajador es visible sin iniciar sesión.
-				if (ruta === '/trabajador/perfil') return;
+	<script is:inline>
+	(function () {
+		var ruta = window.location.pathname.replace(/\/+$/, '') || '/';
+		var rutasProtegidas = [
+			{ prefijo: '/admin', rol: 1, destino: '/admin/admin' },
+			{ prefijo: '/cliente', rol: 3, destino: '/cliente/' },
+			{ prefijo: '/trabajador', rol: 2, destino: '/trabajador/' },
+		];
+		// El perfil público del trabajador es visible sin iniciar sesión.
+		if (ruta === '/trabajador/perfil' && /[?&]id=/.test(window.location.search)) return;
 
-				var regla = rutasProtegidas.find(function (item) {
-					return ruta === item.prefijo || ruta.indexOf(item.prefijo + '/') === 0;
-				});
-				if (!regla) return;
+		var regla = rutasProtegidas.find(function (item) {
+			return ruta === item.prefijo || ruta.indexOf(item.prefijo + '/') === 0;
+		});
+		if (!regla) return;
 
-				var token = '';
-				var usuario = null;
+		// Oculta la página hasta confirmar la sesión
+		var estilo = document.createElement('style');
+		estilo.id = 'guardia-estilo';
+		estilo.textContent = 'body{visibility:hidden}';
+		document.head.appendChild(estilo);
+		var mostrar = function () { var e = document.getElementById('guardia-estilo'); if (e) e.remove(); };
+
+		var irLogin = function () {
+			window.location.replace('/login/login?error=' + encodeURIComponent('Inicia sesión con una cuenta autorizada para continuar.'));
+		};
+
+		fetch('/api/auth/me', { credentials: 'same-origin', cache: 'no-store' })
+			.then(function (r) { return r.ok ? r.json() : null; })
+			.then(function (data) {
+				if (!data || !data.ok || Number(data.usuario.rol) !== regla.rol) { irLogin(); return; }
 				try {
-					token = localStorage.getItem('token') || '';
-					usuario = JSON.parse(localStorage.getItem('usuario') || 'null');
-				} catch (error) {}
-
-				var tokenValido = false;
-				try {
-					var partes = token.split('.');
-					if (partes.length === 3) {
-						var payload = JSON.parse(atob(partes[1].replace(/-/g, '+').replace(/_/g, '/')));
-						var expirado = payload.exp && Number(payload.exp) * 1000 <= Date.now();
-						tokenValido = !expirado && Number(payload.id) === Number(usuario && usuario.id) && Number(payload.rol) === Number(usuario && usuario.rol);
-					}
-				} catch (error) {}
-
-				if (!tokenValido || !usuario || Number(usuario.rol) !== regla.rol) {
-					if (!tokenValido || (usuario && Number(usuario.rol) !== regla.rol)) {
-						try { localStorage.removeItem('token'); localStorage.removeItem('usuario'); } catch (error) {}
-					}
-					window.location.replace('/login/login?error=' + encodeURIComponent('Inicia sesión con una cuenta autorizada para continuar.'));
-					return;
-				}
-
-				if (ruta === '/admin') window.location.replace(regla.destino);
-			})();
-		</script>
+					localStorage.setItem('usuario', JSON.stringify(data.usuario));
+					localStorage.setItem('token', 'sesion-activa');
+				} catch (e) {}
+				if (ruta === '/admin') { window.location.replace(regla.destino); return; }
+				mostrar();
+			})
+			.catch(irLogin);
+	})();
+</script>
 		<slot name="head" />
 	</head>
 	<body>

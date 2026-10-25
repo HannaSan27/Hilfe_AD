@@ -1,0 +1,174 @@
+---
+const { variant = 'nav' } = Astro.props; // 'nav' | 'card'
+---
+
+<div class={`ww ww--${variant}`} data-wallet hidden>
+  <button type="button" class="ww-pill" aria-expanded="false" aria-haspopup="true">
+    <span class="ww-icon">
+      <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="3"/><path d="M2 10h20"/><circle cx="17" cy="15" r="1.2" fill="currentColor"/></svg>
+    </span>
+    <span class="ww-text">
+      <small>Mi billetera</small>
+      <strong data-saldo>$ ••••</strong>
+    </span>
+    <svg class="ww-chevron" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="m6 9 6 6 6-6"/></svg>
+  </button>
+
+  <div class="ww-panel" hidden>
+    <div class="ww-mini">
+      <span class="ww-mini-label">Saldo disponible</span>
+      <span class="ww-mini-amount" data-saldo-big>$ 0</span>
+      <span class="ww-mini-brand">Hilf'e Pay</span>
+    </div>
+    <div class="ww-actions">
+      <a href="/billetera#recargar" class="ww-btn ww-btn--main">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+        Recargar
+      </a>
+      <a href="/billetera" class="ww-btn">Ver billetera</a>
+      <a href="/billetera#historial" class="ww-btn">Historial</a>
+    </div>
+  </div>
+</div>
+
+<script>
+  const cop = (n: number) =>
+    new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(n);
+
+  function contar(el: Element, hasta: number) {
+    const dur = 700, ini = performance.now();
+    const paso = (t: number) => {
+      const p = Math.min((t - ini) / dur, 1);
+      el.textContent = cop(Math.round(hasta * (1 - Math.pow(1 - p, 3))));
+      if (p < 1) requestAnimationFrame(paso);
+    };
+    requestAnimationFrame(paso);
+  }
+
+  function iniciar() {
+    let token: string | null = null, usuario: any = null;
+    try {
+      token = localStorage.getItem('token');
+      usuario = JSON.parse(localStorage.getItem('usuario') || 'null');
+    } catch {}
+
+    const rol = Number(usuario?.rol);
+    const permitido = !!token && (rol === 2 || rol === 3);
+
+    document.querySelectorAll<HTMLElement>('[data-wallet]').forEach(async (w) => {
+      if (!permitido) return;
+
+      const pill = w.querySelector<HTMLButtonElement>('.ww-pill')!;
+      const panel = w.querySelector<HTMLElement>('.ww-panel')!;
+      const chico = w.querySelector('[data-saldo]')!;
+      const grande = w.querySelector('[data-saldo-big]')!;
+
+      const cerrar = () => {
+        panel.hidden = true;
+        pill.setAttribute('aria-expanded', 'false');
+        w.classList.remove('is-open');
+      };
+
+      pill.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const abrir = panel.hidden === true;
+        document.querySelectorAll('[data-wallet] .ww-panel').forEach((p) => ((p as HTMLElement).hidden = true));
+        panel.hidden = !abrir;
+        pill.setAttribute('aria-expanded', String(abrir));
+        w.classList.toggle('is-open', abrir);
+      });
+
+      document.addEventListener('click', (e) => {
+        if (!w.contains(e.target as Node)) cerrar();
+      });
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') cerrar();
+      });
+
+      try {
+        const res = await fetch('/api/billetera/saldo', { credentials: 'same-origin' });
+        if (!res.ok) return; // cookie vencida: el botón queda oculto
+        const data = await res.json();
+
+        // La cookie y el usuario guardado en el navegador no coinciden: se limpia todo
+        if (Number(usuario?.id) !== Number(data.uid)) {
+          window.location.href = '/logout';
+          return;
+        }
+
+        w.hidden = false;
+        chico.textContent = cop(data.saldo);
+        contar(grande, data.saldo);
+      } catch {}
+    });
+  }
+
+  iniciar();
+</script>
+<style>
+  .ww { position: relative; display: inline-block; font-family: 'Inter', system-ui, sans-serif; }
+  .ww[hidden] { display: none !important; }
+
+  .ww-pill {
+    position: relative; overflow: hidden; display: inline-flex; align-items: center; gap: .6rem;
+    padding: .35rem .85rem .35rem .4rem; border: 0; border-radius: 999px; cursor: pointer;
+    color: #fff; font: inherit;
+    background: linear-gradient(120deg, #1d4ed8, #2563eb 50%, #0ea5e9);
+    background-size: 200% 100%;
+    box-shadow: 0 8px 20px -10px rgba(37, 99, 235, .8);
+    transition: background-position .5s ease, transform .2s ease, box-shadow .2s ease;
+  }
+  .ww-pill:hover { background-position: 100% 0; transform: translateY(-2px); box-shadow: 0 14px 26px -10px rgba(37, 99, 235, .9); }
+  .ww-pill::after { /* brillo que cruza la píldora */
+    content: ''; position: absolute; inset: 0; width: 40%;
+    background: linear-gradient(100deg, transparent, rgba(255,255,255,.35), transparent);
+    transform: translateX(-150%) skewX(-20deg); animation: ww-shine 4s ease-in-out infinite;
+  }
+  @keyframes ww-shine { 0%, 60% { transform: translateX(-150%) skewX(-20deg); } 100% { transform: translateX(350%) skewX(-20deg); } }
+
+  .ww-icon { width: 34px; height: 34px; display: grid; place-items: center; border-radius: 50%; background: rgba(255,255,255,.2); transition: transform .3s ease; }
+  .ww-pill:hover .ww-icon { transform: rotate(-12deg) scale(1.08); }
+
+  .ww-text { display: grid; text-align: left; line-height: 1.1; }
+  .ww-text small { font-size: .68rem; opacity: .85; }
+  .ww-text strong { font-size: .92rem; font-weight: 700; filter: blur(5px); transition: filter .3s ease; user-select: none; }
+  .ww-pill:hover .ww-text strong, .ww.is-open .ww-text strong { filter: blur(0); }
+
+  .ww-chevron { transition: transform .25s ease; opacity: .85; }
+  .ww.is-open .ww-chevron { transform: rotate(180deg); }
+
+  .ww-panel {
+    position: absolute; right: 0; top: calc(100% + 12px); z-index: 60; width: 280px; padding: .9rem;
+    border-radius: 22px; background: var(--bg-card, #fff); border: 1px solid var(--border, #e2e8f0);
+    box-shadow: 0 30px 60px -20px rgba(15, 23, 42, .4);
+    animation: ww-pop .22s cubic-bezier(.2, .9, .3, 1.2);
+  }
+  .ww-panel[hidden] { display: none; }
+  .ww--card .ww-panel { right: auto; left: 0; }
+  @keyframes ww-pop { from { opacity: 0; transform: translateY(-8px) scale(.96); } to { opacity: 1; transform: none; } }
+
+  .ww-mini {
+    position: relative; overflow: hidden; display: grid; gap: .2rem; padding: 1rem 1.1rem; border-radius: 16px; color: #fff;
+    background: linear-gradient(135deg, #1e3a8a, #2563eb 60%, #38bdf8);
+  }
+  .ww-mini::after { content: ''; position: absolute; right: -30px; top: -30px; width: 110px; height: 110px; background: radial-gradient(circle, rgba(255,255,255,.35), transparent 70%); }
+  .ww-mini-label { font-size: .72rem; opacity: .85; }
+  .ww-mini-amount { font-size: 1.6rem; font-weight: 800; letter-spacing: -.02em; }
+  .ww-mini-brand { font-size: .7rem; letter-spacing: .12em; text-transform: uppercase; opacity: .75; margin-top: .3rem; }
+
+  .ww-actions { display: grid; gap: .45rem; margin-top: .8rem; }
+  .ww-btn {
+  display: flex; align-items: center; justify-content: center; gap: .4rem; padding: .6rem; border-radius: 12px;
+  font-size: .88rem; font-weight: 600; text-decoration: none; color: var(--text, #0f172a);
+  background: rgba(148, 163, 184, .16); border: 1px solid rgba(148, 163, 184, .35);
+  transition: transform .15s ease, background .15s ease;
+}
+.ww-btn:hover { transform: translateX(3px); background: rgba(148, 163, 184, .28); }
+  .ww-btn--main { background: var(--primary, #2563eb); color: #fff; border-color: transparent; }
+
+  @media (max-width: 900px) {
+    .ww-text small { display: none; }
+    .ww-panel { right: -40px; }
+  }
+  @media (prefers-reduced-motion: reduce) { .ww-pill::after { animation: none; } }
+</style>
