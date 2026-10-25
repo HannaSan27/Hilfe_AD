@@ -43,8 +43,7 @@
     "jsr:@zaubrik/djwt@^3.0.2": "3.0.2",
     "npm:jose@5": "5.10.0",
     "npm:mysql2@3": "3.24.4_@types+node@26.2.0",
-    "npm:path-to-regexp@^6.3.0": "6.3.0",
-    "npm:stripe@^22.6.2": "22.6.2"
+    "npm:path-to-regexp@^6.3.0": "6.3.0"
   },
   "jsr": {
     "@db/mysql@3.0.0-rc.1": {
@@ -290,9 +289,6 @@
     "sql-escaper@1.5.2": {
       "integrity": "sha512-6CKD38c31SENivxOADeMNLdukOnUxUcflKtzVWzace7Riv1v7cAEym5Cx9Q7gYZ3ezIJI7ZpqecQq8cqNeSSFg=="
     },
-    "stripe@22.6.2": {
-      "integrity": "sha512-PwRE2scocvXqDKPiskMa5vRJEAEkq46W69XyUYmAwrNSLr675lQnfqLwnsndAWizwgihOWw/irLmoFRo3ez7ew=="
-    },
     "undici-types@8.3.0": {
       "integrity": "sha512-j375ScV60dom+YkPFIfTLcOiPxkN/buHz5GobjLhixFuANaNs3C9l4GmrWqejgXWJ7BbJcFYpTEUkS1Ge8bpZQ=="
     }
@@ -382,11 +378,6 @@
       "jsr:@std/assert@1",
       "jsr:@tajpouria/cors@^1.2.1",
       "jsr:@zaubrik/djwt@^3.0.2"
-    ],
-    "packageJson": {
-      "dependencies": [
-        "npm:stripe@^22.6.2"
-      ]
-    }
+    ]
   }
 }

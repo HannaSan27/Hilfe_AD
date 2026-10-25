@@ -26,17 +26,3 @@ export async function buscarTrabajadorPorId(id: number) {
   );
   return resultado[0];
 }
-
-export async function actualizarVerificacionTrabajador(id: number, verificado: boolean) {
-  const trabajador = await client.query(
-    "SELECT Id_Usuario FROM usuarios WHERE Id_Usuario = ? AND Id_Rol = 2",
-    [id]
-  );
-  if (!trabajador.length) return false;
-
-  await client.query(
-    "UPDATE usuarios SET Verificado = ? WHERE Id_Usuario = ? AND Id_Rol = 2",
-    [verificado ? 1 : 0, id]
-  );
-  return true;
-}
