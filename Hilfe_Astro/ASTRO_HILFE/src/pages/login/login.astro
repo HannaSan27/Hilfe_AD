@@ -2,8 +2,9 @@
 import Layout from "../../layouts/Layout.astro";
 import "../../components/styles/login.css";
 
-// TODO: cuando conectes tu backend, estos vendrán de tu lógica real de auth
-// (por ahora se leen como query params, ej: /login?error=Credenciales+inválidas)
+// Al llegar al login se borra cualquier sesión anterior (cookie del servidor)
+Astro.cookies.delete('usuario_id', { path: '/' });
+
 const returnUrl = Astro.url.searchParams.get("returnUrl") ?? "";
 const correoRecordado = Astro.url.searchParams.get("correoRecordado") ?? "";
 const error = Astro.url.searchParams.get("error");
@@ -12,9 +13,7 @@ const correoPendiente = Astro.url.searchParams.get("correoPendiente");
 const registroExitoso = Astro.url.searchParams.get("registroExitoso");
 const loginExitoso = Astro.url.searchParams.get("loginExitoso");
 
-// NUEVO: si viene ?vista=registroExitoso se muestra la pantalla completa
-// de "Registro Exitoso" en vez del formulario de login, dentro de este mismo archivo.
-// Ej: /login?vista=registroExitoso
+// Si viene ?vista=registroExitoso se muestra la pantalla de "Registro Exitoso"
 const mostrarRegistroExitoso = Astro.url.searchParams.get("vista") === "registroExitoso";
 
 // Client ID de Google (viene del .env del frontend: PUBLIC_GOOGLE_CLIENT_ID)
@@ -59,8 +58,6 @@ const apiBaseAuth = (import.meta.env.PUBLIC_API_BASE_URL ?? "http://127.0.0.1:80
         <div class="ambient">
           <div></div><div></div><div></div><div></div><div></div><div></div>
         </div>
-
-
 
         <div class="shooting-star" style="top:15%;left:55%;animation:shoot1 7s 2s infinite;transform:rotate(50deg);"></div>
         <div class="shooting-star" style="top:28%;left:72%;animation:shoot2 9s 6s infinite;transform:rotate(-35deg);"></div>
@@ -125,7 +122,7 @@ const apiBaseAuth = (import.meta.env.PUBLIC_API_BASE_URL ?? "http://127.0.0.1:80
             </div>
           )}
 
-          <form method="post" action="/api/account/login" id="loginForm">
+          <form method="post" id="loginForm">
             {returnUrl && <input type="hidden" name="returnUrl" value={returnUrl} />}
 
             <div class="form-group">
@@ -184,6 +181,9 @@ const apiBaseAuth = (import.meta.env.PUBLIC_API_BASE_URL ?? "http://127.0.0.1:80
   {!mostrarRegistroExitoso && (
     <Fragment>
       <script is:inline>
+        // Al abrir el login no debe quedar nada de una sesión anterior
+        try { localStorage.clear(); sessionStorage.clear(); } catch (e) {}
+
         const inputContrasena = document.getElementById("passwordInput");
         const botonVerContrasena = document.querySelector(".toggle-pw");
         botonVerContrasena?.addEventListener("click", () => {
@@ -197,11 +197,6 @@ const apiBaseAuth = (import.meta.env.PUBLIC_API_BASE_URL ?? "http://127.0.0.1:80
           icono?.classList.toggle("bi-eye-slash", !mostrar);
         });
 
-        document.getElementById("loginVerSitio")?.addEventListener("click", () => {
-          localStorage.removeItem("token");
-          localStorage.removeItem("usuario");
-        });
-
         const loginForm = document.getElementById("loginForm");
         const correoLoginInput = document.getElementById("correoInput");
 
@@ -213,6 +208,7 @@ const apiBaseAuth = (import.meta.env.PUBLIC_API_BASE_URL ?? "http://127.0.0.1:80
         window.setTimeout(limpiarAutocompletadoInvalido, 0);
         window.setTimeout(limpiarAutocompletadoInvalido, 250);
 
+        // ===== Login con correo y contraseña (servidor de Astro + base hilfe) =====
         loginForm?.addEventListener("submit", async (event) => {
           event.preventDefault();
           if (!loginForm.checkValidity()) {
@@ -222,41 +218,27 @@ const apiBaseAuth = (import.meta.env.PUBLIC_API_BASE_URL ?? "http://127.0.0.1:80
 
           const formData = new FormData(loginForm);
           const errorUrl = (message) => `/login/login?error=${encodeURIComponent(message)}`;
+          const btn = document.getElementById("loginBtn");
+          if (btn) btn.disabled = true;
 
           try {
-            const apiBase = document.getElementById("googleBtn")?.dataset.apiBase || "http://127.0.0.1:8000/api";
-            const response = await fetch(`${apiBase}/auth/login`, {
+            const response = await fetch("/api/auth/login", {
               method: "POST",
               headers: { "Content-Type": "application/json" },
+              credentials: "same-origin",
               body: JSON.stringify({
                 correo: formData.get("correo"),
                 contrasena: formData.get("contrasena"),
+                recordar: formData.get("recordarme") === "true",
               }),
             });
 
-            const data = await response.json();
+            const data = await response.json().catch(() => ({}));
 
-            if (!response.ok) {
-              const estadosVerificacion = [
-                "CUENTA_PENDIENTE",
-                "CUENTA_EN_REVISION",
-                "CUENTA_REQUIERE_INFO",
-                "CUENTA_RECHAZADO",
-                "CUENTA_RECHAZADA",
-                "CUENTA_NO_HABILITADA",
-              ];
-              if (data.token && data.usuario && estadosVerificacion.includes(data.codigo)) {
-                localStorage.setItem("token", data.token);
-                localStorage.setItem("usuario", JSON.stringify(data.usuario));
-                window.location.assign("/account/verificacion");
-                return;
-              }
+            if (!response.ok || !data.ok) {
               window.location.assign(errorUrl(data.mensaje || data.error || "No fue posible iniciar sesión."));
               return;
             }
-
-            localStorage.setItem("token", data.token);
-            localStorage.setItem("usuario", JSON.stringify(data.usuario));
 
             const rolesValidos = [1, 2, 3];
             if (!rolesValidos.includes(Number(data.usuario?.rol))) {
@@ -264,13 +246,18 @@ const apiBaseAuth = (import.meta.env.PUBLIC_API_BASE_URL ?? "http://127.0.0.1:80
               return;
             }
 
-            window.location.assign("/");
+            // Sesión limpia: nada de la cuenta anterior
+            try { localStorage.clear(); sessionStorage.clear(); } catch (e) {}
+            localStorage.setItem("usuario", JSON.stringify(data.usuario));
+            localStorage.setItem("token", "sesion-activa");
+
+            window.location.assign(data.destino || "/");
           } catch {
             window.location.assign(errorUrl("No se pudo conectar con el servidor."));
           }
         });
 
-        // ===== Iniciar con Google =====
+        // ===== Iniciar con Google (sigue usando el backend externo) =====
         const googleBtn = document.getElementById("googleBtn");
         const apiBaseGoogle = (googleBtn?.dataset.apiBase || "http://127.0.0.1:8000/api").replace(/\/+$/, "");
         const destinosGoogle = { 1: "/admin/admin", 2: "/trabajador", 3: "/cliente" };
@@ -385,8 +372,6 @@ const apiBaseAuth = (import.meta.env.PUBLIC_API_BASE_URL ?? "http://127.0.0.1:80
         }, 200);
       </script>
       <script is:inline src="https://accounts.google.com/gsi/client" async defer></script>
-      <script is:inline src="/js/pages/login.js"></script>
-      <script is:inline src="/js/site.js"></script>
     </Fragment>
   )}
 </Layout>

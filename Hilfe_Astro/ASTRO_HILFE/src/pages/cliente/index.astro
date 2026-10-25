@@ -20,7 +20,7 @@ interface Solicitud {
   calificacion: Calificacion | null;
 }
 
-// TODO: reemplaza por tu lógica real (sesión/BD/API) cuando conectes tu backend
+// Los datos reales se cargan desde /api/citas/cliente en el script de abajo
 const nombre = "Cliente";
 const solicitudes: Solicitud[] = [];
 
@@ -262,33 +262,58 @@ const porCalificar = solicitudes.filter((s) => s.estado === "finalizado" && s.ca
   </script>
 
   <script is:inline>
+    // Solo se usa para calificar (pendiente de migrar a Astro)
     const apiCliente = "http://127.0.0.1:8000";
-    const leerArregloCliente = (data) => Array.isArray(data) ? data : Array.isArray(data?.value) ? data.value : [];
-    const textoSeguroCliente = (value) => String(value ?? "");
+
     const estadoCliente = (estado) => ({ aceptado: "Aceptada", en_proceso: "En proceso", rumbo_a_ubicacion: "En camino", trabajo_realizado: "Trabajo realizado", finalizado: "Finalizada", cancelada: "Cancelada", rechazado: "Rechazada", pendiente: "Pendiente" }[estado] || estado || "Pendiente");
     const claseEstadoCliente = (estado) => ({ pendiente: "badge-warning", aceptado: "badge-primary", en_proceso: "badge-primary", rumbo_a_ubicacion: "badge-primary", trabajo_realizado: "badge-success", finalizado: "badge-success", cancelada: "badge-danger", rechazado: "badge-danger" }[estado] || "badge-neutral");
     const mostrarErrorCliente = (mensaje) => window.alert(mensaje);
-    const fechaCliente = (value) => {
-      if (!value) return "—";
-      const date = new Date(value);
-      return Number.isNaN(date.getTime()) ? textoSeguroCliente(value) : date.toLocaleDateString("es-CO");
+
+    /* ========== PAGO DE SERVICIOS ========== */
+    const MSG_PAGO = {
+      SALDO_INSUFICIENTE: "No tienes saldo suficiente. Recarga tu billetera.",
+      YA_PAGADA: "Este servicio ya fue pagado.",
+      NO_PAGABLE: "El servicio aún no está listo para pagar.",
+      NO_AUTORIZADO: "No puedes pagar esta solicitud.",
+      NO_SESION: "Tu sesión expiró. Inicia sesión de nuevo."
+    };
+    const copCliente = (n) => new Intl.NumberFormat("es-CO", { style: "currency", currency: "COP", maximumFractionDigits: 0 }).format(n);
+
+    const pagarCita = async (btn, cita) => {
+      if (!window.confirm("¿Pagar " + copCliente(cita.total) + " con tu billetera?\n(Incluye 5% de comisión Hilf'e)")) return;
+      btn.disabled = true;
+      btn.textContent = "Procesando…";
+      try {
+        const res = await fetch("/api/billetera/pagar", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "same-origin",
+          body: JSON.stringify({ solicitudId: cita.id })
+        });
+        const data = await res.json();
+        if (!data.ok) {
+          window.alert(MSG_PAGO[data.error] || "No se pudo completar el pago.");
+          btn.disabled = false;
+          btn.textContent = "Pagar servicio";
+          return;
+        }
+        window.location.href = data.redirect;
+      } catch {
+        window.alert("Error de conexión.");
+        btn.disabled = false;
+        btn.textContent = "Pagar servicio";
+      }
     };
 
+    /* ========== CARGA DE SOLICITUDES (desde la base hilfe) ========== */
     const cargarSolicitudesCliente = async (silencioso = false) => {
-      let usuario;
-      try { usuario = JSON.parse(localStorage.getItem("usuario") || "null"); } catch { usuario = null; }
-      const token = localStorage.getItem("token");
-      if (!usuario?.id) {
-        if (!silencioso) mostrarErrorCliente("Inicia sesión para consultar tus solicitudes.");
-        return;
-      }
       try {
-        const response = await fetch(`${apiCliente}/api/solicitudes?cliente=${encodeURIComponent(usuario.id)}`, {
-          headers: token ? { Authorization: `Bearer ${token}` } : {},
-        });
+        const response = await fetch("/api/citas/cliente", { credentials: "same-origin" });
+        if (response.status === 401) { window.location.href = "/login/login"; return; }
         const data = await response.json().catch(() => ({}));
-        if (!response.ok) throw new Error(data.mensaje || "No se pudieron cargar tus solicitudes.");
-        const solicitudes = leerArregloCliente(data);
+        if (!data.ok) throw new Error("No se pudieron cargar tus solicitudes.");
+        const solicitudes = data.citas;
+
         const body = document.getElementById("solicitudesBody");
         const empty = document.getElementById("solicitudesEmpty");
         if (!body) return;
@@ -297,50 +322,68 @@ const porCalificar = solicitudes.filter((s) => s.estado === "finalizado" && s.ca
         const main = document.getElementById("solicitudesTable");
         if (main) main.hidden = solicitudes.length === 0;
 
-        let pendientes = 0, aceptadas = 0, finalizadas = 0, porCalificar = 0;
-        for (const solicitud of solicitudes) {
-          const estado = String(solicitud.Estado_Solicitudes || "pendiente").toLowerCase();
-          const calificada = Number(solicitud.Calificada) === 1;
+        let pendientes = 0, aceptadas = 0, finalizadas = 0;
+        for (const s of solicitudes) {
+          const estado = String(s.estado || "pendiente").toLowerCase();
           if (estado === "pendiente") pendientes++;
           if (["aceptado", "en_proceso", "rumbo_a_ubicacion", "trabajo_realizado"].includes(estado)) aceptadas++;
           if (estado === "finalizado") finalizadas++;
-          if (estado === "finalizado" && !calificada) porCalificar++;
 
           const tr = document.createElement("tr");
-          const servicio = document.createElement("td");
-          servicio.className = "cliente-service-cell";
-          const serviceLabel = document.createElement("span"); serviceLabel.className = "cliente-request-service";
-          const serviceIcon = document.createElement("span"); serviceIcon.className = "cliente-request-service-icon";
-          serviceIcon.innerHTML = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="m14.7 6.3 3 3M4 20l4.2-1 10.5-10.5a2.1 2.1 0 0 0-3-3L5.2 16 4 20Z"/><path d="m13 8 3 3"/></svg>';
+
+          const tdServicio = document.createElement("td");
+          tdServicio.className = "cliente-service-cell";
+          const label = document.createElement("span"); label.className = "cliente-request-service";
+          const icon = document.createElement("span"); icon.className = "cliente-request-service-icon";
+          icon.innerHTML = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="m14.7 6.3 3 3M4 20l4.2-1 10.5-10.5a2.1 2.1 0 0 0-3-3L5.2 16 4 20Z"/><path d="m13 8 3 3"/></svg>';
           const strong = document.createElement("strong");
           strong.className = "cliente-request-service-title";
-          strong.textContent = solicitud.Titulo_Servicio || "Servicio";
-          serviceLabel.append(serviceIcon, strong); servicio.appendChild(serviceLabel);
-          const trabajador = document.createElement("td"); trabajador.className = "cliente-worker-cell"; trabajador.textContent = solicitud.Nombre_Trabajador || "—";
-          const fecha = document.createElement("td"); fecha.textContent = fechaCliente(solicitud.Fecha_Servicio);
-          const hora = document.createElement("td"); hora.textContent = textoSeguroCliente(solicitud.Hora_Servicio) || "—";
-          const estadoTd = document.createElement("td");
-          const badge = document.createElement("span"); badge.className = `badge ${claseEstadoCliente(estado)}`; badge.textContent = estadoCliente(estado); estadoTd.appendChild(badge);
-          const acciones = document.createElement("td"); acciones.style.textAlign = "center";
-          if (estado === "finalizado" && !calificada) {
-            const button = document.createElement("button"); button.type = "button"; button.className = "btn btn-primary btn-sm btn-calificar";
-            button.dataset.id = solicitud.Id_Solicitud; button.dataset.servicio = solicitud.Titulo_Servicio || "Servicio"; button.textContent = "Calificar"; acciones.appendChild(button);
-          } else if (estado === "finalizado" && calificada) {
-            const done = document.createElement("span"); done.className = "badge badge-neutral badge-sm"; done.style.fontSize = "11px"; done.textContent = "Calificada"; acciones.appendChild(done);
+          strong.textContent = s.servicio || "Servicio";
+          label.append(icon, strong);
+          tdServicio.appendChild(label);
+
+          const tdTrab = document.createElement("td"); tdTrab.className = "cliente-worker-cell"; tdTrab.textContent = s.trabajador || "—";
+          const tdFecha = document.createElement("td"); tdFecha.textContent = s.fecha || "—";
+          const tdHora = document.createElement("td"); tdHora.textContent = s.hora || "—";
+
+          const tdEstado = document.createElement("td");
+          const badge = document.createElement("span");
+          badge.className = "badge " + claseEstadoCliente(estado);
+          badge.textContent = estadoCliente(estado);
+          tdEstado.appendChild(badge);
+
+          const tdAcc = document.createElement("td"); tdAcc.style.textAlign = "center";
+          if (estado === "trabajo_realizado") {
+            const btn = document.createElement("button");
+            btn.type = "button"; btn.className = "btn btn-primary btn-sm";
+            btn.textContent = "Pagar servicio";
+            btn.addEventListener("click", () => pagarCita(btn, s));
+            tdAcc.appendChild(btn);
+          } else if (estado === "finalizado") {
+            const btn = document.createElement("button");
+            btn.type = "button"; btn.className = "btn btn-primary btn-sm btn-calificar";
+            btn.dataset.id = s.id; btn.dataset.servicio = s.servicio || "Servicio";
+            btn.textContent = "Calificar";
+            tdAcc.appendChild(btn);
           }
-          tr.append(servicio, trabajador, fecha, hora, estadoTd, acciones); body.appendChild(tr);
+
+          tr.append(tdServicio, tdTrab, tdFecha, tdHora, tdEstado, tdAcc);
+          body.appendChild(tr);
         }
 
         document.getElementById("statPendientes").textContent = String(pendientes);
         document.getElementById("statAceptadas").textContent = String(aceptadas);
         document.getElementById("statFinalizadas").textContent = String(finalizadas);
         document.getElementById("statTotal").textContent = String(solicitudes.length);
-        const indicador = document.getElementById("calificacionesPendientes");
+        const porCalificar = document.getElementById("calificacionesPendientes");
         const contador = document.getElementById("contadorCalificaciones");
-        if (indicador) indicador.hidden = porCalificar === 0;
-        if (contador) contador.textContent = String(porCalificar);
+        if (porCalificar) porCalificar.hidden = finalizadas === 0;
+        if (contador) contador.textContent = String(finalizadas);
+
+        let usuario = null;
+        try { usuario = JSON.parse(localStorage.getItem("usuario") || "null"); } catch {}
         const bienvenida = document.getElementById("nombreBienvenidaCliente");
-        if (bienvenida) bienvenida.textContent = usuario.nombre || "Cliente";
+        if (bienvenida) bienvenida.textContent = (usuario && usuario.nombre) || "Cliente";
       } catch (error) {
         if (!silencioso) mostrarErrorCliente(error instanceof Error ? error.message : "No se pudieron cargar tus solicitudes.");
       }
@@ -350,82 +393,7 @@ const porCalificar = solicitudes.filter((s) => s.estado === "finalizado" && s.ca
     window.setInterval(() => cargarSolicitudesCliente(true), 12000);
     window.addEventListener("focus", () => cargarSolicitudesCliente(true));
 
-    // ---------- Estrellas ----------
-    const TEXTOS_PUNTAJE = ["Toca una estrella", "Muy malo", "Malo", "Regular", "Bueno", "Excelente"];
-    const pintarEstrellas = (valor) => {
-      document.querySelectorAll("#starRating .star").forEach((s) => {
-        s.classList.toggle("is-active", Number(s.dataset.value) <= valor);
-      });
-    };
-    const fijarPuntaje = (valor) => {
-      document.getElementById("inputPuntaje").value = String(valor);
-      const texto = document.getElementById("ratingTexto");
-      texto.textContent = TEXTOS_PUNTAJE[valor] || TEXTOS_PUNTAJE[0];
-      texto.classList.toggle("has-value", valor > 0);
-      pintarEstrellas(valor);
-    };
-    const starRating = document.getElementById("starRating");
-    starRating?.addEventListener("mouseover", (e) => {
-      const s = e.target instanceof Element ? e.target.closest(".star") : null;
-      if (s) pintarEstrellas(Number(s.dataset.value));
-    });
-    starRating?.addEventListener("mouseleave", () => pintarEstrellas(Number(document.getElementById("inputPuntaje").value)));
-
-    // ---------- Fotos de la calificación ----------
-    const MAX_FOTOS = 3;
-    const MAX_BYTES = 5 * 1024 * 1024;
-    const TIPOS_FOTO = ["image/jpeg", "image/png", "image/webp"];
-    let fotosCalificacion = [];
-
-    const renderFotosCalificacion = () => {
-      const lista = document.getElementById("fotoList");
-      const dropzone = document.getElementById("btnAgregarFoto");
-      const contador = document.getElementById("fotoContador");
-      if (!lista) return;
-      lista.querySelectorAll("img").forEach((img) => URL.revokeObjectURL(img.src));
-      lista.replaceChildren();
-      fotosCalificacion.forEach((archivo, indice) => {
-        const item = document.createElement("div");
-        item.className = "cal-photo";
-        const img = document.createElement("img");
-        img.src = URL.createObjectURL(archivo);
-        img.alt = archivo.name;
-        const quitar = document.createElement("button");
-        quitar.type = "button";
-        quitar.className = "cal-photo-remove";
-        quitar.setAttribute("aria-label", "Quitar foto");
-        quitar.dataset.quitarFoto = String(indice);
-        quitar.innerHTML = "&times;";
-        item.append(img, quitar);
-        lista.appendChild(item);
-      });
-      if (contador) contador.textContent = `${fotosCalificacion.length}/${MAX_FOTOS}`;
-      if (dropzone) dropzone.hidden = fotosCalificacion.length >= MAX_FOTOS;
-      lista.hidden = fotosCalificacion.length === 0;
-    };
-
-    const inputFotos = document.getElementById("inputFotos");
-    inputFotos?.addEventListener("change", () => {
-      for (const archivo of Array.from(inputFotos.files || [])) {
-        if (fotosCalificacion.length >= MAX_FOTOS) {
-          mostrarErrorCliente(`Máximo ${MAX_FOTOS} fotos.`);
-          break;
-        }
-        if (!TIPOS_FOTO.includes(archivo.type)) {
-          mostrarErrorCliente(`"${archivo.name}" no es JPG, PNG o WEBP.`);
-          continue;
-        }
-        if (archivo.size > MAX_BYTES) {
-          mostrarErrorCliente(`"${archivo.name}" supera los 5 MB.`);
-          continue;
-        }
-        fotosCalificacion.push(archivo);
-      }
-      inputFotos.value = ""; // permite volver a elegir el mismo archivo
-      renderFotosCalificacion();
-    });
-
-    // ---------- Modal ----------
+    /* ========== CALIFICAR ========== */
     const modalCalificar = document.getElementById("modalCalificar");
     const cerrarModalCalificar = () => modalCalificar?.classList.remove("active");
 

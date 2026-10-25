@@ -12,3 +12,4 @@ Hilfe_Deno/SERVER_HILFE/uploads/
 # Sistema operativo / editor
 .DS_Store
 Thumbs.db
+.env

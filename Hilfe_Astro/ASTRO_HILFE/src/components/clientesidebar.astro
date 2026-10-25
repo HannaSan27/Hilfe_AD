@@ -1,6 +1,6 @@
 ---
 interface Props {
-  active?: "solicitudes" | "citas" | "perfil";
+  active?: "solicitudes" | "citas" | "perfil" | "billetera";
 }
 const { active = "solicitudes" } = Astro.props;
 ---
@@ -22,13 +22,20 @@ const { active = "solicitudes" } = Astro.props;
         <span id="contadorAvisosCitasCliente" class="cliente-citas-badge" hidden>0</span>
       </span>
     </a>
+    <a href="/billetera" class:list={["sidebar-link", { active: active === "billetera" }]}>
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <rect x="1" y="4" width="22" height="16" rx="2" ry="2"/>
+        <line x1="1" y1="10" x2="23" y2="10"/>
+      </svg>
+      Mi Billetera
+    </a>
     <a href="/cliente/editarperfil" class:list={["sidebar-link", { active: active === "perfil" }]}>
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
       Mi perfil
     </a>
   </nav>
   <div class="sidebar-footer">
-    <a href="/login/login" class="sidebar-link" id="cerrarSesionCliente" style="color:var(--danger,#ef4444)">
+    <a href="/logout" class="sidebar-link" id="cerrarSesionCliente" style="color:var(--danger,#ef4444)">
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
       Cerrar sesión
     </a>
@@ -36,19 +43,15 @@ const { active = "solicitudes" } = Astro.props;
 </aside>
 
 <script is:inline>
+  // Cerrar sesión: confirma y deja que /logout borre cookie y localStorage
   document.getElementById("cerrarSesionCliente")?.addEventListener("click", (event) => {
     if (!window.confirm("¿Estás seguro de que quieres cerrar sesión?")) {
       event.preventDefault();
-      return;
     }
-    localStorage.removeItem("token");
-    localStorage.removeItem("usuario");
-    event.preventDefault();
-    window.location.assign("/");
   });
 
+  // Avisos de citas aceptadas o rechazadas (datos desde la base hilfe)
   (() => {
-    const api = "http://127.0.0.1:8000/api/solicitudes";
     const claveEstado = (id) => `hilf-e:cliente:${id}:estados-solicitudes`;
     const claveAvisos = (id) => `hilf-e:cliente:${id}:avisos-citas`;
     const relevantes = new Set(["aceptado", "rechazado"]);
@@ -84,22 +87,19 @@ const { active = "solicitudes" } = Astro.props;
       if (!clienteId) { actualizarBadge(0); return; }
 
       try {
-        const token = localStorage.getItem("token");
-        const response = await fetch(`${api}?cliente=${encodeURIComponent(clienteId)}`, {
-          headers: token ? { Authorization: `Bearer ${token}` } : {},
-        });
+        const response = await fetch("/api/citas/cliente", { credentials: "same-origin" });
         if (!response.ok) return;
         const result = await response.json();
-        const solicitudes = Array.isArray(result) ? result : Array.isArray(result?.value) ? result.value : [];
+        const solicitudes = Array.isArray(result?.citas) ? result.citas : [];
         const estadosActuales = {};
         const estadosAnteriores = leerObjeto(claveEstado(clienteId));
         const primeraConsulta = !localStorage.getItem(claveEstado(clienteId));
         const avisos = new Set(leerAvisos(claveAvisos(clienteId)));
 
         for (const solicitud of solicitudes) {
-          const id = String(solicitud.Id_Solicitud ?? "");
+          const id = String(solicitud.id ?? "");
           if (!id) continue;
-          const estado = String(solicitud.Estado_Solicitudes || "pendiente").toLowerCase();
+          const estado = String(solicitud.estado || "pendiente").toLowerCase();
           estadosActuales[id] = estado;
           const anterior = estadosAnteriores[id];
           const cambioAtendible = relevantes.has(estado) && (primeraConsulta || (anterior && anterior !== estado));

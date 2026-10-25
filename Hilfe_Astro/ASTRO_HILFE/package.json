@@ -11,6 +11,10 @@
     "preview": "astro preview",
     "astro": "astro"
   },
+  "dependencies": {
+    "@astrojs/node": "^11.1.9",
+    "ag-grid-enterprise": "^36.2.0"
+  },
   "allowScripts": {
     "esbuild": true
   },

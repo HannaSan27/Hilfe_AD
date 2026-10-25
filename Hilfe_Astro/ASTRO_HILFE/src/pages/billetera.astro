@@ -1,0 +1,674 @@
+---
+import Layout from '../layouts/Layout.astro';
+import { obtenerBilletera, obtenerPendientesPago } from '../lib/billetera';
+import { getUsuarioId } from '../lib/sesion';
+import { agruparPorFecha, horaDe } from '../lib/fechas';
+
+export const prerender = false;
+
+const usuarioId = getUsuarioId(Astro.cookies);
+if (!usuarioId) return Astro.redirect('/login/login');
+
+const { saldo, movimientos: filas } = await obtenerBilletera(usuarioId, 10);
+const pendientes = await obtenerPendientesPago(usuarioId);
+
+const cop = (n: number) =>
+  new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(n);
+
+const movimientos = filas.map((m: any) => {
+  const entra = m.type === 'deposit' || m.type === 'refund';
+  return {
+    id: m.id,
+    titulo: m.description ?? (entra ? 'Ingreso' : 'Egreso'),
+    fecha: new Date(m.created_at),
+    monto: entra ? Number(m.amount) : -Number(m.amount),
+  };
+});
+const grupos = agruparPorFecha(movimientos);
+---
+
+<Layout title="Mi Billetera | Hilf'e">
+  <main class="wallet">
+    <header class="wallet__head">
+      <div>
+        <a href="/" class="brand" aria-label="Ir al inicio de Hilf'e">
+          <span class="brand__mark">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+              <rect x="3" y="3" width="18" height="18" rx="4"/>
+              <line x1="12" y1="7" x2="12" y2="17"/>
+              <line x1="7" y1="12" x2="17" y2="12"/>
+            </svg>
+          </span>
+          <span class="brand__text">Hilf<span class="brand__accent">'e</span></span>
+        </a>
+        <span class="eyebrow">Mi billetera</span>
+        <h1>Saldo <span class="grad">disponible</span></h1>
+      </div>
+      <button type="button" class="btn btn--ghost" data-open-hist>Historial</button>
+    </header>
+
+    <p class="demo">Modo demostración: las recargas y retiros son simulados.</p>
+
+    <section class="balance">
+      <div class="balance__info">
+        <p class="balance__label">Saldo actual</p>
+        <p class="balance__amount" id="saldo-actual">{cop(saldo)}</p>
+        <p class="balance__hint">Disponible para usar en Hilf'e</p>
+      </div>
+      <div class="balance__actions">
+        <button class="btn btn--primary" id="btn-recargar">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+          Recargar
+        </button>
+        <button class="btn btn--soft" id="btn-retirar">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M6 13l6 6 6-6"/></svg>
+          Retirar
+        </button>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="card__head">
+        <h2>Servicios por pagar</h2>
+      </div>
+      {pendientes.length === 0 ? (
+        <p class="muted-msg">No tienes servicios pendientes de pago.</p>
+      ) : (
+        <ul class="list">
+          {pendientes.map(p => (
+            <li class="item">
+              <span class="item__icon out">$</span>
+              <div class="item__text">
+                <strong>{p.titulo}</strong>
+                <small>{p.trabajador} · Total {cop(p.total)} (incluye 5%)</small>
+              </div>
+              <button type="button" class="btn btn--main btn-pagar" data-solicitud={p.id} data-total={p.total}>
+                Pagar servicio
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
+
+    <section class="card">
+      <div class="card__head">
+        <h2>Últimos movimientos</h2>
+        <button type="button" class="link" data-open-hist>Ver todos</button>
+      </div>
+
+      {grupos.length === 0 ? (
+        <div class="empty">
+          <div class="empty__icon">💳</div>
+          <h3>Aún no tienes movimientos</h3>
+          <p>Cuando completes trabajos, tus ingresos aparecerán aquí.</p>
+        </div>
+      ) : (
+        grupos.map(g => (
+          <div class="day-group">
+            <h3 class="day">{g.etiqueta}</h3>
+            <ul class="list">
+              {g.items.map(m => (
+                <li class="item">
+                  <span class={`item__icon ${m.monto >= 0 ? 'in' : 'out'}`}>{m.monto >= 0 ? '↓' : '↑'}</span>
+                  <div class="item__text">
+                    <strong>{m.titulo}</strong>
+                    <small>{horaDe(m.fecha)}</small>
+                  </div>
+                  <span class={`item__amount ${m.monto >= 0 ? 'in' : 'out'}`}>
+                    {m.monto >= 0 ? '+' : ''}{cop(m.monto)}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ))
+      )}
+    </section>
+
+    <!-- ========== MODAL RECARGA / RETIRO ========== -->
+    <dialog id="modal" class="modal">
+      <h3 id="modal-title">Recargar saldo</h3>
+
+      <div id="step-form">
+        <input id="modal-monto" type="number" min="1000" step="1000" placeholder="Monto en COP" />
+        <select id="modal-banco">
+          <option value="">Elige tu banco</option>
+          <option value="Bancolombia">Bancolombia</option>
+          <option value="Davivienda">Davivienda</option>
+          <option value="Banco de Bogotá">Banco de Bogotá</option>
+          <option value="BBVA">BBVA</option>
+          <option value="Nequi">Nequi</option>
+          <option value="Daviplata">Daviplata</option>
+        </select>
+        <input id="modal-cuenta" type="text" inputmode="numeric" maxlength="4" placeholder="Últimos 4 dígitos (solo retiro)" hidden />
+        <p id="modal-error" class="modal__error" hidden></p>
+        <div class="modal__actions">
+          <button type="button" class="btn btn--ghost" id="modal-cancel">Cancelar</button>
+          <button type="button" class="btn btn--main" id="modal-ok">Continuar</button>
+        </div>
+      </div>
+
+      <div id="step-bank" class="bank" hidden>
+        <div class="bank__name" id="bank-name"></div>
+        <div class="bank__spin" id="bank-spin"></div>
+        <p id="bank-msg">Conectando con tu banco…</p>
+        <div class="modal__actions" id="bank-actions" hidden>
+          <button type="button" class="btn btn--ghost" id="bank-reject">Rechazar</button>
+          <button type="button" class="btn btn--main" id="bank-approve">Aprobar</button>
+        </div>
+      </div>
+
+      <div id="step-code" class="bank" hidden>
+        <p id="code-msg">Ingresa el código de 6 dígitos que enviamos a tu correo</p>
+        <input id="code-input" class="code" type="text" inputmode="numeric" maxlength="6" autocomplete="one-time-code" placeholder="000000" />
+        <p id="code-error" class="modal__error" hidden></p>
+        <div class="modal__actions">
+          <button type="button" class="btn btn--ghost" id="code-resend">Reenviar</button>
+          <button type="button" class="btn btn--main" id="code-ok">Confirmar</button>
+        </div>
+      </div>
+    </dialog>
+
+    <!-- ========== HISTORIAL ========== -->
+    <dialog id="hist" class="hist">
+      <div class="hist__box">
+        <header class="hist__head">
+          <div>
+            <span class="eyebrow">Mi billetera</span>
+            <h3>Historial de movimientos</h3>
+          </div>
+          <button type="button" class="hist__close" id="hist-close" aria-label="Cerrar">×</button>
+        </header>
+        <div class="hist__chips" role="tablist">
+          <button type="button" class="chip is-active" data-filtro="todos">Todos</button>
+          <button type="button" class="chip" data-filtro="in">Ingresos</button>
+          <button type="button" class="chip" data-filtro="out">Egresos</button>
+        </div>
+        <div class="hist__body" id="hist-body"></div>
+      </div>
+    </dialog>
+  </main>
+</Layout>
+
+<script>
+  import { agruparPorFecha, horaDe } from '../lib/fechas';
+
+  const cop = (n: number) =>
+    new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(n);
+
+  /* ========== MODAL RECARGA / RETIRO ========== */
+  const modal = document.getElementById('modal') as HTMLDialogElement;
+  const modalTitle = document.getElementById('modal-title')!;
+  const stepForm = document.getElementById('step-form')!;
+  const stepBank = document.getElementById('step-bank')!;
+  const stepCode = document.getElementById('step-code')!;
+  const montoInput = document.getElementById('modal-monto') as HTMLInputElement;
+  const bancoSelect = document.getElementById('modal-banco') as HTMLSelectElement;
+  const cuentaInput = document.getElementById('modal-cuenta') as HTMLInputElement;
+  const modalError = document.getElementById('modal-error')!;
+  const bankName = document.getElementById('bank-name')!;
+  const bankSpin = document.getElementById('bank-spin')!;
+  const bankMsg = document.getElementById('bank-msg')!;
+  const bankActions = document.getElementById('bank-actions')!;
+  const codeMsg = document.getElementById('code-msg')!;
+  const codeInput = document.getElementById('code-input') as HTMLInputElement;
+  const codeError = document.getElementById('code-error')!;
+
+  let accionActual: 'recargar' | 'retirar' = 'recargar';
+  let montoActual = 0;
+  let bancoActual = '';
+  let correoEnmascarado = '';
+
+  function mostrarPaso(paso: 'form' | 'bank' | 'code') {
+    stepForm.hidden = paso !== 'form';
+    stepBank.hidden = paso !== 'bank';
+    stepCode.hidden = paso !== 'code';
+  }
+
+  function abrir(accion: 'recargar' | 'retirar') {
+    accionActual = accion;
+    modalTitle.textContent = accion === 'recargar' ? 'Recargar saldo' : 'Retirar dinero';
+    montoInput.value = '';
+    bancoSelect.value = '';
+    cuentaInput.value = '';
+    cuentaInput.hidden = accion !== 'retirar';
+    modalError.hidden = true;
+    codeError.hidden = true;
+    codeInput.value = '';
+    mostrarPaso('form');
+    modal.showModal();
+    montoInput.focus();
+  }
+
+  function cerrarModal() {
+    modal.close();
+  }
+
+  document.getElementById('btn-recargar')?.addEventListener('click', () => abrir('recargar'));
+  document.getElementById('btn-retirar')?.addEventListener('click', () => abrir('retirar'));
+  document.getElementById('modal-cancel')?.addEventListener('click', cerrarModal);
+
+  document.getElementById('modal-ok')?.addEventListener('click', async () => {
+    const monto = Number(montoInput.value);
+    const banco = bancoSelect.value;
+
+    modalError.hidden = true;
+
+    if (!monto || monto < 1000) {
+      modalError.textContent = 'Ingresa un monto válido (mínimo $1.000)';
+      modalError.hidden = false;
+      return;
+    }
+    if (!banco) {
+      modalError.textContent = 'Selecciona un banco';
+      modalError.hidden = false;
+      return;
+    }
+    if (accionActual === 'retirar' && cuentaInput.value && !/^\d{4}$/.test(cuentaInput.value)) {
+      modalError.textContent = 'Los últimos 4 dígitos deben ser numéricos';
+      modalError.hidden = false;
+      return;
+    }
+
+    montoActual = monto;
+    bancoActual = banco;
+
+    mostrarPaso('bank');
+    bankName.textContent = banco;
+    bankSpin.hidden = false;
+    bankActions.hidden = true;
+    bankMsg.textContent = 'Conectando con tu banco…';
+
+    await new Promise(r => setTimeout(r, 1800));
+
+    bankSpin.hidden = true;
+    bankMsg.textContent = accionActual === 'recargar'
+      ? `¿Autorizas la recarga de ${cop(monto)} desde ${banco}?`
+      : `¿Autorizas el retiro de ${cop(monto)} hacia ${banco}?`;
+    bankActions.hidden = false;
+  });
+
+  document.getElementById('bank-reject')?.addEventListener('click', () => {
+    cerrarModal();
+  });
+
+  document.getElementById('bank-approve')?.addEventListener('click', async () => {
+    bankActions.hidden = true;
+    bankSpin.hidden = false;
+    bankMsg.textContent = 'Enviando código de verificación…';
+
+    try {
+      const res = await fetch('/api/billetera/codigo', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'same-origin',
+        body: JSON.stringify({
+          accion: accionActual,
+          monto: montoActual,
+          banco: bancoActual,
+        }),
+      });
+      const data = await res.json();
+
+      if (!data.ok) {
+        bankMsg.textContent = mensajeError(data.error);
+        bankSpin.hidden = true;
+        bankActions.hidden = false;
+        return;
+      }
+
+      correoEnmascarado = data.correo || 'tu correo';
+      codeMsg.textContent = `Ingresa el código de 6 dígitos que enviamos a ${correoEnmascarado}`;
+      codeInput.value = '';
+      codeError.hidden = true;
+      mostrarPaso('code');
+      codeInput.focus();
+    } catch {
+      bankMsg.textContent = 'Error de conexión. Intenta de nuevo.';
+      bankSpin.hidden = true;
+      bankActions.hidden = false;
+    }
+  });
+
+  document.getElementById('code-ok')?.addEventListener('click', async () => {
+    const codigo = codeInput.value.trim();
+    codeError.hidden = true;
+
+    if (!/^\d{6}$/.test(codigo)) {
+      codeError.textContent = 'El código debe tener 6 dígitos';
+      codeError.hidden = false;
+      return;
+    }
+
+    const btn = document.getElementById('code-ok') as HTMLButtonElement;
+    btn.disabled = true;
+    btn.textContent = 'Procesando…';
+
+    try {
+      const endpoint = accionActual === 'recargar' ? '/api/billetera/recargar' : '/api/billetera/retirar';
+      const body: any = {
+        monto: montoActual,
+        banco: bancoActual,
+        codigo,
+      };
+      if (accionActual === 'retirar' && cuentaInput.value) {
+        body.ultimos = cuentaInput.value;
+      }
+
+      const res = await fetch(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'same-origin',
+        body: JSON.stringify(body),
+      });
+      const data = await res.json();
+
+      if (!data.ok) {
+        codeError.textContent = mensajeError(data.error);
+        codeError.hidden = false;
+        btn.disabled = false;
+        btn.textContent = 'Confirmar';
+        return;
+      }
+
+      cerrarModal();
+      location.reload();
+    } catch {
+      codeError.textContent = 'Error de conexión. Intenta de nuevo.';
+      codeError.hidden = false;
+      btn.disabled = false;
+      btn.textContent = 'Confirmar';
+    }
+  });
+
+  document.getElementById('code-resend')?.addEventListener('click', async () => {
+    const btn = document.getElementById('code-resend') as HTMLButtonElement;
+    btn.disabled = true;
+    btn.textContent = 'Enviando…';
+
+    try {
+      const res = await fetch('/api/billetera/codigo', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'same-origin',
+        body: JSON.stringify({
+          accion: accionActual,
+          monto: montoActual,
+          banco: bancoActual,
+        }),
+      });
+      const data = await res.json();
+
+      if (data.ok) {
+        codeMsg.textContent = `Nuevo código enviado a ${data.correo || correoEnmascarado}`;
+        codeError.hidden = true;
+      } else {
+        codeError.textContent = mensajeError(data.error);
+        codeError.hidden = false;
+      }
+    } catch {
+      codeError.textContent = 'No se pudo reenviar. Intenta más tarde.';
+      codeError.hidden = false;
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Reenviar';
+    }
+  });
+
+  function mensajeError(code: string): string {
+    const map: Record<string, string> = {
+      MONTO_INVALIDO: 'Monto no válido',
+      BANCO_INVALIDO: 'Banco no válido',
+      SALDO_INSUFICIENTE: 'Saldo insuficiente',
+      CODIGO_INVALIDO: 'Código incorrecto',
+      CODIGO_EXPIRADO: 'El código ha expirado',
+      DEMASIADOS_INTENTOS: 'Demasiados intentos. Solicita uno nuevo',
+      ESPERA: 'Espera un momento antes de solicitar otro código',
+      CORREO_ERROR: 'No se pudo enviar el correo',
+      NO_SESION: 'Sesión expirada. Vuelve a iniciar sesión',
+      YA_PAGADA: 'Este servicio ya fue pagado',
+      NO_PAGABLE: 'El servicio aún no está listo para pagar',
+      NO_AUTORIZADO: 'No puedes pagar esta solicitud',
+    };
+    return map[code] || 'Ocurrió un error. Intenta de nuevo.';
+  }
+
+  modal.addEventListener('click', (e) => {
+    if (e.target === modal) cerrarModal();
+  });
+
+  /* ========== PAGAR SERVICIO ========== */
+  document.querySelectorAll<HTMLButtonElement>('.btn-pagar').forEach((b) =>
+    b.addEventListener('click', async () => {
+      const total = Number(b.dataset.total);
+      if (!confirm(`¿Pagar ${cop(total)} con tu billetera?`)) return;
+      b.disabled = true;
+      b.textContent = 'Procesando…';
+      try {
+        const res = await fetch('/api/billetera/pagar', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'same-origin',
+          body: JSON.stringify({ solicitudId: Number(b.dataset.solicitud) }),
+        });
+        const data = await res.json();
+        if (!data.ok) {
+          alert(mensajeError(data.error));
+          b.disabled = false;
+          b.textContent = 'Pagar servicio';
+          return;
+        }
+        location.reload();
+      } catch {
+        alert('Error de conexión.');
+        b.disabled = false;
+        b.textContent = 'Pagar servicio';
+      }
+    })
+  );
+
+  /* ========== HISTORIAL ========== */
+  type Mov = { id: number; titulo: string; fecha: string | Date; monto: number };
+  const hist = document.getElementById('hist') as HTMLDialogElement;
+  const histBody = document.getElementById('hist-body')!;
+  let datos: Mov[] = [];
+  let filtro: 'todos' | 'in' | 'out' = 'todos';
+
+  function fila(m: Mov) {
+    const li = document.createElement('li');
+    li.className = 'item';
+    const ic = document.createElement('span');
+    ic.className = `item__icon ${m.monto >= 0 ? 'in' : 'out'}`;
+    ic.textContent = m.monto >= 0 ? '↓' : '↑';
+    const tx = document.createElement('div');
+    tx.className = 'item__text';
+    const st = document.createElement('strong');
+    st.textContent = m.titulo;
+    const sm = document.createElement('small');
+    sm.textContent = horaDe(m.fecha);
+    tx.append(st, sm);
+    const am = document.createElement('span');
+    am.className = `item__amount ${m.monto >= 0 ? 'in' : 'out'}`;
+    am.textContent = (m.monto >= 0 ? '+' : '') + cop(m.monto);
+    li.append(ic, tx, am);
+    return li;
+  }
+
+  function pintar() {
+    histBody.replaceChildren();
+    const lista = datos.filter((m) =>
+      filtro === 'todos' ? true : filtro === 'in' ? m.monto >= 0 : m.monto < 0
+    );
+    if (!lista.length) {
+      const p = document.createElement('p');
+      p.className = 'hist__empty';
+      p.textContent = 'No hay movimientos para mostrar.';
+      histBody.appendChild(p);
+      return;
+    }
+    for (const g of agruparPorFecha(lista)) {
+      const h = document.createElement('h4');
+      h.className = 'day';
+      h.textContent = g.etiqueta;
+      const ul = document.createElement('ul');
+      ul.className = 'list';
+      g.items.forEach((m) => ul.appendChild(fila(m)));
+      histBody.append(h, ul);
+    }
+  }
+
+  async function abrirHistorial() {
+    hist.showModal();
+    histBody.textContent = 'Cargando…';
+    try {
+      const res = await fetch('/api/billetera/historial', { credentials: 'same-origin' });
+      const data = await res.json();
+      datos = data.ok ? data.movimientos : [];
+    } catch {
+      datos = [];
+    }
+    pintar();
+  }
+
+  document.querySelectorAll('[data-open-hist]').forEach((b) =>
+    b.addEventListener('click', abrirHistorial)
+  );
+  document.getElementById('hist-close')?.addEventListener('click', () => hist.close());
+  hist.addEventListener('click', (e) => {
+    if (e.target === hist) hist.close();
+  });
+
+  document.querySelectorAll<HTMLElement>('.chip').forEach((c) =>
+    c.addEventListener('click', () => {
+      document.querySelectorAll('.chip').forEach((x) => x.classList.remove('is-active'));
+      c.classList.add('is-active');
+      filtro = c.dataset.filtro as 'todos' | 'in' | 'out';
+      pintar();
+    })
+  );
+
+  /* ========== Accesos desde el navbar ========== */
+  if (location.hash === '#recargar') abrir('recargar');
+  if (location.hash === '#historial') abrirHistorial();
+</script>
+
+<style>
+  .wallet {
+    --primary: var(--color-primary, #1d4ed8);
+    --primary-soft: var(--color-primary-soft, #e8f0fe);
+    --bg-card: var(--color-surface, #ffffff);
+    --text: var(--color-text, #0f172a);
+    --muted: var(--color-muted, #64748b);
+    --border: var(--color-border, #e2e8f0);
+
+    font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+    color: var(--text);
+    max-width: 920px;
+    margin: 0 auto;
+    padding: 3rem 1.25rem 5rem;
+    display: grid;
+    gap: 1.75rem;
+  }
+
+  .wallet__head { display: flex; justify-content: space-between; align-items: flex-end; gap: 1rem; }
+  .eyebrow { display: block; font-size: 0.8rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--primary); }
+  h1 { font-size: clamp(2rem, 4vw, 2.75rem); font-weight: 800; line-height: 1.1; margin: 0.25rem 0 0; letter-spacing: -0.02em; }
+  .grad { background: linear-gradient(90deg, #4f46e5, #7c3aed); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .demo { margin: 0; padding: 0.6rem 1rem; border-radius: 14px; background: #fef9c3; color: #854d0e; font-size: 0.85rem; }
+  .muted-msg { margin: 0; color: var(--muted); font-size: 0.92rem; }
+
+  .brand { display: inline-flex; align-items: center; gap: .6rem; margin-bottom: 1.1rem; text-decoration: none; color: var(--text); transition: transform .2s ease; }
+  .brand:hover { transform: translateY(-2px); }
+  .brand__mark { width: 38px; height: 38px; display: grid; place-items: center; border-radius: 12px; color: #fff; background: linear-gradient(135deg, #1d4ed8, #2563eb 55%, #0ea5e9); box-shadow: 0 10px 20px -10px rgba(37, 99, 235, .8); transition: transform .3s ease; }
+  .brand:hover .brand__mark { transform: rotate(-8deg) scale(1.06); }
+  .brand__text { font-size: 1.7rem; font-weight: 800; letter-spacing: -.03em; line-height: 1; }
+  .brand__accent { background: linear-gradient(90deg, #2563eb, #7c3aed); -webkit-background-clip: text; background-clip: text; color: transparent; }
+
+  .balance {
+    display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1.5rem;
+    padding: 2rem 2.25rem; border-radius: 28px; color: #fff;
+    background: linear-gradient(135deg, #1d4ed8 0%, #2563eb 55%, #0ea5e9 100%);
+    box-shadow: 0 20px 40px -18px rgba(37, 99, 235, 0.55);
+    position: relative; overflow: hidden;
+  }
+  .balance::after { content: ''; position: absolute; right: -60px; top: -60px; width: 220px; height: 220px; background: radial-gradient(circle, rgba(255, 255, 255, 0.25), transparent 70%); }
+  .balance__label { margin: 0; opacity: 0.85; font-size: 0.95rem; }
+  .balance__amount { margin: 0.25rem 0; font-size: clamp(2.4rem, 6vw, 3.4rem); font-weight: 800; letter-spacing: -0.03em; }
+  .balance__hint { margin: 0; opacity: 0.8; font-size: 0.9rem; }
+  .balance__actions { display: flex; flex-direction: column; gap: 0.75rem; min-width: 170px; position: relative; z-index: 1; }
+
+  .btn { display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem; padding: 0.8rem 1.5rem; border-radius: 999px; border: 1px solid transparent; font: inherit; font-weight: 600; cursor: pointer; text-decoration: none; transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.15s ease; }
+  .btn:hover { transform: translateY(-1px); }
+  .btn:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+  .balance .btn--primary { background: #fff; color: var(--primary); box-shadow: 0 8px 20px -8px rgba(0, 0, 0, 0.35); }
+  .balance .btn--soft { background: rgba(255, 255, 255, 0.16); color: #fff; border-color: rgba(255, 255, 255, 0.35); backdrop-filter: blur(6px); }
+  .btn--ghost { background: var(--bg-card); color: var(--text); border-color: var(--border); }
+  .btn--main { background: var(--primary); color: #fff; }
+
+  .card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 28px; padding: 1.75rem 2rem; box-shadow: 0 10px 30px -20px rgba(15, 23, 42, 0.25); }
+  .card__head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; }
+  .card__head h2 { font-size: 1.15rem; font-weight: 700; margin: 0; }
+  .link { color: var(--primary); font-weight: 600; text-decoration: none; background: none; border: 0; cursor: pointer; font: inherit; }
+  .link:hover { text-decoration: underline; }
+
+  .empty { text-align: center; padding: 2.5rem 1rem; color: var(--muted); }
+  .empty__icon { width: 64px; height: 64px; margin: 0 auto 1rem; display: grid; place-items: center; font-size: 1.8rem; background: var(--primary-soft); border-radius: 20px; }
+  .empty h3 { margin: 0 0 0.25rem; color: var(--text); font-size: 1.05rem; }
+  .empty p { margin: 0; font-size: 0.92rem; }
+
+  .day { margin: 1.1rem 0 0.2rem; font-size: 0.76rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
+  .day-group:first-of-type .day { margin-top: 0; }
+  .list { list-style: none; margin: 0; padding: 0; display: grid; }
+  .item { display: flex; align-items: center; gap: 1rem; padding: 0.85rem 0; border-bottom: 1px solid var(--border); }
+  .item:last-child { border-bottom: 0; }
+  .item__icon { width: 42px; height: 42px; border-radius: 14px; display: grid; place-items: center; font-weight: 700; }
+  .item__icon.in { background: #dcfce7; color: #16a34a; }
+  .item__icon.out { background: #fee2e2; color: #dc2626; }
+  .item__text { flex: 1; display: grid; }
+  .item__text small { color: var(--muted); }
+  .item__amount { font-weight: 700; }
+  .item__amount.in { color: #16a34a; }
+  .item__amount.out { color: #dc2626; }
+
+  .modal { border: 0; border-radius: 24px; padding: 1.75rem; width: min(92vw, 380px); font-family: inherit; background: var(--bg-card); color: var(--text); box-shadow: 0 30px 60px -20px rgba(15, 23, 42, 0.45); }
+  .modal::backdrop { background: rgba(15, 23, 42, 0.5); backdrop-filter: blur(3px); }
+  .modal h3 { margin: 0 0 1rem; font-size: 1.2rem; }
+  .modal input, .modal select { width: 100%; box-sizing: border-box; padding: 0.8rem 1rem; border: 1px solid var(--border); border-radius: 14px; font: inherit; background: var(--bg-card); color: inherit; margin-top: 0.75rem; }
+  .modal input[hidden] { display: none; }
+  .modal input:first-child { margin-top: 0; }
+  .modal__error { color: #dc2626; font-size: 0.9rem; margin: 0.6rem 0 0; }
+  .modal__actions { display: flex; gap: 0.75rem; margin-top: 1.25rem; }
+  .modal__actions .btn { flex: 1; }
+
+  .bank { text-align: center; }
+  .bank__name { display: inline-block; padding: 0.5rem 1.2rem; border-radius: 12px; font-weight: 800; color: #fff; background: linear-gradient(135deg, #1e3a8a, #2563eb); margin-bottom: 1rem; }
+  .bank__spin { width: 34px; height: 34px; margin: 0.5rem auto 1rem; border: 3px solid var(--border); border-top-color: var(--primary); border-radius: 50%; animation: bank-spin 0.8s linear infinite; }
+  .bank__spin[hidden] { display: none; }
+  @keyframes bank-spin { to { transform: rotate(360deg); } }
+  .code { text-align: center; font-size: 1.6rem; letter-spacing: 0.4em; font-weight: 700; }
+
+  .hist { border: 0; padding: 0; width: min(94vw, 560px); max-height: 82vh; border-radius: 28px; font-family: 'Inter', system-ui, sans-serif; background: var(--bg-card); color: var(--text); box-shadow: 0 40px 80px -24px rgba(15, 23, 42, 0.55); overflow: hidden; }
+  .hist[open] { animation: hist-pop 0.25s cubic-bezier(0.2, 0.9, 0.3, 1.15); display: flex; }
+  .hist::backdrop { background: rgba(15, 23, 42, 0.55); backdrop-filter: blur(5px); animation: hist-fade 0.2s ease; }
+  @keyframes hist-pop { from { opacity: 0; transform: translateY(14px) scale(0.96); } to { opacity: 1; transform: none; } }
+  @keyframes hist-fade { from { opacity: 0; } to { opacity: 1; } }
+
+  .hist__box { display: flex; flex-direction: column; width: 100%; max-height: 82vh; }
+  .hist__head { display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; padding: 1.4rem 1.6rem 1rem; background: linear-gradient(135deg, rgba(37, 99, 235, 0.12), rgba(14, 165, 233, 0.06)); }
+  .hist__head h3 { margin: 0.2rem 0 0; font-size: 1.3rem; font-weight: 800; letter-spacing: -0.02em; }
+  .hist__close { width: 36px; height: 36px; border-radius: 50%; border: 1px solid var(--border); background: var(--bg-card); color: var(--text); font-size: 1.3rem; line-height: 1; cursor: pointer; transition: transform 0.2s ease; }
+  .hist__close:hover { transform: rotate(90deg); }
+  .hist__chips { display: flex; gap: 0.5rem; padding: 0.9rem 1.6rem 0.4rem; }
+  .chip { padding: 0.4rem 1rem; border-radius: 999px; border: 1px solid var(--border); background: transparent; color: var(--text); font: inherit; font-size: 0.85rem; font-weight: 600; cursor: pointer; transition: all 0.15s ease; }
+  .chip.is-active { background: var(--primary); border-color: transparent; color: #fff; }
+  .hist__body { overflow-y: auto; padding: 0.4rem 1.6rem 1.5rem; }
+  .hist__empty { text-align: center; color: var(--muted); padding: 2rem 0; }
+
+  @media (max-width: 600px) {
+    .balance { padding: 1.5rem; }
+    .balance__actions { width: 100%; flex-direction: row; }
+    .balance__actions .btn { flex: 1; }
+    .card { padding: 1.25rem; }
+  }
+</style>
