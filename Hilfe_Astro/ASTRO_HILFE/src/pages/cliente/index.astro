@@ -60,6 +60,10 @@ const porCalificar = solicitudes.filter((s) => s.estado === "finalizado" && s.ca
           <p>Bienvenido, <a id="nombreBienvenidaCliente" href="/cliente/editarperfil">{nombre}</a></p>
         </div>
         <div class="cliente-dashboard-actions">
+          <a href="/billetera" class="btn btn-secondary" aria-label="Abrir Mi Billetera">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="5" width="20" height="15" rx="2"/><path d="M2 10h20M16 15h2"/></svg>
+            Mi Billetera
+          </a>
           <span id="calificacionesPendientes" class="btn btn-secondary btn-sm" role="status" hidden={porCalificar === 0} style="position:relative;padding:8px 14px;cursor:default;pointer-events:none">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
             Calificar
@@ -280,7 +284,11 @@ const porCalificar = solicitudes.filter((s) => s.estado === "finalizado" && s.ca
     const copCliente = (n) => new Intl.NumberFormat("es-CO", { style: "currency", currency: "COP", maximumFractionDigits: 0 }).format(n);
 
     const pagarCita = async (btn, cita) => {
-      if (!window.confirm("¿Pagar " + copCliente(cita.total) + " con tu billetera?\n(Incluye 5% de comisión Hilf'e)")) return;
+      const saldoPendiente = Number(cita.saldoPendiente ?? cita.total ?? 0);
+      const confirmacion = saldoPendiente > 0
+        ? "¿Pagar el saldo restante de " + copCliente(saldoPendiente) + " con tu billetera?"
+        : "El abono ya cubre el total. ¿Confirmas el pago para finalizar el servicio?";
+      if (!window.confirm(confirmacion)) return;
       btn.disabled = true;
       btn.textContent = "Procesando…";
       try {
@@ -311,7 +319,7 @@ const porCalificar = solicitudes.filter((s) => s.estado === "finalizado" && s.ca
         const response = await fetch("/api/citas/cliente", { credentials: "same-origin" });
         if (response.status === 401) { window.location.href = "/login/login"; return; }
         const data = await response.json().catch(() => ({}));
-        if (!data.ok) throw new Error("No se pudieron cargar tus solicitudes.");
+        if (!data.ok) throw new Error(data.mensaje || "No se pudieron cargar tus solicitudes.");
         const solicitudes = data.citas;
 
         const body = document.getElementById("solicitudesBody");
@@ -356,7 +364,7 @@ const porCalificar = solicitudes.filter((s) => s.estado === "finalizado" && s.ca
           if (estado === "trabajo_realizado") {
             const btn = document.createElement("button");
             btn.type = "button"; btn.className = "btn btn-primary btn-sm";
-            btn.textContent = "Pagar servicio";
+            btn.textContent = Number(s.saldoPendiente) > 0 ? "Pagar saldo restante" : "Confirmar pago";
             btn.addEventListener("click", () => pagarCita(btn, s));
             tdAcc.appendChild(btn);
           } else if (estado === "finalizado") {

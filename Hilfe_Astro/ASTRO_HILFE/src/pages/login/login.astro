@@ -2,9 +2,6 @@
 import Layout from "../../layouts/Layout.astro";
 import "../../components/styles/login.css";
 
-// Al llegar al login se borra cualquier sesión anterior (cookie del servidor)
-Astro.cookies.delete('usuario_id', { path: '/' });
-
 const returnUrl = Astro.url.searchParams.get("returnUrl") ?? "";
 const correoRecordado = Astro.url.searchParams.get("correoRecordado") ?? "";
 const error = Astro.url.searchParams.get("error");
@@ -181,6 +178,12 @@ const apiBaseAuth = (import.meta.env.PUBLIC_API_BASE_URL ?? "http://127.0.0.1:80
   {!mostrarRegistroExitoso && (
     <Fragment>
       <script is:inline>
+        function mostrarAvisoInicioSesion(usuario) {
+          const nombres = { 1: "Administrador", 2: "Trabajador", 3: "Cliente" };
+          const rol = nombres[Number(usuario?.rol)];
+          if (rol) sessionStorage.setItem("hilfe:loginToast", `Has iniciado sesión como ${rol}`);
+        }
+
         // Al abrir el login no debe quedar nada de una sesión anterior
         try { localStorage.clear(); sessionStorage.clear(); } catch (e) {}
 
@@ -249,7 +252,8 @@ const apiBaseAuth = (import.meta.env.PUBLIC_API_BASE_URL ?? "http://127.0.0.1:80
             // Sesión limpia: nada de la cuenta anterior
             try { localStorage.clear(); sessionStorage.clear(); } catch (e) {}
             localStorage.setItem("usuario", JSON.stringify(data.usuario));
-            localStorage.setItem("token", "sesion-activa");
+            localStorage.setItem("token", data.token);
+            mostrarAvisoInicioSesion(data.usuario);
 
             window.location.assign(data.destino || "/");
           } catch {
@@ -259,13 +263,12 @@ const apiBaseAuth = (import.meta.env.PUBLIC_API_BASE_URL ?? "http://127.0.0.1:80
 
         // ===== Iniciar con Google (sigue usando el backend externo) =====
         const googleBtn = document.getElementById("googleBtn");
-        const apiBaseGoogle = (googleBtn?.dataset.apiBase || "http://127.0.0.1:8000/api").replace(/\/+$/, "");
-        const destinosGoogle = { 1: "/admin/admin", 2: "/trabajador", 3: "/cliente" };
+        const destinosGoogle = { 1: "/", 2: "/", 3: "/" };
 
         async function manejarGoogle(respuesta) {
           const errorGoogle = (m) => `/login/login?error=${encodeURIComponent(m)}`;
           try {
-            const response = await fetch(`${apiBaseGoogle}/auth/google`, {
+            const response = await fetch("/api/auth/google", {
               method: "POST",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({ credential: respuesta.credential }),
@@ -291,10 +294,11 @@ const apiBaseAuth = (import.meta.env.PUBLIC_API_BASE_URL ?? "http://127.0.0.1:80
               return;
             }
 
-            // Cuenta existente: entra directo a su panel
+            // Las cuentas existentes aterrizan en la página principal.
             if (data.existe) {
               localStorage.setItem("token", data.token);
               localStorage.setItem("usuario", JSON.stringify(data.usuario));
+              mostrarAvisoInicioSesion(data.usuario);
               const destino = destinosGoogle[data.usuario?.rol];
               window.location.assign(destino ?? errorGoogle("El rol de usuario no es válido."));
               return;

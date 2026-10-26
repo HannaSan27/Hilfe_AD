@@ -3,14 +3,49 @@ import Layout from '../layouts/Layout.astro';
 import { obtenerBilletera, obtenerPendientesPago } from '../lib/billetera';
 import { getUsuarioId } from '../lib/sesion';
 import { agruparPorFecha, horaDe } from '../lib/fechas';
+import { pool } from '../lib/db';
+import { sincronizarComisionesAdmin } from '../lib/billetera';
 
 export const prerender = false;
 
 const usuarioId = getUsuarioId(Astro.cookies);
 if (!usuarioId) return Astro.redirect('/login/login');
 
-const { saldo, movimientos: filas } = await obtenerBilletera(usuarioId, 10);
-const pendientes = await obtenerPendientesPago(usuarioId);
+let saldo = 0;
+let filas: any[] = [];
+let pendientes: Awaited<ReturnType<typeof obtenerPendientesPago>> = [];
+let errorBilletera = '';
+let esAdmin = false;
+let esCliente = false;
+let comisionesGeneradas = 0;
+let totalRetirado = 0;
+try {
+  const [usuarios] = await pool.query<any[]>('SELECT Id_Rol FROM usuarios WHERE Id_Usuario = ? LIMIT 1', [usuarioId]);
+  const rol = Number(usuarios[0]?.Id_Rol);
+  esAdmin = rol === 1;
+  esCliente = rol === 3;
+  if (esAdmin) await sincronizarComisionesAdmin(usuarioId);
+  const wallet = await obtenerBilletera(usuarioId, 10);
+  saldo = wallet.saldo;
+  filas = wallet.movimientos;
+  if (esAdmin) {
+    const [resumen] = await pool.query<any[]>(
+      `SELECT
+          COALESCE(SUM(CASE WHEN t.type = 'deposit' AND t.description = 'Comisión de plataforma por servicio' THEN t.amount ELSE 0 END), 0) AS comisiones,
+          COALESCE(SUM(CASE WHEN t.type = 'withdraw' THEN t.amount ELSE 0 END), 0) AS retiros
+         FROM transactions t
+         JOIN wallets w ON w.id = t.wallet_id
+        WHERE w.user_id = ?`,
+      [usuarioId]
+    );
+    comisionesGeneradas = Number(resumen[0]?.comisiones || 0);
+    totalRetirado = Number(resumen[0]?.retiros || 0);
+  }
+  pendientes = await obtenerPendientesPago(usuarioId);
+} catch (error) {
+  console.error('No se pudo cargar la billetera:', error);
+  errorBilletera = 'No se pudo cargar tu billetera. Revisa que MySQL esté activo y vuelve a intentarlo.';
+}
 
 const cop = (n: number) =>
   new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(n);
@@ -41,25 +76,27 @@ const grupos = agruparPorFecha(movimientos);
           </span>
           <span class="brand__text">Hilf<span class="brand__accent">'e</span></span>
         </a>
-        <span class="eyebrow">Mi billetera</span>
+        <span class="eyebrow">{esAdmin ? 'Billetera de administración' : 'Mi billetera'}</span>
         <h1>Saldo <span class="grad">disponible</span></h1>
       </div>
       <button type="button" class="btn btn--ghost" data-open-hist>Historial</button>
     </header>
 
-    <p class="demo">Modo demostración: las recargas y retiros son simulados.</p>
+    {errorBilletera && <p class="wallet__error" role="alert">{errorBilletera}</p>}
+
+    <p class="demo">{esAdmin ? 'Billetera del administrador: aquí se acumulan comisiones de servicios. Los retiros son simulados.' : 'Modo demostración: las recargas y retiros son simulados.'}</p>
 
     <section class="balance">
       <div class="balance__info">
         <p class="balance__label">Saldo actual</p>
         <p class="balance__amount" id="saldo-actual">{cop(saldo)}</p>
-        <p class="balance__hint">Disponible para usar en Hilf'e</p>
+        <p class="balance__hint">{esAdmin ? 'Comisiones de servicios finalizados' : "Disponible para usar en Hilf'e"}</p>
       </div>
       <div class="balance__actions">
-        <button class="btn btn--primary" id="btn-recargar">
+        {!esAdmin && <button class="btn btn--primary" id="btn-recargar">
           <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
           Recargar
-        </button>
+        </button>}
         <button class="btn btn--soft" id="btn-retirar">
           <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M6 13l6 6 6-6"/></svg>
           Retirar
@@ -67,7 +104,17 @@ const grupos = agruparPorFecha(movimientos);
       </div>
     </section>
 
-    <section class="card">
+    {esAdmin && <section class="card admin-commission-summary" aria-label="Resumen de comisiones de administración">
+      <div>
+        <span class="eyebrow">Ingresos de la plataforma</span>
+        <h2>Comisiones generadas</h2>
+        <p>Comisión acumulada por servicios finalizados.</p>
+      </div>
+      <strong>{cop(comisionesGeneradas)}</strong>
+      <div class="admin-commission-withdrawn">Retiros simulados: <b>{cop(totalRetirado)}</b></div>
+    </section>}
+
+    {esCliente && <section class="card">
       <div class="card__head">
         <h2>Servicios por pagar</h2>
       </div>
@@ -80,16 +127,16 @@ const grupos = agruparPorFecha(movimientos);
               <span class="item__icon out">$</span>
               <div class="item__text">
                 <strong>{p.titulo}</strong>
-                <small>{p.trabajador} · Total {cop(p.total)} (incluye 5%)</small>
+                <small>{p.trabajador} · Abonado {cop(p.abonado)} · Pendiente {cop(p.saldoPendiente)}</small>
               </div>
-              <button type="button" class="btn btn--main btn-pagar" data-solicitud={p.id} data-total={p.total}>
-                Pagar servicio
+              <button type="button" class="btn btn--main btn-pagar" data-solicitud={p.id} data-total={p.saldoPendiente}>
+                {p.saldoPendiente > 0 ? 'Pagar saldo restante' : 'Confirmar y finalizar'}
               </button>
             </li>
           ))}
         </ul>
       )}
-    </section>
+    </section>}
 
     <section class="card">
       <div class="card__head">
@@ -132,6 +179,7 @@ const grupos = agruparPorFecha(movimientos);
 
       <div id="step-form">
         <input id="modal-monto" type="number" min="1000" step="1000" placeholder="Monto en COP" />
+        <label id="modal-banco-label" for="modal-banco">Banco desde el que se simula la recarga</label>
         <select id="modal-banco">
           <option value="">Elige tu banco</option>
           <option value="Bancolombia">Bancolombia</option>
@@ -141,7 +189,9 @@ const grupos = agruparPorFecha(movimientos);
           <option value="Nequi">Nequi</option>
           <option value="Daviplata">Daviplata</option>
         </select>
-        <input id="modal-cuenta" type="text" inputmode="numeric" maxlength="4" placeholder="Últimos 4 dígitos (solo retiro)" hidden />
+        <label id="modal-destino-label" for="modal-cuenta" hidden>Cuenta, celular o llave Bre‑B de destino</label>
+        <input id="modal-cuenta" type="text" maxlength="120" autocomplete="off" placeholder="Ej. 3001234567 o nombre@banco" hidden />
+        <small id="modal-destino-ayuda" hidden>En esta demostración no se envía dinero; el retiro solo se descuenta de tu saldo y queda registrado.</small>
         <p id="modal-error" class="modal__error" hidden></p>
         <div class="modal__actions">
           <button type="button" class="btn btn--ghost" id="modal-cancel">Cancelar</button>
@@ -159,15 +209,6 @@ const grupos = agruparPorFecha(movimientos);
         </div>
       </div>
 
-      <div id="step-code" class="bank" hidden>
-        <p id="code-msg">Ingresa el código de 6 dígitos que enviamos a tu correo</p>
-        <input id="code-input" class="code" type="text" inputmode="numeric" maxlength="6" autocomplete="one-time-code" placeholder="000000" />
-        <p id="code-error" class="modal__error" hidden></p>
-        <div class="modal__actions">
-          <button type="button" class="btn btn--ghost" id="code-resend">Reenviar</button>
-          <button type="button" class="btn btn--main" id="code-ok">Confirmar</button>
-        </div>
-      </div>
     </dialog>
 
     <!-- ========== HISTORIAL ========== -->
@@ -202,28 +243,25 @@ const grupos = agruparPorFecha(movimientos);
   const modalTitle = document.getElementById('modal-title')!;
   const stepForm = document.getElementById('step-form')!;
   const stepBank = document.getElementById('step-bank')!;
-  const stepCode = document.getElementById('step-code')!;
   const montoInput = document.getElementById('modal-monto') as HTMLInputElement;
   const bancoSelect = document.getElementById('modal-banco') as HTMLSelectElement;
   const cuentaInput = document.getElementById('modal-cuenta') as HTMLInputElement;
+  const bancoLabel = document.getElementById('modal-banco-label')!;
+  const destinoLabel = document.getElementById('modal-destino-label')!;
+  const destinoAyuda = document.getElementById('modal-destino-ayuda')!;
   const modalError = document.getElementById('modal-error')!;
   const bankName = document.getElementById('bank-name')!;
   const bankSpin = document.getElementById('bank-spin')!;
   const bankMsg = document.getElementById('bank-msg')!;
   const bankActions = document.getElementById('bank-actions')!;
-  const codeMsg = document.getElementById('code-msg')!;
-  const codeInput = document.getElementById('code-input') as HTMLInputElement;
-  const codeError = document.getElementById('code-error')!;
 
   let accionActual: 'recargar' | 'retirar' = 'recargar';
   let montoActual = 0;
   let bancoActual = '';
-  let correoEnmascarado = '';
 
-  function mostrarPaso(paso: 'form' | 'bank' | 'code') {
+  function mostrarPaso(paso: 'form' | 'bank') {
     stepForm.hidden = paso !== 'form';
     stepBank.hidden = paso !== 'bank';
-    stepCode.hidden = paso !== 'code';
   }
 
   function abrir(accion: 'recargar' | 'retirar') {
@@ -232,10 +270,12 @@ const grupos = agruparPorFecha(movimientos);
     montoInput.value = '';
     bancoSelect.value = '';
     cuentaInput.value = '';
+    bancoSelect.hidden = accion !== 'recargar';
+    bancoLabel.hidden = accion !== 'recargar';
     cuentaInput.hidden = accion !== 'retirar';
+    destinoLabel.hidden = accion !== 'retirar';
+    destinoAyuda.hidden = accion !== 'retirar';
     modalError.hidden = true;
-    codeError.hidden = true;
-    codeInput.value = '';
     mostrarPaso('form');
     modal.showModal();
     montoInput.focus();
@@ -260,13 +300,14 @@ const grupos = agruparPorFecha(movimientos);
       modalError.hidden = false;
       return;
     }
-    if (!banco) {
+    if (accionActual === 'recargar' && !banco) {
       modalError.textContent = 'Selecciona un banco';
       modalError.hidden = false;
       return;
     }
-    if (accionActual === 'retirar' && cuentaInput.value && !/^\d{4}$/.test(cuentaInput.value)) {
-      modalError.textContent = 'Los últimos 4 dígitos deben ser numéricos';
+    const destino = cuentaInput.value.trim();
+    if (accionActual === 'retirar' && (destino.length < 4 || destino.length > 120 || !/^[\p{L}\p{N}._@+\- ]+$/u.test(destino))) {
+      modalError.textContent = 'Escribe un número, correo o llave Bre‑B válida (mínimo 4 caracteres).';
       modalError.hidden = false;
       return;
     }
@@ -275,17 +316,19 @@ const grupos = agruparPorFecha(movimientos);
     bancoActual = banco;
 
     mostrarPaso('bank');
-    bankName.textContent = banco;
+    bankName.textContent = accionActual === 'recargar' ? banco : 'Retiro simulado';
     bankSpin.hidden = false;
     bankActions.hidden = true;
-    bankMsg.textContent = 'Conectando con tu banco…';
+    bankMsg.textContent = accionActual === 'recargar'
+      ? 'Simulación de confirmación de recarga…'
+      : 'Preparando la simulación de retiro…';
 
     await new Promise(r => setTimeout(r, 1800));
 
     bankSpin.hidden = true;
     bankMsg.textContent = accionActual === 'recargar'
       ? `¿Autorizas la recarga de ${cop(monto)} desde ${banco}?`
-      : `¿Autorizas el retiro de ${cop(monto)} hacia ${banco}?`;
+      : `¿Confirmas descontar ${cop(monto)} y simular el envío a ${destino}?`;
     bankActions.hidden = false;
   });
 
@@ -293,126 +336,48 @@ const grupos = agruparPorFecha(movimientos);
     cerrarModal();
   });
 
-  document.getElementById('bank-approve')?.addEventListener('click', async () => {
+    document.getElementById('bank-approve')?.addEventListener('click', async () => {
     bankActions.hidden = true;
     bankSpin.hidden = false;
-    bankMsg.textContent = 'Enviando código de verificación…';
-
-    try {
-      const res = await fetch('/api/billetera/codigo', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'same-origin',
-        body: JSON.stringify({
-          accion: accionActual,
-          monto: montoActual,
-          banco: bancoActual,
-        }),
-      });
-      const data = await res.json();
-
-      if (!data.ok) {
-        bankMsg.textContent = mensajeError(data.error);
-        bankSpin.hidden = true;
-        bankActions.hidden = false;
+      if (accionActual === 'recargar') {
+        bankMsg.textContent = 'Aplicando recarga simulada a tu billetera…';
+        try {
+          const res = await fetch('/api/billetera/recargar', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'same-origin',
+            body: JSON.stringify({ monto: montoActual, banco: bancoActual }),
+          });
+          const data = await res.json().catch(() => ({}));
+          if (!res.ok || !data.ok) throw new Error(mensajeError(data.error) || 'No se pudo aplicar la recarga.');
+          bankSpin.hidden = true;
+          bankMsg.textContent = `Recarga simulada aplicada: ${cop(montoActual)}. Tu saldo está actualizado.`;
+          window.setTimeout(() => { cerrarModal(); location.reload(); }, 850);
+        } catch (error) {
+          bankSpin.hidden = true;
+          bankMsg.textContent = error instanceof Error ? error.message : 'Error al aplicar la recarga. Intenta de nuevo.';
+          bankActions.hidden = false;
+        }
         return;
       }
 
-      correoEnmascarado = data.correo || 'tu correo';
-      codeMsg.textContent = `Ingresa el código de 6 dígitos que enviamos a ${correoEnmascarado}`;
-      codeInput.value = '';
-      codeError.hidden = true;
-      mostrarPaso('code');
-      codeInput.focus();
-    } catch {
-      bankMsg.textContent = 'Error de conexión. Intenta de nuevo.';
+    bankMsg.textContent = 'Descontando el retiro de demostración…';
+    try {
+      const res = await fetch('/api/billetera/retirar', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'same-origin',
+        body: JSON.stringify({ monto: montoActual, destino: cuentaInput.value.trim() }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data.ok) throw new Error(mensajeError(data.error));
+      bankSpin.hidden = true;
+      bankMsg.textContent = `Retiro simulado de ${cop(montoActual)} registrado. El saldo se descontó; no se envió dinero real.`;
+      window.setTimeout(() => { cerrarModal(); location.reload(); }, 1200);
+    } catch (error) {
+      bankMsg.textContent = error instanceof Error ? error.message : 'No se pudo completar el retiro. Revisa el saldo e intenta de nuevo.';
       bankSpin.hidden = true;
       bankActions.hidden = false;
-    }
-  });
-
-  document.getElementById('code-ok')?.addEventListener('click', async () => {
-    const codigo = codeInput.value.trim();
-    codeError.hidden = true;
-
-    if (!/^\d{6}$/.test(codigo)) {
-      codeError.textContent = 'El código debe tener 6 dígitos';
-      codeError.hidden = false;
-      return;
-    }
-
-    const btn = document.getElementById('code-ok') as HTMLButtonElement;
-    btn.disabled = true;
-    btn.textContent = 'Procesando…';
-
-    try {
-      const endpoint = accionActual === 'recargar' ? '/api/billetera/recargar' : '/api/billetera/retirar';
-      const body: any = {
-        monto: montoActual,
-        banco: bancoActual,
-        codigo,
-      };
-      if (accionActual === 'retirar' && cuentaInput.value) {
-        body.ultimos = cuentaInput.value;
-      }
-
-      const res = await fetch(endpoint, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'same-origin',
-        body: JSON.stringify(body),
-      });
-      const data = await res.json();
-
-      if (!data.ok) {
-        codeError.textContent = mensajeError(data.error);
-        codeError.hidden = false;
-        btn.disabled = false;
-        btn.textContent = 'Confirmar';
-        return;
-      }
-
-      cerrarModal();
-      location.reload();
-    } catch {
-      codeError.textContent = 'Error de conexión. Intenta de nuevo.';
-      codeError.hidden = false;
-      btn.disabled = false;
-      btn.textContent = 'Confirmar';
-    }
-  });
-
-  document.getElementById('code-resend')?.addEventListener('click', async () => {
-    const btn = document.getElementById('code-resend') as HTMLButtonElement;
-    btn.disabled = true;
-    btn.textContent = 'Enviando…';
-
-    try {
-      const res = await fetch('/api/billetera/codigo', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'same-origin',
-        body: JSON.stringify({
-          accion: accionActual,
-          monto: montoActual,
-          banco: bancoActual,
-        }),
-      });
-      const data = await res.json();
-
-      if (data.ok) {
-        codeMsg.textContent = `Nuevo código enviado a ${data.correo || correoEnmascarado}`;
-        codeError.hidden = true;
-      } else {
-        codeError.textContent = mensajeError(data.error);
-        codeError.hidden = false;
-      }
-    } catch {
-      codeError.textContent = 'No se pudo reenviar. Intenta más tarde.';
-      codeError.hidden = false;
-    } finally {
-      btn.disabled = false;
-      btn.textContent = 'Reenviar';
     }
   });
 
@@ -421,11 +386,7 @@ const grupos = agruparPorFecha(movimientos);
       MONTO_INVALIDO: 'Monto no válido',
       BANCO_INVALIDO: 'Banco no válido',
       SALDO_INSUFICIENTE: 'Saldo insuficiente',
-      CODIGO_INVALIDO: 'Código incorrecto',
-      CODIGO_EXPIRADO: 'El código ha expirado',
-      DEMASIADOS_INTENTOS: 'Demasiados intentos. Solicita uno nuevo',
-      ESPERA: 'Espera un momento antes de solicitar otro código',
-      CORREO_ERROR: 'No se pudo enviar el correo',
+      DESTINO_INVALIDO: 'Escribe un número, correo o llave Bre‑B válida.',
       NO_SESION: 'Sesión expirada. Vuelve a iniciar sesión',
       YA_PAGADA: 'Este servicio ya fue pagado',
       NO_PAGABLE: 'El servicio aún no está listo para pagar',
@@ -607,6 +568,12 @@ const grupos = agruparPorFecha(movimientos);
   .btn--main { background: var(--primary); color: #fff; }
 
   .card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 28px; padding: 1.75rem 2rem; box-shadow: 0 10px 30px -20px rgba(15, 23, 42, 0.25); }
+  .admin-commission-summary { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: .35rem 1.5rem; border-color: color-mix(in srgb, var(--primary) 28%, var(--border)); }
+  .admin-commission-summary h2 { margin: .25rem 0; font-size: 1.15rem; }
+  .admin-commission-summary p { margin: 0; color: var(--muted); font-size: .9rem; }
+  .admin-commission-summary > strong { color: var(--primary); font-size: clamp(1.5rem, 3vw, 2rem); font-variant-numeric: tabular-nums; }
+  .admin-commission-withdrawn { grid-column: 1 / -1; padding-top: .8rem; border-top: 1px solid var(--border); color: var(--muted); font-size: .85rem; }
+  .admin-commission-withdrawn b { color: var(--text); }
   .card__head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; }
   .card__head h2 { font-size: 1.15rem; font-weight: 700; margin: 0; }
   .link { color: var(--primary); font-weight: 600; text-decoration: none; background: none; border: 0; cursor: pointer; font: inherit; }

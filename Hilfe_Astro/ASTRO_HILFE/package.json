@@ -13,12 +13,14 @@
   },
   "dependencies": {
     "@astrojs/node": "^11.1.9",
-    "ag-grid-enterprise": "^36.2.0"
+    "ag-grid-enterprise": "^36.2.0",
+    "bcryptjs": "^3.0.3"
   },
   "allowScripts": {
     "esbuild": true
   },
   "devDependencies": {
+    "@types/bcryptjs": "^2.4.6",
     "astro": "^7.3.4"
   }
 }

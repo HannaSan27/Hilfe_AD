@@ -54,8 +54,14 @@ const {
 			.then(function (data) {
 				if (!data || !data.ok || Number(data.usuario.rol) !== regla.rol) { irLogin(); return; }
 				try {
+				var token = localStorage.getItem('token');
+				if (!token || token === 'sesion-activa') {
+					localStorage.removeItem('token');
+					localStorage.removeItem('usuario');
+					irLogin();
+					return;
+				}
 					localStorage.setItem('usuario', JSON.stringify(data.usuario));
-					localStorage.setItem('token', 'sesion-activa');
 				} catch (e) {}
 				if (ruta === '/admin') { window.location.replace(regla.destino); return; }
 				mostrar();
@@ -70,6 +76,26 @@ const {
 
 		<script is:inline>
 			(function () {
+				var mensajeLogin = null;
+				try {
+					mensajeLogin = sessionStorage.getItem('hilfe:loginToast');
+					sessionStorage.removeItem('hilfe:loginToast');
+				} catch (e) {}
+				if (mensajeLogin) {
+					var aviso = document.createElement('div');
+					aviso.setAttribute('role', 'status');
+					aviso.setAttribute('aria-live', 'polite');
+					aviso.textContent = mensajeLogin;
+					aviso.style.cssText = 'position:fixed;top:20px;right:20px;z-index:5000;padding:12px 18px;border:1px solid #86efac;border-radius:12px;background:#f0fdf4;color:#166534;box-shadow:0 12px 36px rgba(15,23,42,.18);font:600 14px Inter,system-ui,sans-serif;opacity:0;transform:translateY(-8px);transition:opacity .2s ease,transform .2s ease';
+					document.body.appendChild(aviso);
+					requestAnimationFrame(function () { aviso.style.opacity = '1'; aviso.style.transform = 'translateY(0)'; });
+					window.setTimeout(function () {
+						aviso.style.opacity = '0';
+						aviso.style.transform = 'translateY(-8px)';
+						window.setTimeout(function () { aviso.remove(); }, 220);
+					}, 3200);
+				}
+
 				var current = 'light';
 				try { current = localStorage.getItem('theme') || 'light'; } catch (e) {}
 				document.documentElement.setAttribute('data-theme', current);

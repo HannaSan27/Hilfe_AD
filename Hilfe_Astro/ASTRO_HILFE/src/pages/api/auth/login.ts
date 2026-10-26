@@ -1,14 +1,11 @@
 import type { APIRoute } from 'astro';
-import type { RowDataPacket } from 'mysql2';
-import bcrypt from 'bcryptjs';
-import { pool } from '../../../lib/db';
 
 export const prerender = false;
 
 const DESTINOS: Record<number, string> = {
-  1: '/admin/admin',
-  2: '/trabajador',
-  3: '/cliente',
+  1: '/',
+  2: '/',
+  3: '/',
 };
 
 export const POST: APIRoute = async ({ request, cookies }) => {
@@ -18,21 +15,25 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     return Response.json({ ok: false, mensaje: 'Completa correo y contraseña.' }, { status: 400 });
   }
 
-  const [rows] = await pool.query<RowDataPacket[]>(
-    'SELECT Id_Usuario, Id_Rol, Nombre, Contrasena FROM usuarios WHERE Correo = ? LIMIT 1',
-    [String(correo).trim().toLowerCase()]
-  );
-  const u = rows[0];
-
-  // $2y$ (PHP) -> $2a$ para que bcryptjs lo entienda; $2b$ funciona directo
-  const hash = u ? String(u.Contrasena).replace(/^\$2y\$/, '$2a$') : '';
-  const valido = u ? await bcrypt.compare(String(contrasena), hash) : false;
-
-  if (!valido) {
-    return Response.json({ ok: false, mensaje: 'Correo o contraseña incorrectos.' }, { status: 401 });
+  const apiBase = (import.meta.env.PUBLIC_API_BASE_URL || 'http://127.0.0.1:8000/api').replace(/\/+$/, '');
+  let response: Response;
+  try {
+    response = await fetch(`${apiBase}/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ correo: String(correo).trim().toLowerCase(), contrasena }),
+    });
+  } catch {
+    return Response.json({ ok: false, mensaje: "No se pudo conectar con el servidor de autenticación." }, { status: 503 });
   }
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok || !data.token || !data.usuario) {
+    return Response.json({ ok: false, ...data }, { status: response.status || 502 });
+  }
+  const destino = DESTINOS[Number(data.usuario.rol)];
+  if (!destino) return Response.json({ ok: false, mensaje: 'La cuenta no tiene un rol válido. Contacta al administrador.' }, { status: 403 });
 
-  cookies.set('usuario_id', String(u.Id_Usuario), {
+  cookies.set('usuario_id', String(data.usuario.id), {
     path: '/',
     httpOnly: true,
     sameSite: 'lax',
@@ -42,7 +43,8 @@ export const POST: APIRoute = async ({ request, cookies }) => {
 
   return Response.json({
     ok: true,
-    destino: DESTINOS[u.Id_Rol] ?? '/',
-    usuario: { id: u.Id_Usuario, nombre: u.Nombre, rol: u.Id_Rol },
+    token: data.token,
+    destino,
+    usuario: data.usuario,
   });
 };

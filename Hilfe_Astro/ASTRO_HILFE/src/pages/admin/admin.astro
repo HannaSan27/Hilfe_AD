@@ -1,6 +1,7 @@
 ---
 import Layout from '../../layouts/Layout.astro';
 import UserMenu from '../../components/UserMenu.astro';
+import BotonBilletera from '../../components/BotonBilletera.astro';
 import '../../components/styles/admin.css';
 import '../../components/styles/admin-polish.css';
 
@@ -50,6 +51,7 @@ const cards = [
   { icon: 'hard-hat', color: 'success', value: stats.totalTrabajadores, label: 'Trabajadores activos', trend: 'Trabajadores registrados', up: true },
   { icon: 'calendar-check', color: 'warning', value: stats.citasMes, label: 'Citas este mes', trend: 'Mes actual', up: true },
   { icon: 'star', color: 'danger', value: stats.califPromedio, label: 'Calificación promedio', trend: 'Sin cambios', up: false },
+  { icon: 'wallet-cards', color: 'success', value: '$0', label: 'Comisión acumulada', trend: 'Cargando movimientos…', up: true },
 ];
 ---
 
@@ -86,6 +88,9 @@ const cards = [
       <a href="/admin/categoria" class="sidebar-item">
         <i data-lucide="tag"></i> Categorías
       </a>
+      <a href="/billetera" class="sidebar-item">
+        <i data-lucide="wallet-cards"></i> Billetera
+      </a>
 
       <span class="sidebar-label">Cuenta</span>
       <a href="/" class="sidebar-item">
@@ -106,6 +111,7 @@ const cards = [
           </div>
 
           <div class="nav-actions">
+            <BotonBilletera />
             <button type="button" class="theme-toggle" aria-label="Cambiar tema">
               <svg class="theme-icon-light" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
               <svg class="theme-icon-dark" style="display:none" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
@@ -131,9 +137,9 @@ const cards = [
                 <i data-lucide={c.icon} style="width:22px;height:22px"></i>
               </div>
               <div class="stat-card-body">
-                <div class="stat-card-value">{c.value}</div>
+                <div class="stat-card-value" id={c.label === 'Comisión acumulada' ? 'adminComisionTotal' : undefined}>{c.value}</div>
                 <div class="stat-card-label">{c.label}</div>
-                <div class={`stat-card-trend ${c.up ? 'up' : ''}`}>{c.trend}</div>
+                <div class={`stat-card-trend ${c.up ? 'up' : ''}`} id={c.label === 'Comisión acumulada' ? 'adminComisionDetalle' : undefined}>{c.trend}</div>
               </div>
             </div>
           ))}
@@ -226,6 +232,8 @@ const cards = [
     (function () {
       const countElement = document.getElementById('adminVerificationCount');
       const alertElement = document.getElementById('adminVerificationAlert');
+      const commissionElement = document.getElementById('adminComisionTotal');
+      const commissionDetail = document.getElementById('adminComisionDetalle');
       if (!countElement || !alertElement) return;
 
       async function actualizarSolicitudesPendientes() {
@@ -248,6 +256,22 @@ const cards = [
       }
       actualizarSolicitudesPendientes();
       window.setInterval(actualizarSolicitudesPendientes, 60000);
+
+      async function actualizarComisiones() {
+        if (!commissionElement || !commissionDetail) return;
+        try {
+          const response = await fetch('/api/admin/comisiones', { credentials: 'same-origin', cache: 'no-store' });
+          const data = await response.json();
+          if (!response.ok || !data.ok) throw new Error(data.mensaje || 'No se pudo cargar');
+          const formato = (monto) => new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(Number(monto) || 0);
+          commissionElement.textContent = formato(data.comisionTotal);
+          commissionDetail.textContent = `Cliente ${formato(data.comisionCliente)} · Profesional ${formato(data.comisionTrabajador)} · ${data.serviciosConMovimiento} servicios`;
+        } catch {
+          commissionDetail.textContent = 'No se pudo cargar el historial de servicios';
+        }
+      }
+      actualizarComisiones();
+      window.setInterval(actualizarComisiones, 60000);
     })();
 
     document.getElementById('cerrarSesionAdmin')?.addEventListener('click', function (event) {

@@ -117,27 +117,17 @@ const nombre = usuario.nombre;
   </aside>
 
   <script is:inline>
-    document.getElementById('cerrarSesionTrabajador')?.addEventListener('click', (event) => {
+    document.getElementById('cerrarSesionTrabajador')?.addEventListener('click', async (event) => {
       if (!window.confirm('¿Estás seguro de que quieres cerrar sesión?')) {
         event.preventDefault();
         return;
       }
+      event.preventDefault();
       localStorage.removeItem('token');
       localStorage.removeItem('usuario');
-      document.cookie = 'usuario_id=; path=/; max-age=0';
-      event.preventDefault();
+      await fetch('/api/auth/logout', { method: 'POST', credentials: 'same-origin' }).catch(() => null);
       window.location.assign('/');
     });
-
-    (function syncCookie() {
-      try {
-        const usuario = JSON.parse(localStorage.getItem('usuario') || 'null');
-        const token = localStorage.getItem('token');
-        if (usuario && usuario.id && token) {
-          document.cookie = 'usuario_id=' + usuario.id + '; path=/; max-age=' + (60 * 60 * 24 * 7) + '; SameSite=Lax';
-        }
-      } catch (e) {}
-    })();
   </script>
 
   <main>
@@ -380,7 +370,7 @@ const nombre = usuario.nombre;
 									) : sol.estado === 'rumbo_a_ubicacion' ? (
 									<button type="button" class="btn btn-sm btn-success" onclick={`avanzarSolicitud(${sol.id})`}><i class="bi bi-check2-circle"></i> Trabajo realizado</button>
 									) : sol.estado === 'trabajo_realizado' ? (
-									<button type="button" class="btn btn-sm btn-primary" onclick={`avanzarSolicitud(${sol.id})`}><i class="bi bi-check-all"></i> Finalizar</button>
+									<span class="text-secondary" role="status"><i class="bi bi-hourglass-split"></i> Esperando pago del cliente</span>
 									) : null}
 									</div>
 									</div>
@@ -563,12 +553,12 @@ const nombre = usuario.nombre;
 			rechazado: { clase: 'badge-danger', label: 'Rechazado', icono: 'x-circle' },
 			cancelada: { clase: 'badge-danger', label: 'Cancelada', icono: 'x-circle' }
 		};
-		var transicionesSolicitud = { aceptado: 'en_proceso', en_proceso: 'rumbo_a_ubicacion', rumbo_a_ubicacion: 'trabajo_realizado', trabajo_realizado: 'finalizado' };
+		var transicionesSolicitud = { aceptado: 'en_proceso', en_proceso: 'rumbo_a_ubicacion', rumbo_a_ubicacion: 'trabajo_realizado' };
 
 		async function actualizarEstadoSolicitud(id, estado) {
 			try {
 				var respuesta = await fetch('http://127.0.0.1:8000/api/solicitudes/' + encodeURIComponent(id) + '/estado', {
-					method: 'PUT', headers: { 'Content-Type': 'application/json' },
+					method: 'PUT', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + (localStorage.getItem('token') || '') },
 					body: JSON.stringify({ Estado_Solicitudes: estado })
 				});
 				var resultado = await respuesta.json().catch(function () { return {}; });
@@ -631,10 +621,10 @@ const nombre = usuario.nombre;
 			var acciones = {
 				aceptado: ['En proceso', 'btn-primary', 'arrow-repeat'],
 				en_proceso: ['Rumbo a ubicación', 'btn-primary', 'geo-alt'],
-				rumbo_a_ubicacion: ['Trabajo realizado', 'btn-success', 'check2-circle'],
-				trabajo_realizado: ['Finalizar', 'btn-primary', 'check-all']
+				rumbo_a_ubicacion: ['Trabajo realizado', 'btn-success', 'check2-circle']
 			};
 			if (acciones[estado]) celda.appendChild(botonAccionSolicitud(acciones[estado][0], acciones[estado][1], acciones[estado][2], function () { avanzarSolicitud(id); }));
+			else if (estado === 'trabajo_realizado') celda.appendChild(textoElemento('span', 'text-secondary', 'Esperando pago del cliente'));
 		}
 		function crearTarjetaSolicitud(solicitud) {
 			var estado = String(solicitud.Estado_Solicitudes || 'pendiente').toLowerCase();
@@ -671,7 +661,7 @@ const nombre = usuario.nombre;
 				return;
 			}
 			try {
-				var respuesta = await fetch('http://127.0.0.1:8000/api/solicitudes?trabajador=' + encodeURIComponent(usuario.id));
+				var respuesta = await fetch('http://127.0.0.1:8000/api/solicitudes?trabajador=' + encodeURIComponent(usuario.id), { headers: { Authorization: 'Bearer ' + (localStorage.getItem('token') || '') } });
 				var datos = await respuesta.json().catch(function () { return {}; });
 				if (!respuesta.ok) throw new Error(datos.mensaje || 'No se pudieron cargar las solicitudes.');
 				var items = Array.isArray(datos) ? datos : (Array.isArray(datos.value) ? datos.value : []);
@@ -774,7 +764,7 @@ const nombre = usuario.nombre;
 				var horarios = leerHorariosEditor();
 				if (horarios.some(function (h) { return !h.Hora_Inicio || !h.Hora_Fin || h.Hora_Inicio >= h.Hora_Fin; })) throw new Error('Revisa los horarios: la hora de inicio debe ser anterior a la hora de fin.');
 				await leerRespuesta(await fetch(api + '/disponibilidad/servicio/' + encodeURIComponent(servicioId), {
-					method: 'PUT', headers: { 'Content-Type': 'application/json' },
+					method: 'PUT', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + (localStorage.getItem('token') || '') },
 					body: JSON.stringify({ Id_Trabajador: Number(trabajadorId), horarios: horarios })
 				}));
 				horariosPorServicio[String(servicioId)] = horarios;

@@ -2,6 +2,7 @@
 import Layout from "../../layouts/Layout.astro";
 import "../../components/styles/design-system.css";
 import "../../components/styles/auth-premium.css";
+const apiBaseConfigurada = (import.meta.env.PUBLIC_API_BASE_URL || "http://127.0.0.1:8000/api").replace(/\/+$/, "");
 ---
 
 <Layout title="Registro de Cliente | Hilf'e Colombia">
@@ -12,7 +13,7 @@ import "../../components/styles/auth-premium.css";
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
   </Fragment>
 
-  <div class="wizard-page-layout">
+  <div class="wizard-page-layout" data-api-base={apiBaseConfigurada}>
     <!-- BARRA SUPERIOR -->
     <header class="wizard-navbar">
       <a href="/" class="wizard-brand">
@@ -590,7 +591,7 @@ import "../../components/styles/auth-premium.css";
     (function () {
       let currentStep = 1;
       let formEnviado = false;
-      const apiBase = `${window.location.protocol}//${window.location.hostname}:8000/api`;
+      const apiBase = document.querySelector('.wizard-page-layout')?.dataset.apiBase || "http://127.0.0.1:8000/api";
       async function fetchConTiempoLimite(url, opciones, milisegundos = 20000) {
         const controlador = new AbortController();
         const temporizador = window.setTimeout(() => controlador.abort(), milisegundos);
@@ -1012,17 +1013,27 @@ import "../../components/styles/auth-premium.css";
           }
 
           if (registroConGoogle) sessionStorage.removeItem("googlePendiente");
-          localStorage.setItem("token", data.token);
-          localStorage.setItem("usuario", JSON.stringify(data.usuario || {
-            id: data.idUsuario,
-            nombre: payload.nombre,
-            correo: payload.correo,
-            rol: 3,
-          }));
+          // Registro crea la cuenta en Deno; abrir también la sesión de Astro para
+          // que el panel y la billetera tengan la misma identidad autenticada.
+          const sesionRes = await fetch("/api/auth/login", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            credentials: "same-origin",
+            body: JSON.stringify({ correo: payload.correo, contrasena: payload.contrasena }),
+          }).catch(() => null);
+          const sesion = sesionRes?.ok ? await sesionRes.json().catch(() => null) : null;
+          if (!sesion?.ok || !sesion.token || !sesion.usuario) {
+            // El registro quedó guardado en el servidor, pero no se debe entrar
+            // al panel con un JWT sin la cookie de sesión que usa Astro.
+            window.location.assign(`/login/login?registroExitoso=1&correoRecordado=${encodeURIComponent(payload.correo)}`);
+            return;
+          }
+          localStorage.setItem("token", sesion.token);
+          localStorage.setItem("usuario", JSON.stringify(sesion.usuario));
           window.location.assign("/cliente");
         } catch (error) {
           generalErrorText.textContent = error instanceof TypeError
-            ? "No se pudo conectar con la API de Hilf'e en el puerto 8000. Inicia el servidor Deno y verifica que XAMPP MySQL siga activo."
+            ? `No se pudo conectar con la API (${apiBase}). Verifica que Deno esté activo, que MySQL esté iniciado y que la API permita solicitudes desde este origen.`
             : error.message || "No fue posible completar el registro.";
           generalErrorAlert.style.display = "flex";
           window.scrollTo({ top: 0, behavior: "smooth" });

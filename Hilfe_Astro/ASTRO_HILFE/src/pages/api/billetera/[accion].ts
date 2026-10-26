@@ -1,7 +1,8 @@
 import type { APIRoute } from 'astro';
+import type { RowDataPacket } from 'mysql2';
 import { getUsuarioId } from '../../../lib/sesion';
+import { pool } from '../../../lib/db';
 import {
-  solicitarCodigo,
   recargar,
   retirar,
   pagarSolicitud,
@@ -20,13 +21,9 @@ const STATUS: Record<string, number> = {
   MONTO_INVALIDO: 400,
   SALDO_INSUFICIENTE: 400,
   BANCO_INVALIDO: 400,
-  CODIGO_INVALIDO: 400,
-  CODIGO_EXPIRADO: 400,
   NO_CANCELABLE: 409,
-  DEMASIADOS_INTENTOS: 429,
-  ESPERA: 429,
-  CORREO_ERROR: 502,
-  RUTA_INVALIDA: 400,
+  DESTINO_INVALIDO: 400,
+  RECARGA_NO_PERMITIDA: 403,
 };
 
 export const POST: APIRoute = async ({ params, request, cookies }) => {
@@ -39,21 +36,17 @@ export const POST: APIRoute = async ({ params, request, cookies }) => {
     let res: object;
 
     switch (params.accion) {
-      case 'codigo':
-        res = await solicitarCodigo(
-          uid,
-          String(body.accion),
-          Number(body.monto),
-          String(body.banco ?? '')
-        );
-        break;
-
       case 'recargar':
+        {
+          const [usuarios] = await pool.query<RowDataPacket[]>(
+            'SELECT Id_Rol FROM usuarios WHERE Id_Usuario = ? LIMIT 1', [uid]
+          );
+          if (Number(usuarios[0]?.Id_Rol) === 1) throw new Error('RECARGA_NO_PERMITIDA');
+        }
         res = await recargar(
           uid,
           Number(body.monto),
-          String(body.banco ?? ''),
-          body.codigo
+          String(body.banco ?? '')
         );
         break;
 
@@ -61,9 +54,7 @@ export const POST: APIRoute = async ({ params, request, cookies }) => {
         res = await retirar(
           uid,
           Number(body.monto),
-          String(body.banco ?? ''),
-          body.ultimos,
-          body.codigo
+          String(body.destino ?? '')
         );
         break;
 

@@ -522,10 +522,15 @@ import BotonBilletera from './BotonBilletera.astro';
 			var ocupadas = await ocupadasRes.json(); if (!Array.isArray(ocupadas)) ocupadas = ocupadas.value || [];
 			if (ocupadas.some(function (h) { return String(h).slice(0, 5) === hora; })) throw new Error('Esa hora ya está ocupada. Indica otra hora disponible.');
 			flujoReserva.fecha = fecha; flujoReserva.hora = hora; flujoReserva.direccion = direccion;
-			flujoReserva.paso = 'confirmar';
+			flujoReserva.paso = 'abono';
 			var precio = Number(servicio.Precio) || 0;
-			addHelpMessage('Confirma los datos de tu solicitud:\n• Servicio: ' + (servicio.Titulo || 'Servicio') + '\n• Profesional: ' + (servicio.Nombre_Trabajador || 'Profesional') + '\n• Fecha: ' + fecha + ' a las ' + hora + '\n• Dirección: ' + direccion + (precio ? '\n• Precio publicado: $' + precio.toLocaleString('es-CO') : '') + '\n\n¿La envío?', 'bot');
-			accionesAyuda([{ label: 'Sí, enviar solicitud', action: 'confirm' }, { label: 'Cancelar', action: 'cancel' }]);
+			addHelpMessage('Elige el abono para reservar:\n• Servicio: ' + (servicio.Titulo || 'Servicio') + '\n• Profesional: ' + (servicio.Nombre_Trabajador || 'Profesional') + '\n• Fecha: ' + fecha + ' a las ' + hora + '\n• Precio: $' + precio.toLocaleString('es-CO') + '\n\nPuedes abonar el 25%, 50% o 100%. El cargo incluye 5% de comisión y se descuenta ahora de tu billetera.', 'bot');
+			accionesAyuda([
+				{ label: 'Abonar 25%', action: 'deposit-percent', value: '25' },
+				{ label: 'Abonar 50%', action: 'deposit-percent', value: '50' },
+				{ label: 'Abonar 100%', action: 'deposit-percent', value: '100' },
+				{ label: 'Cancelar', action: 'cancel' },
+			]);
 		}
 		async function responderDudaDuranteReserva(pregunta) {
 			var q = normalizarAyuda(pregunta);
@@ -562,6 +567,7 @@ import BotonBilletera from './BotonBilletera.astro';
 			if (action === 'login') { window.location.href = '/login/login'; return; }
 			if (action === 'register') { window.location.href = '/login/registrar'; return; }
 			if (action === 'profile') { window.location.href = value; return; }
+			if (action === 'wallet') { window.location.href = '/billetera'; return; }
 			if (action === 'categories') { window.location.href = '/categorias/'; return; }
 			if (action === 'cancel-search') { busquedaProfesional = null; accionesAyuda([]); addHelpMessage('Listo, cancelé la búsqueda.', 'bot'); return; }
 			if (action === 'cancel') { flujoReserva = null; accionesAyuda([{ label: 'Quiero agendar un servicio', action: 'book' }]); addHelpMessage('Listo, cancelé la solicitud. Si quieres, podemos empezar de nuevo.', 'bot'); return; }
@@ -571,20 +577,55 @@ import BotonBilletera from './BotonBilletera.astro';
 				flujoReserva.fecha = ''; flujoReserva.hora = ''; flujoReserva.direccion = '';
 				await mostrarDisponibilidadParaAgendar(); return;
 			}
+			if (action === 'deposit-percent' && flujoReserva) {
+				var porcentajeAbono = Number(value);
+				if (![25, 50, 100].includes(porcentajeAbono)) return;
+				flujoReserva.porcentajeAbono = porcentajeAbono;
+				var precioServicio = Number(flujoReserva.servicio.Precio) || 0;
+				var montoAbono = Math.round(precioServicio * porcentajeAbono) / 100;
+				montoAbono = Math.round(montoAbono * 1.05 * 100) / 100;
+				var saldoActual = null;
+				try {
+					var saldoRes = await fetch('/api/billetera/saldo', { credentials: 'same-origin', cache: 'no-store' });
+					var saldoData = await saldoRes.json();
+					if (saldoRes.ok && saldoData.ok) saldoActual = Number(saldoData.saldo) || 0;
+				} catch (_) {}
+				var formatoCOP = function (n) { return '$' + Number(n).toLocaleString('es-CO'); };
+				var detalleAbono = 'Abono seleccionado: ' + porcentajeAbono + '% (' + formatoCOP(montoAbono) + ' con comisión).';
+				if (saldoActual === null) {
+					addHelpMessage(detalleAbono + ' No pude consultar tu billetera; inicia sesión de nuevo y revisa el saldo antes de confirmar.', 'bot');
+					accionesAyuda([{ label: 'Abrir billetera', action: 'wallet' }, { label: 'Abonar 25%', action: 'deposit-percent', value: '25' }, { label: 'Abonar 50%', action: 'deposit-percent', value: '50' }, { label: 'Abonar 100%', action: 'deposit-percent', value: '100' }, { label: 'Cancelar', action: 'cancel' }]);
+					return;
+				}
+				if (saldoActual < montoAbono) {
+					flujoReserva.paso = 'abono';
+					addHelpMessage(detalleAbono + ' Tu saldo disponible es ' + formatoCOP(saldoActual) + '. Te faltan ' + formatoCOP(montoAbono - saldoActual) + '. Recarga la billetera y vuelve a elegir el abono.', 'bot');
+					accionesAyuda([{ label: 'Recargar billetera', action: 'wallet' }, { label: 'Abonar 25%', action: 'deposit-percent', value: '25' }, { label: 'Abonar 50%', action: 'deposit-percent', value: '50' }, { label: 'Abonar 100%', action: 'deposit-percent', value: '100' }, { label: 'Cancelar', action: 'cancel' }]);
+					return;
+				}
+				flujoReserva.paso = 'confirmar';
+				addHelpMessage(detalleAbono + ' Tu saldo disponible es ' + formatoCOP(saldoActual) + '. Al confirmar se descontará el abono y se enviará la solicitud para aprobación del profesional. ¿Continuamos?', 'bot');
+				accionesAyuda([{ label: 'Confirmar y abonar', action: 'confirm' }, { label: 'Abonar 25%', action: 'deposit-percent', value: '25' }, { label: 'Abonar 50%', action: 'deposit-percent', value: '50' }, { label: 'Abonar 100%', action: 'deposit-percent', value: '100' }, { label: 'Cancelar', action: 'cancel' }]);
+				return;
+			}
 			if (action === 'confirm' && flujoReserva) {
 				try {
 					var s = flujoReserva.servicio;
-					var response = await fetch(apiAyuda + '/solicitudes', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({
+					if (![25, 50, 100].includes(Number(flujoReserva.porcentajeAbono))) throw new Error('Elige primero un abono del 25%, 50% o 100%.');
+					var token = localStorage.getItem('token');
+					if (!token || token === 'sesion-activa') throw new Error('Tu sesión venció. Inicia sesión de nuevo antes de enviar la solicitud.');
+					var response = await fetch(apiAyuda + '/solicitudes', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token }, body: JSON.stringify({
 						Id_Cliente: flujoReserva.cliente.id, Id_Trabajador: s.Id_Trabajador, Id_Servicio: s.Id_Servicio,
 						Fecha_Servicio: flujoReserva.fecha, Hora_Servicio: flujoReserva.hora, Direccion: flujoReserva.direccion,
 						Telefono: flujoReserva.cliente.telefono || flujoReserva.cliente.Telefono || null,
-						Descripcion_Solicitud: 'Solicitud creada desde el chat de ayuda.'
+						Descripcion_Solicitud: 'Solicitud creada desde el chat de ayuda.',
+						porcentajeAbono: Number(flujoReserva.porcentajeAbono)
 					}) });
 					var result = await response.json().catch(function () { return {}; });
 					if (!response.ok) throw new Error(result.mensaje || result.error || 'No fue posible enviar la solicitud.');
 					flujoReserva = null; accionesAyuda([{ label: 'Ver mis citas', action: 'appointments' }]);
-					addHelpMessage('¡Solicitud enviada! Quedó pendiente de confirmación por el profesional. Puedes consultar su estado en “Mis citas”.', 'bot');
-				} catch (error) { addHelpMessage(error.message, 'bot'); accionesAyuda([{ label: 'Volver a intentar', action: 'confirm' }, { label: 'Cancelar', action: 'cancel' }]); }
+					addHelpMessage('¡Solicitud enviada! ' + (result.mensaje || 'El abono fue descontado de tu billetera.') + ' Quedó pendiente de confirmación por el profesional. Puedes consultar el estado en “Mis citas”.', 'bot');
+				} catch (error) { addHelpMessage(error.message, 'bot'); accionesAyuda([{ label: 'Volver a intentar', action: 'confirm' }, { label: 'Abrir billetera', action: 'wallet' }, { label: 'Cancelar', action: 'cancel' }]); }
 			}
 			if (action === 'appointments') window.location.href = '/cliente/citas/';
 		}

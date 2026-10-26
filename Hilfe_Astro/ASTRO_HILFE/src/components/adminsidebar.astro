@@ -1,6 +1,6 @@
 ---
 interface Props {
-  active?: 'dashboard' | 'usuario' | 'verificaciones' | 'citas' | 'categoria';
+  active?: 'dashboard' | 'usuario' | 'verificaciones' | 'citas' | 'categoria' | 'billetera';
 }
 const { active } = Astro.props;
 ---
@@ -35,6 +35,10 @@ const { active } = Astro.props;
   <a href="/admin/categoria" class={`admin-nav-item${active === 'categoria' ? ' active' : ''}`}>
     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2H2v10l9.29 9.29c.94.94 2.48.94 3.42 0l6.58-6.58c.94-.94.94-2.48 0-3.42L12 2Z"/><path d="M7 7h.01"/></svg>
     Categorías
+  </a>
+  <a href="/billetera" class={`admin-nav-item${active === 'billetera' ? ' active' : ''}`}>
+    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="15" rx="3"/><path d="M2 10h20"/><circle cx="17" cy="15" r="1"/></svg>
+    Billetera
   </a>
   <span class="admin-nav-label">Cuenta</span>
   <a href="/" class="admin-nav-item">

@@ -21,7 +21,7 @@ const { variant = 'nav' } = Astro.props; // 'nav' | 'card'
       <span class="ww-mini-brand">Hilf'e Pay</span>
     </div>
     <div class="ww-actions">
-      <a href="/billetera#recargar" class="ww-btn ww-btn--main">
+      <a href="/billetera#recargar" class="ww-btn ww-btn--main" data-wallet-recharge>
         <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
         Recargar
       </a>
@@ -53,7 +53,7 @@ const { variant = 'nav' } = Astro.props; // 'nav' | 'card'
     } catch {}
 
     const rol = Number(usuario?.rol);
-    const permitido = !!token && (rol === 2 || rol === 3);
+    const permitido = !!token && (rol === 1 || rol === 2 || rol === 3);
 
     document.querySelectorAll<HTMLElement>('[data-wallet]').forEach(async (w) => {
       if (!permitido) return;
@@ -62,6 +62,8 @@ const { variant = 'nav' } = Astro.props; // 'nav' | 'card'
       const panel = w.querySelector<HTMLElement>('.ww-panel')!;
       const chico = w.querySelector('[data-saldo]')!;
       const grande = w.querySelector('[data-saldo-big]')!;
+      const recargar = w.querySelector<HTMLElement>('[data-wallet-recharge]');
+      if (recargar && rol === 1) recargar.hidden = true;
 
       const cerrar = () => {
         panel.hidden = true;
@@ -131,8 +133,7 @@ const { variant = 'nav' } = Astro.props; // 'nav' | 'card'
 
   .ww-text { display: grid; text-align: left; line-height: 1.1; }
   .ww-text small { font-size: .68rem; opacity: .85; }
-  .ww-text strong { font-size: .92rem; font-weight: 700; filter: blur(5px); transition: filter .3s ease; user-select: none; }
-  .ww-pill:hover .ww-text strong, .ww.is-open .ww-text strong { filter: blur(0); }
+  .ww-text strong { font-size: .92rem; font-weight: 700; user-select: text; }
 
   .ww-chevron { transition: transform .25s ease; opacity: .85; }
   .ww.is-open .ww-chevron { transform: rotate(180deg); }
@@ -143,6 +144,7 @@ const { variant = 'nav' } = Astro.props; // 'nav' | 'card'
     box-shadow: 0 30px 60px -20px rgba(15, 23, 42, .4);
     animation: ww-pop .22s cubic-bezier(.2, .9, .3, 1.2);
   }
+  .ww [hidden] { display: none !important; }
   .ww-panel[hidden] { display: none; }
   .ww--card .ww-panel { right: auto; left: 0; }
   @keyframes ww-pop { from { opacity: 0; transform: translateY(-8px) scale(.96); } to { opacity: 1; transform: none; } }
