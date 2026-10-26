@@ -4,6 +4,7 @@ import AdminSidebar from '../../components/adminsidebar.astro';
 import AdminTopbar from '../../components/admintopbar.astro';
 import '../../components/styles/adminusuario.css';
 import '../../components/styles/admin-polish.css';
+export const prerender = false;
 
 // Antes: @model List<Hilfe.Models.Usuario>. Reemplaza por tu backend.
 interface Usuario {
@@ -16,12 +17,7 @@ interface Usuario {
   Activo: boolean;
 }
 
-const usuarios: Usuario[] = [
-  { Id_Usuario: 1, Nombre: 'Laura Gómez', Correo: 'laura@correo.com', Id_Rol: 2, Rol: { Nombre_Rol: 'Cliente' }, Ubicacion: 'Bogotá', Activo: true },
-  { Id_Usuario: 2, Nombre: 'Carlos Ruiz', Correo: 'carlos@correo.com', Id_Rol: 3, Rol: { Nombre_Rol: 'Trabajador' }, Ubicacion: 'Medellín', Activo: true },
-  { Id_Usuario: 3, Nombre: 'Andrés Peña', Correo: 'andres@correo.com', Id_Rol: 2, Rol: null, Ubicacion: 'Cali', Activo: false },
-  { Id_Usuario: 4, Nombre: 'María Torres', Correo: 'maria@correo.com', Id_Rol: 3, Rol: { Nombre_Rol: 'Trabajador' }, Ubicacion: 'Bogotá', Activo: true },
-];
+const usuarios: Usuario[] = [];
 
 const svg = (paths: string, size: number) =>
   `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${paths}</svg>`;
@@ -99,10 +95,8 @@ const icons = {
                     </td>
                   </tr>
                 ))}
-                <tr id="usrVacio" hidden={usuarios.length > 0}>
-                  <td colspan="6" class="text-center text-muted" style="padding:2rem">
-                    No hay usuarios registrados aún.
-                  </td>
+                <tr id="usrVacio">
+                  <td colspan="6" class="text-center text-muted" style="padding:2rem">Cargando usuarios…</td>
                 </tr>
               </tbody>
             </table>
@@ -166,6 +160,52 @@ const icons = {
 
       window.buscarUsuario = filtrar;
 
+      function rolTexto(usuario) {
+        return usuario.Nombre_Rol || usuario.Rol?.Nombre_Rol || ({ 1: 'Administrador', 2: 'Trabajador', 3: 'Cliente' }[Number(usuario.Id_Rol)] || 'Sin rol');
+      }
+
+      function crearFila(usuario) {
+        var id = Number(usuario.Id_Usuario);
+        var activo = String(usuario.Estado || '').toLowerCase() === 'activo';
+        var fila = document.createElement('tr');
+        fila.id = 'fila-' + id;
+        var nombre = document.createElement('td'); nombre.className = 'js-nombre';
+        var nombreFuerte = document.createElement('strong'); nombreFuerte.style.color = 'var(--text)'; nombreFuerte.textContent = usuario.Nombre || '';
+        nombre.appendChild(nombreFuerte);
+        var correo = document.createElement('td'); correo.className = 'js-correo'; correo.textContent = usuario.Correo || '';
+        var rol = document.createElement('td');
+        var rolBadge = document.createElement('span'); rolBadge.className = 'badge ' + (Number(usuario.Id_Rol) === 2 ? 'badge-warning' : 'badge-info'); rolBadge.textContent = rolTexto(usuario); rol.appendChild(rolBadge);
+        var ubicacion = document.createElement('td'); ubicacion.className = 'js-ubic'; ubicacion.textContent = usuario.Ubicacion || '—';
+        var estado = document.createElement('td'); estado.className = 'js-estado';
+        var estadoBadge = document.createElement('span'); estadoBadge.className = 'badge ' + (activo ? 'badge-success' : 'badge-danger'); estadoBadge.textContent = activo ? 'Activo' : 'Inactivo'; estado.appendChild(estadoBadge);
+        var acciones = document.createElement('td');
+        var editar = document.createElement('button'); editar.type = 'button'; editar.className = 'btn-tbl js-editar'; editar.title = 'Editar';
+        editar.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg>';
+        editar.addEventListener('click', function () { window.abrirEditarUsuario(id, nombreFuerte.textContent, correo.textContent, ubicacion.textContent === '—' ? '' : ubicacion.textContent); });
+        var alternar = document.createElement('button'); alternar.type = 'button'; alternar.className = 'btn-tbl js-toggle'; alternar.dataset.activo = String(activo);
+        alternar.addEventListener('click', function () { window.toggleUsuario(id, alternar, alternar.dataset.activo !== 'true'); });
+        acciones.append(editar, alternar);
+        fila.append(nombre, correo, rol, ubicacion, estado, acciones);
+        actualizarBotonEstado(alternar, activo);
+        return fila;
+      }
+
+      async function cargarUsuarios() {
+        try {
+          var respuesta = await fetch('/api/admin/usuarios', { credentials: 'same-origin', cache: 'no-store' });
+          var datos = await respuesta.json().catch(function () { return {}; });
+          if (!respuesta.ok || !datos.ok || !Array.isArray(datos.usuarios)) throw new Error(datos.mensaje || 'No se pudo cargar la lista de usuarios.');
+          body.querySelectorAll('tr[id^="fila-"]').forEach(function (fila) { fila.remove(); });
+          datos.usuarios.forEach(function (usuario) { body.insertBefore(crearFila(usuario), vacio); });
+          vacio.hidden = datos.usuarios.length > 0;
+          vacio.querySelector('td').textContent = datos.usuarios.length ? '' : 'No hay usuarios registrados aún.';
+          filtrar(input.value);
+        } catch (error) {
+          vacio.hidden = false;
+          vacio.querySelector('td').textContent = error.message || 'No se pudo cargar la lista de usuarios.';
+        }
+      }
+
       // Respeta enlaces antiguos tipo /admin/usuario?buscar=laura
       var inicial = new URLSearchParams(location.search).get('buscar');
       if (inicial) { input.value = inicial; filtrar(inicial); }
@@ -184,46 +224,70 @@ const icons = {
         modal.style.display = 'none';
       };
 
-      // TODO backend: en guardarUsuario, toggleUsuario y eliminarUsuarioPermanente
-      // haz el fetch antes de tocar el DOM.
-      window.guardarUsuario = function () {
+      window.guardarUsuario = async function () {
         var id = document.getElementById('editId').value;
         var nombre = document.getElementById('editNombre').value.trim();
         var correo = document.getElementById('editCorreo').value.trim();
         var ubicacion = document.getElementById('editUbicacion').value.trim();
         if (!nombre) { document.getElementById('editNombre').focus(); return; }
 
+        try {
+          var respuesta = await fetch('/api/admin/usuarios', {
+            method: 'PUT', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id: Number(id), nombre: nombre, correo: correo, ubicacion: ubicacion })
+          });
+          var resultado = await respuesta.json().catch(function () { return {}; });
+          if (!respuesta.ok || !resultado.ok) throw new Error(resultado.mensaje || 'No se pudo guardar el usuario.');
+        } catch (error) {
+          window.alert(error.message || 'No se pudo guardar el usuario.');
+          return;
+        }
+
         var fila = document.getElementById('fila-' + id);
         fila.querySelector('.js-nombre strong').textContent = nombre;
         fila.querySelector('.js-correo').textContent = correo;
         fila.querySelector('.js-ubic').textContent = ubicacion;
-        fila.querySelector('.js-editar').setAttribute('onclick',
-          'abrirEditarUsuario(' + id + ',' + JSON.stringify(nombre) + ',' + JSON.stringify(correo) + ',' + JSON.stringify(ubicacion) + ')');
         window.cerrarModalUsuario();
       };
 
       // ── Habilitar / deshabilitar (activo = nuevo estado) ──
-      window.toggleUsuario = function (id, btn, activo) {
+      function actualizarBotonEstado(btn, activo) {
+        btn.title = activo ? 'Desactivar' : 'Activar';
+        btn.style.color = activo ? 'var(--warning)' : 'var(--success)';
+        btn.innerHTML = activo ? icons.deshabilitar : icons.habilitar;
+        btn.dataset.activo = String(activo);
+      }
+
+      window.toggleUsuario = async function (id, btn, activo) {
+        btn.disabled = true;
+        try {
+          var respuesta = await fetch('/api/admin/usuarios', {
+            method: 'PATCH', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id: Number(id), activo: activo })
+          });
+          var resultado = await respuesta.json().catch(function () { return {}; });
+          if (!respuesta.ok || !resultado.ok) throw new Error(resultado.mensaje || 'No se pudo cambiar el estado.');
+        } catch (error) {
+          window.alert(error.message || 'No se pudo cambiar el estado.');
+          btn.disabled = false;
+          return;
+        }
         var badge = document.querySelector('#fila-' + id + ' .js-estado .badge');
         badge.className = 'badge ' + (activo ? 'badge-success' : 'badge-danger');
         badge.textContent = activo ? 'Activo' : 'Inactivo';
-
-        btn.title = activo ? 'Deshabilitar' : 'Habilitar';
-        btn.style.color = activo ? 'var(--warning)' : 'var(--success)';
-        btn.innerHTML = activo ? icons.deshabilitar : icons.habilitar;
-        btn.setAttribute('onclick', 'toggleUsuario(' + id + ', this, ' + (!activo) + ')');
+		actualizarBotonEstado(btn, activo);
+		btn.disabled = false;
       };
 
       // ── Eliminar ──
       window.eliminarUsuarioPermanente = function (id, btn) {
-        if (!confirm('¿Eliminar este usuario permanentemente? Esta acción no se puede deshacer.')) return;
-        btn.closest('tr').remove();
-        filtrar(input.value);
+        window.alert('Para preservar el historial de solicitudes y pagos, desactiva la cuenta en lugar de eliminarla.');
       };
 
       document.addEventListener('keydown', function (e) {
         if (e.key === 'Escape') window.cerrarModalUsuario();
       });
+      cargarUsuarios();
     })();
   </script>
 </Layout>

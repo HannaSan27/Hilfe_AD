@@ -82,7 +82,7 @@ import '../../../components/styles/trabajador-panel-polish.css';
 					if (!window.confirm('¿Eliminar esta foto?')) return;
 					botonEliminar.disabled = true;
 					try {
-						await leerRespuesta(await fetch(api + '/imagenes-trabajos/' + encodeURIComponent(imagen.Id_Imagen), { method: 'DELETE' }));
+						await leerRespuesta(await fetch(api + '/imagenes-trabajos/' + encodeURIComponent(imagen.Id_Imagen), { method: 'DELETE', headers: { Authorization: 'Bearer ' + (localStorage.getItem('token') || '') } }));
 						tarjeta.remove();
 						mostrarMensaje('Foto eliminada correctamente.');
 					} catch (error) {
@@ -141,7 +141,7 @@ import '../../../components/styles/trabajador-panel-polish.css';
 				datos.append('foto', archivo);
 				botonSubir.disabled = true;
 				try {
-					var resultado = await leerRespuesta(await fetch(api + '/imagenes-trabajos', { method: 'POST', body: datos }));
+					var resultado = await leerRespuesta(await fetch(api + '/imagenes-trabajos', { method: 'POST', headers: { Authorization: 'Bearer ' + (localStorage.getItem('token') || '') }, body: datos }));
 					selectorFoto.value = '';
 					mostrarMensaje(resultado.mensaje || 'Foto subida correctamente.');
 					await cargarFotos();

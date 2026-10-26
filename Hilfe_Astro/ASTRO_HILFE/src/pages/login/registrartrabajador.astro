@@ -2,6 +2,7 @@
 import Layout from "../../layouts/Layout.astro";
 import "../../components/styles/design-system.css";
 import "../../components/styles/auth-premium.css";
+const apiBaseConfigurada = (import.meta.env.PUBLIC_API_BASE_URL || "http://127.0.0.1:8000/api").replace(/\/+$/, "");
 ---
 
 <Layout title="Registro de Trabajador Profesional | Hilf'e Colombia">
@@ -12,7 +13,7 @@ import "../../components/styles/auth-premium.css";
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
   </Fragment>
 
-  <div class="wizard-page-layout">
+  <div class="wizard-page-layout" data-api-base={apiBaseConfigurada}>
     <!-- BARRA SUPERIOR -->
     <header class="wizard-navbar">
       <a href="/" class="wizard-brand">
@@ -698,7 +699,7 @@ import "../../components/styles/auth-premium.css";
       let currentStep = 1;
       let formEnviado = false;
       let selectedPhotoFile = null;
-      const apiBase = `${window.location.protocol}//${window.location.hostname}:8000/api`;
+      const apiBase = document.querySelector('.wizard-page-layout')?.dataset.apiBase || "http://127.0.0.1:8000/api";
       async function fetchConTiempoLimite(url, opciones, milisegundos = 20000) {
         const controlador = new AbortController();
         const temporizador = window.setTimeout(() => controlador.abort(), milisegundos);
@@ -1273,7 +1274,7 @@ import "../../components/styles/auth-premium.css";
           document.getElementById("stepSuccessPanel").style.display = "block";
         } catch (error) {
           generalErrorText.textContent = error instanceof TypeError
-            ? "No se pudo conectar con la API de Hilf'e en el puerto 8000. Inicia el servidor Deno y vuelve a intentarlo. XAMPP debe mantener MySQL activo."
+            ? `No se pudo conectar con la API (${apiBase}). Verifica que Deno esté activo, que MySQL esté iniciado y que la API permita solicitudes desde este origen.`
             : error.message || "No fue posible completar el registro.";
           generalErrorAlert.style.display = "flex";
           window.scrollTo({ top: 0, behavior: "smooth" });

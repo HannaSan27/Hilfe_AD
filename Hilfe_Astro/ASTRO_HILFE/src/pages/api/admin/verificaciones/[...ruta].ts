@@ -92,14 +92,44 @@ export const PUT: APIRoute = async ({ params, request, cookies }) => {
   const texto = String(body.notas ?? body.infoRequerida ?? body.motivo ?? '').trim().slice(0, 2000);
   if (def.exigeTexto && !texto) return json({ mensaje: 'Debes escribir la observación.' }, 400);
 
-  // El nombre de columna viene de una lista fija, no del usuario
-  const [r] = await pool.query<ResultSetHeader>(
-    `UPDATE solicitudes_verificacion
-        SET Estado = ?, ${def.campo} = ?, Revisado_Por = ?, Fecha_Revision = NOW()
-      WHERE Id_Solicitud_Verificacion = ?`,
-    [def.estado, texto || null, admin, Number(id)]
-  );
-  if (r.affectedRows === 0) return json({ mensaje: 'Solicitud no encontrada.' }, 404);
+  // La decisión y el estado de la cuenta deben cambiar juntos. Si solo se
+  // actualiza la solicitud, el panel la muestra aprobada pero el usuario queda
+  // bloqueado como pendiente en el resto de la plataforma.
+  const conn = await pool.getConnection();
+  try {
+    await conn.beginTransaction();
+    const [solicitudes] = await conn.query<RowDataPacket[]>(
+      'SELECT Id_Usuario FROM solicitudes_verificacion WHERE Id_Solicitud_Verificacion = ? FOR UPDATE',
+      [Number(id)]
+    );
+    const solicitud = solicitudes[0];
+    if (!solicitud) {
+      await conn.rollback();
+      return json({ mensaje: 'Solicitud no encontrada.' }, 404);
+    }
 
-  return json({ ok: true, mensaje: def.msg });
+    const [r] = await conn.query<ResultSetHeader>(
+      `UPDATE solicitudes_verificacion
+          SET Estado = ?, ${def.campo} = ?, Revisado_Por = ?, Fecha_Revision = NOW()
+        WHERE Id_Solicitud_Verificacion = ?`,
+      [def.estado, texto || null, admin, Number(id)]
+    );
+    if (r.affectedRows === 0) {
+      await conn.rollback();
+      return json({ mensaje: 'Solicitud no encontrada.' }, 404);
+    }
+
+    await conn.query(
+      `UPDATE usuarios SET Verificado = ?, Estado_Verificacion = ? WHERE Id_Usuario = ?`,
+      [def.estado === 'aprobado' ? 1 : 0, def.estado, solicitud.Id_Usuario]
+    );
+    await conn.commit();
+    return json({ ok: true, mensaje: def.msg });
+  } catch (error) {
+    await conn.rollback().catch(() => {});
+    console.error('No se pudo guardar la decisión de verificación:', error);
+    return json({ mensaje: 'No se pudo guardar la decisión. Intenta de nuevo.' }, 500);
+  } finally {
+    conn.release();
+  }
 };

@@ -163,7 +163,7 @@ const plus = '<line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19"
           try {
             await leerRespuesta(await fetch(api + '/categorias' + (id ? '/' + encodeURIComponent(id) : ''), {
               method: id ? 'PUT' : 'POST',
-              headers: { 'Content-Type': 'application/json' },
+              headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + (localStorage.getItem('token') || '') },
               body: JSON.stringify({ Nombre_Categoria: nombre, Descripcion: desc || null })
             }));
             await cargarCategorias();
@@ -179,7 +179,7 @@ const plus = '<line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19"
       window.eliminarCategoria = async function (id) {
         if (!confirm('¿Eliminar esta categoría?')) return;
         try {
-          await leerRespuesta(await fetch(api + '/categorias/' + encodeURIComponent(id), { method: 'DELETE' }));
+          await leerRespuesta(await fetch(api + '/categorias/' + encodeURIComponent(id), { method: 'DELETE', headers: { Authorization: 'Bearer ' + (localStorage.getItem('token') || '') } }));
           var tarjeta = document.getElementById('cat-' + id);
           if (tarjeta) tarjeta.remove();
           refrescarVacio();
