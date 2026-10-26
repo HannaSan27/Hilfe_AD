@@ -113,9 +113,8 @@ const { active } = Astro.props;
       event.preventDefault();
       return;
     }
-    localStorage.removeItem('token');
-    localStorage.removeItem('usuario');
+    try { localStorage.clear(); sessionStorage.clear(); } catch {}
     event.preventDefault();
-    window.location.assign('/');
+      window.location.assign('/logout');
   });
 </script>

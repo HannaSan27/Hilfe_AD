@@ -47,7 +47,9 @@ const { active = "solicitudes" } = Astro.props;
   document.getElementById("cerrarSesionCliente")?.addEventListener("click", (event) => {
     if (!window.confirm("¿Estás seguro de que quieres cerrar sesión?")) {
       event.preventDefault();
+      return;
     }
+    try { localStorage.clear(); sessionStorage.clear(); } catch {}
   });
 
   // Avisos de citas aceptadas o rechazadas (datos desde la base hilfe)
@@ -87,7 +89,7 @@ const { active = "solicitudes" } = Astro.props;
       if (!clienteId) { actualizarBadge(0); return; }
 
       try {
-        const response = await fetch("/api/citas/cliente", { credentials: "same-origin" });
+        const response = await fetch("/api/citas/citas", { credentials: "same-origin" });
         if (!response.ok) return;
         const result = await response.json();
         const solicitudes = Array.isArray(result?.citas) ? result.citas : [];

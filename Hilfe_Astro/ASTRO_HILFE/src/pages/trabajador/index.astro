@@ -1133,8 +1133,9 @@ const nombre = usuario.nombre;
 				feedback.hidden = true;
 				try {
 					var nombre = document.getElementById('perfilTrabajadorNombre').value.trim();
-					var response = await fetch(api + '/usuarios/' + encodeURIComponent(session.usuario.id), {
+					var response = await fetch('/api/usuarios/' + encodeURIComponent(session.usuario.id), {
 						method: 'PUT',
+						credentials: 'same-origin',
 						headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + session.token },
 						body: JSON.stringify({
 							nombre: nombre,
@@ -1150,8 +1151,8 @@ const nombre = usuario.nombre;
 						var photoData = new FormData();
 						photoData.append('foto_Perfil', photoInput.files[0]);
 						try {
-							var photoResponse = await fetch(api + '/usuarios/' + encodeURIComponent(session.usuario.id) + '/foto-perfil', {
-								method: 'POST', headers: { Authorization: 'Bearer ' + session.token }, body: photoData
+							var photoResponse = await fetch('/api/usuarios/' + encodeURIComponent(session.usuario.id) + '/foto-perfil', {
+								method: 'POST', credentials: 'same-origin', headers: { Authorization: 'Bearer ' + session.token }, body: photoData
 							});
 							await readResponse(photoResponse);
 							photoInput.value = '';

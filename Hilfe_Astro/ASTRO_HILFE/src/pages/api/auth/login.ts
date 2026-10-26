@@ -40,6 +40,13 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     secure: import.meta.env.PROD,
     maxAge: recordar ? 60 * 60 * 24 * 30 : 60 * 60 * 8,
   });
+  cookies.set('backend_token', String(data.token), {
+    path: '/',
+    httpOnly: true,
+    sameSite: 'lax',
+    secure: import.meta.env.PROD,
+    maxAge: recordar ? 60 * 60 * 24 * 30 : 60 * 60 * 8,
+  });
 
   return Response.json({
     ok: true,

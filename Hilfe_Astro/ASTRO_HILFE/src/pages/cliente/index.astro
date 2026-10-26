@@ -20,7 +20,7 @@ interface Solicitud {
   calificacion: Calificacion | null;
 }
 
-// Los datos reales se cargan desde /api/citas/cliente en el script de abajo
+// Los datos reales se cargan desde /api/citas/citas en el script de abajo
 const nombre = "Cliente";
 const solicitudes: Solicitud[] = [];
 
@@ -316,7 +316,7 @@ const porCalificar = solicitudes.filter((s) => s.estado === "finalizado" && s.ca
     /* ========== CARGA DE SOLICITUDES (desde la base hilfe) ========== */
     const cargarSolicitudesCliente = async (silencioso = false) => {
       try {
-        const response = await fetch("/api/citas/cliente", { credentials: "same-origin" });
+        const response = await fetch("/api/citas/citas", { credentials: "same-origin" });
         if (response.status === 401) { window.location.href = "/login/login"; return; }
         const data = await response.json().catch(() => ({}));
         if (!data.ok) throw new Error(data.mensaje || "No se pudieron cargar tus solicitudes.");
@@ -330,7 +330,7 @@ const porCalificar = solicitudes.filter((s) => s.estado === "finalizado" && s.ca
         const main = document.getElementById("solicitudesTable");
         if (main) main.hidden = solicitudes.length === 0;
 
-        let pendientes = 0, aceptadas = 0, finalizadas = 0;
+        let pendientes = 0, aceptadas = 0, finalizadas = 0, pendientesCalificar = 0;
         for (const s of solicitudes) {
           const estado = String(s.estado || "pendiente").toLowerCase();
           if (estado === "pendiente") pendientes++;
@@ -368,11 +368,19 @@ const porCalificar = solicitudes.filter((s) => s.estado === "finalizado" && s.ca
             btn.addEventListener("click", () => pagarCita(btn, s));
             tdAcc.appendChild(btn);
           } else if (estado === "finalizado") {
-            const btn = document.createElement("button");
-            btn.type = "button"; btn.className = "btn btn-primary btn-sm btn-calificar";
-            btn.dataset.id = s.id; btn.dataset.servicio = s.servicio || "Servicio";
-            btn.textContent = "Calificar";
-            tdAcc.appendChild(btn);
+            if (s.calificacion) {
+              const calificacion = document.createElement("span");
+              calificacion.className = "badge badge-neutral badge-sm";
+              calificacion.textContent = `${s.calificacion.puntaje}/5`;
+              tdAcc.appendChild(calificacion);
+            } else {
+              pendientesCalificar++;
+              const btn = document.createElement("button");
+              btn.type = "button"; btn.className = "btn btn-primary btn-sm btn-calificar";
+              btn.dataset.id = s.id; btn.dataset.servicio = s.servicio || "Servicio";
+              btn.textContent = "Calificar";
+              tdAcc.appendChild(btn);
+            }
           }
 
           tr.append(tdServicio, tdTrab, tdFecha, tdHora, tdEstado, tdAcc);
@@ -385,8 +393,8 @@ const porCalificar = solicitudes.filter((s) => s.estado === "finalizado" && s.ca
         document.getElementById("statTotal").textContent = String(solicitudes.length);
         const porCalificar = document.getElementById("calificacionesPendientes");
         const contador = document.getElementById("contadorCalificaciones");
-        if (porCalificar) porCalificar.hidden = finalizadas === 0;
-        if (contador) contador.textContent = String(finalizadas);
+        if (porCalificar) porCalificar.hidden = pendientesCalificar === 0;
+        if (contador) contador.textContent = String(pendientesCalificar);
 
         let usuario = null;
         try { usuario = JSON.parse(localStorage.getItem("usuario") || "null"); } catch {}
@@ -404,6 +412,72 @@ const porCalificar = solicitudes.filter((s) => s.estado === "finalizado" && s.ca
     /* ========== CALIFICAR ========== */
     const modalCalificar = document.getElementById("modalCalificar");
     const cerrarModalCalificar = () => modalCalificar?.classList.remove("active");
+    const inputFotos = document.getElementById("inputFotos");
+    const listaFotos = document.getElementById("fotoList");
+    const contadorFotos = document.getElementById("fotoContador");
+    const MAX_FOTOS = 3;
+    let fotosCalificacion = [];
+    let urlsFotosCalificacion = [];
+
+    const fijarPuntaje = (puntaje) => {
+      const valor = Math.max(0, Math.min(5, Number(puntaje) || 0));
+      document.getElementById("inputPuntaje").value = String(valor);
+      document.querySelectorAll("#starRating .star").forEach((estrella) => {
+        const activa = Number(estrella.dataset.value) <= valor;
+        estrella.classList.toggle("is-active", activa);
+        estrella.setAttribute("aria-checked", String(Number(estrella.dataset.value) === valor));
+      });
+      const textos = ["Toca una estrella", "Muy mala", "Mala", "Regular", "Buena", "Excelente"];
+      const texto = document.getElementById("ratingTexto");
+      texto.textContent = textos[valor];
+      texto.classList.toggle("has-value", valor > 0);
+    };
+
+    const renderFotosCalificacion = () => {
+      urlsFotosCalificacion.forEach((url) => URL.revokeObjectURL(url));
+      urlsFotosCalificacion = [];
+      listaFotos.replaceChildren();
+      fotosCalificacion.forEach((archivo, indice) => {
+        const url = URL.createObjectURL(archivo);
+        urlsFotosCalificacion.push(url);
+        const tarjeta = document.createElement("div");
+        tarjeta.className = "cal-photo";
+        const imagen = document.createElement("img");
+        imagen.src = url;
+        imagen.alt = `Foto ${indice + 1} del trabajo`;
+        const quitar = document.createElement("button");
+        quitar.type = "button";
+        quitar.className = "cal-photo-remove";
+        quitar.dataset.quitarFoto = String(indice);
+        quitar.setAttribute("aria-label", `Quitar foto ${indice + 1}`);
+        quitar.textContent = "×";
+        tarjeta.append(imagen, quitar);
+        listaFotos.appendChild(tarjeta);
+      });
+      listaFotos.hidden = fotosCalificacion.length === 0;
+      contadorFotos.textContent = `${fotosCalificacion.length}/${MAX_FOTOS}`;
+    };
+
+    inputFotos?.addEventListener("change", () => {
+      const seleccionadas = Array.from(inputFotos.files || []);
+      for (const archivo of seleccionadas) {
+        if (!new Set(["image/jpeg", "image/png", "image/webp"]).has(archivo.type)) {
+          mostrarErrorCliente("Las fotos deben ser JPG, PNG o WEBP.");
+          continue;
+        }
+        if (archivo.size > 5 * 1024 * 1024) {
+          mostrarErrorCliente("Cada foto puede pesar máximo 5 MB.");
+          continue;
+        }
+        if (fotosCalificacion.length >= MAX_FOTOS) {
+          mostrarErrorCliente(`Máximo ${MAX_FOTOS} fotos.`);
+          break;
+        }
+        fotosCalificacion.push(archivo);
+      }
+      inputFotos.value = "";
+      renderFotosCalificacion();
+    });
 
     document.addEventListener("click", (event) => {
       const target = event.target;
@@ -429,6 +503,7 @@ const porCalificar = solicitudes.filter((s) => s.estado === "finalizado" && s.ca
         document.getElementById("charCounter").textContent = "0/500";
         fijarPuntaje(0);
         fotosCalificacion = [];
+        inputFotos.value = "";
         renderFotosCalificacion();
         modalCalificar?.classList.add("active");
       }

@@ -111,8 +111,8 @@ const { variant = 'default' } = Astro.props;
     root.querySelector('[data-user-logout]').addEventListener('click', (event) => {
       event.preventDefault();
       if (!window.confirm('¿Estás seguro de que quieres cerrar sesión?')) return;
-      try { localStorage.removeItem('token'); localStorage.removeItem('usuario'); } catch {}
-      window.location.href = '/';
+      try { localStorage.clear(); sessionStorage.clear(); } catch {}
+      window.location.href = '/logout';
     });
   })();
 </script>

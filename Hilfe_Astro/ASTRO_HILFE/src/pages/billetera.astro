@@ -18,7 +18,11 @@ let errorBilletera = '';
 let esAdmin = false;
 let esCliente = false;
 let comisionesGeneradas = 0;
+let comisionCliente = 0;
+let comisionTrabajador = 0;
+let serviciosConMovimiento = 0;
 let totalRetirado = 0;
+let detalleServiciosComision: any[] = [];
 try {
   const [usuarios] = await pool.query<any[]>('SELECT Id_Rol FROM usuarios WHERE Id_Usuario = ? LIMIT 1', [usuarioId]);
   const rol = Number(usuarios[0]?.Id_Rol);
@@ -40,6 +44,75 @@ try {
     );
     comisionesGeneradas = Number(resumen[0]?.comisiones || 0);
     totalRetirado = Number(resumen[0]?.retiros || 0);
+
+    const [detalleComisiones] = await pool.query<any[]>(
+      `SELECT
+          COALESCE(SUM(GREATEST(0, pagos - reembolsos) * 0.05 / 1.05), 0) AS comisionCliente,
+          COALESCE(SUM(pagosTrabajador * 0.05 / 0.95), 0) AS comisionTrabajador,
+          COALESCE(SUM(CASE WHEN pagos > reembolsos OR pagosTrabajador > 0 THEN 1 ELSE 0 END), 0) AS serviciosConMovimiento
+       FROM (
+         SELECT s.Id_Solicitud,
+                COALESCE(SUM(CASE WHEN t.type = 'payment' THEN t.amount ELSE 0 END), 0) AS pagos,
+                COALESCE(SUM(CASE WHEN t.type = 'refund' THEN t.amount ELSE 0 END), 0) AS reembolsos,
+                COALESCE(SUM(CASE WHEN t.type = 'deposit' AND t.description LIKE 'Pago por:%' THEN t.amount ELSE 0 END), 0) AS pagosTrabajador
+           FROM solicitudes s
+           LEFT JOIN transactions t ON t.solicitud_id = s.Id_Solicitud
+          WHERE s.Estado_Solicitudes = 'finalizado'
+          GROUP BY s.Id_Solicitud
+       ) movimientos`
+    );
+    comisionCliente = Math.round(Number(detalleComisiones[0]?.comisionCliente || 0) * 100) / 100;
+    comisionTrabajador = Math.round(Number(detalleComisiones[0]?.comisionTrabajador || 0) * 100) / 100;
+    serviciosConMovimiento = Number(detalleComisiones[0]?.serviciosConMovimiento || 0);
+
+    const [servicios] = await pool.query<any[]>(
+      `SELECT s.Id_Solicitud, sv.Titulo, sv.Precio,
+              cliente.Nombre AS nombreCliente, trabajador.Nombre AS nombreTrabajador,
+              COALESCE(pagosCliente.total, 0) AS totalPagadoCliente,
+              COALESCE(pagosCliente.reembolsos, 0) AS reembolsosCliente,
+              COALESCE(pagosTrabajador.total, 0) AS totalRecibidoTrabajador,
+              GREATEST(COALESCE(pagosCliente.total, 0) - COALESCE(pagosCliente.reembolsos, 0), 0) AS pagoNetoCliente
+         FROM solicitudes s
+         JOIN servicios sv ON sv.Id_Servicio = s.Id_Servicio
+         JOIN usuarios cliente ON cliente.Id_Usuario = s.Id_Cliente
+         JOIN usuarios trabajador ON trabajador.Id_Usuario = s.Id_Trabajador
+         LEFT JOIN (
+           SELECT w.user_id, t.solicitud_id,
+                  SUM(CASE WHEN t.type = 'payment' THEN t.amount ELSE 0 END) AS total,
+                  SUM(CASE WHEN t.type = 'refund' THEN t.amount ELSE 0 END) AS reembolsos
+             FROM transactions t JOIN wallets w ON w.id = t.wallet_id
+            WHERE t.type IN ('payment', 'refund')
+            GROUP BY w.user_id, t.solicitud_id
+         ) pagosCliente ON pagosCliente.user_id = s.Id_Cliente AND pagosCliente.solicitud_id = s.Id_Solicitud
+         LEFT JOIN (
+           SELECT w.user_id, t.solicitud_id, SUM(t.amount) AS total
+             FROM transactions t JOIN wallets w ON w.id = t.wallet_id
+            WHERE t.type = 'deposit' AND t.description LIKE 'Pago por:%'
+            GROUP BY w.user_id, t.solicitud_id
+         ) pagosTrabajador ON pagosTrabajador.user_id = s.Id_Trabajador AND pagosTrabajador.solicitud_id = s.Id_Solicitud
+        WHERE s.Estado_Solicitudes = 'finalizado'
+          AND (COALESCE(pagosCliente.total, 0) > COALESCE(pagosCliente.reembolsos, 0)
+            OR COALESCE(pagosTrabajador.total, 0) > 0)
+        ORDER BY s.Id_Solicitud DESC`
+    );
+    detalleServiciosComision = servicios.map((servicio: any) => {
+      const netoCliente = Math.max(0, Number(servicio.pagoNetoCliente || 0));
+      const netoTrabajador = Number(servicio.totalRecibidoTrabajador || 0);
+      const descuentoCliente = Math.round((netoCliente * 0.05 / 1.05) * 100) / 100;
+      const descuentoTrabajador = Math.round((netoTrabajador * 0.05 / 0.95) * 100) / 100;
+      return {
+        id: Number(servicio.Id_Solicitud),
+        servicio: String(servicio.Titulo || 'Servicio'),
+        valorBase: Number(servicio.Precio || 0),
+        cliente: String(servicio.nombreCliente || 'Cliente'),
+        totalCliente: netoCliente,
+        descuentoCliente,
+        trabajador: String(servicio.nombreTrabajador || 'Trabajador'),
+        totalTrabajador: netoTrabajador,
+        descuentoTrabajador,
+        comisionTotal: Math.round((descuentoCliente + descuentoTrabajador) * 100) / 100,
+      };
+    });
   }
   pendientes = await obtenerPendientesPago(usuarioId);
 } catch (error) {
@@ -63,7 +136,7 @@ const grupos = agruparPorFecha(movimientos);
 ---
 
 <Layout title="Mi Billetera | Hilf'e">
-  <main class="wallet">
+  <main class="wallet" data-wallet-admin={esAdmin ? 'true' : 'false'}>
     <header class="wallet__head">
       <div>
         <a href="/" class="brand" aria-label="Ir al inicio de Hilf'e">
@@ -77,41 +150,86 @@ const grupos = agruparPorFecha(movimientos);
           <span class="brand__text">Hilf<span class="brand__accent">'e</span></span>
         </a>
         <span class="eyebrow">{esAdmin ? 'Billetera de administración' : 'Mi billetera'}</span>
-        <h1>Saldo <span class="grad">disponible</span></h1>
+        <h1>{esAdmin ? <>Comisiones de <span class="grad">Hilf’e</span></> : <>Saldo <span class="grad">disponible</span></>}</h1>
       </div>
       <button type="button" class="btn btn--ghost" data-open-hist>Historial</button>
     </header>
 
     {errorBilletera && <p class="wallet__error" role="alert">{errorBilletera}</p>}
 
-    <p class="demo">{esAdmin ? 'Billetera del administrador: aquí se acumulan comisiones de servicios. Los retiros son simulados.' : 'Modo demostración: las recargas y retiros son simulados.'}</p>
+    <p class="demo">{esAdmin ? 'Aquí se acumulan las comisiones de Hilf’e: 5% al cliente y 5% al trabajador. Puedes consultar los movimientos y simular un retiro.' : 'Modo demostración: las recargas y retiros son simulados.'}</p>
 
     <section class="balance">
       <div class="balance__info">
-        <p class="balance__label">Saldo actual</p>
+        <p class="balance__label">{esAdmin ? 'Saldo de comisiones' : 'Saldo actual'}</p>
         <p class="balance__amount" id="saldo-actual">{cop(saldo)}</p>
-        <p class="balance__hint">{esAdmin ? 'Comisiones de servicios finalizados' : "Disponible para usar en Hilf'e"}</p>
+        <p class="balance__hint">{esAdmin ? 'Comisiones disponibles para retirar' : "Disponible para usar en Hilf'e"}</p>
       </div>
       <div class="balance__actions">
         {!esAdmin && <button class="btn btn--primary" id="btn-recargar">
           <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
           Recargar
         </button>}
-        <button class="btn btn--soft" id="btn-retirar">
+        <button class="btn btn--soft" id="btn-retirar" disabled={esAdmin && saldo <= 0}>
           <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M6 13l6 6 6-6"/></svg>
-          Retirar
+          {esAdmin ? 'Retirar comisiones' : 'Retirar'}
         </button>
       </div>
     </section>
 
     {esAdmin && <section class="card admin-commission-summary" aria-label="Resumen de comisiones de administración">
-      <div>
+      <div class="admin-commission-summary__head">
         <span class="eyebrow">Ingresos de la plataforma</span>
-        <h2>Comisiones generadas</h2>
-        <p>Comisión acumulada por servicios finalizados.</p>
+        <h2>Comisiones acumuladas</h2>
+        <p>Por cada servicio finalizado, Hilf’e recibe el 5% del cliente y el 5% del trabajador.</p>
       </div>
-      <strong>{cop(comisionesGeneradas)}</strong>
-      <div class="admin-commission-withdrawn">Retiros simulados: <b>{cop(totalRetirado)}</b></div>
+      <strong class="admin-commission-summary__total">{cop(comisionesGeneradas)}</strong>
+      <div class="admin-commission-summary__split">
+        <div><span>5% aportado por clientes</span><b>{cop(comisionCliente)}</b></div>
+        <div><span>5% descontado a trabajadores</span><b>{cop(comisionTrabajador)}</b></div>
+        <div><span>Servicios con comisión</span><b>{serviciosConMovimiento}</b></div>
+        <div><span>Retiros registrados</span><b>{cop(totalRetirado)}</b></div>
+      </div>
+      <div class="admin-commission-withdrawn">Disponible para retirar: <b>{cop(saldo)}</b>. Los retiros de esta demostración se descuentan del saldo y quedan en el historial; no se envía dinero real.</div>
+    </section>}
+
+    {esAdmin && <section class="card admin-commission-detail" aria-label="Detalle de comisiones por servicio">
+      <div class="card__head">
+        <div>
+          <span class="eyebrow">Trazabilidad de cobros</span>
+          <h2>Comisiones por servicio</h2>
+          <p class="admin-commission-detail__hint">Consulta quién pagó y quién recibió cada servicio, junto con el valor descontado a cada parte.</p>
+        </div>
+        <span class="admin-commission-detail__count">{detalleServiciosComision.length} servicios</span>
+      </div>
+      {detalleServiciosComision.length === 0 ? (
+        <p class="muted-msg">Todavía no hay servicios finalizados con movimientos de pago.</p>
+      ) : (
+        <div class="admin-commission-table-wrap">
+          <table class="admin-commission-table">
+            <thead><tr>
+              <th>Servicio</th><th>Cliente</th><th>Trabajador</th><th>Valor del servicio</th>
+              <th>Pagó el cliente</th><th>Descuento cliente (5%)</th>
+              <th>Recibió trabajador</th><th>Descuento trabajador (5%)</th><th>Comisión Hilf’e</th>
+            </tr></thead>
+            <tbody>
+              {detalleServiciosComision.map((servicio: any) => (
+                <tr>
+                  <td><strong>{servicio.servicio}</strong><small>Solicitud #{servicio.id}</small></td>
+                  <td>{servicio.cliente}</td>
+                  <td>{servicio.trabajador}</td>
+                  <td>{cop(servicio.valorBase)}</td>
+                  <td>{cop(servicio.totalCliente)}</td>
+                  <td class="admin-commission-table__fee">{cop(servicio.descuentoCliente)}</td>
+                  <td>{cop(servicio.totalTrabajador)}</td>
+                  <td class="admin-commission-table__fee">{cop(servicio.descuentoTrabajador)}</td>
+                  <td><strong>{cop(servicio.comisionTotal)}</strong></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
     </section>}
 
     {esCliente && <section class="card">
@@ -216,7 +334,7 @@ const grupos = agruparPorFecha(movimientos);
       <div class="hist__box">
         <header class="hist__head">
           <div>
-            <span class="eyebrow">Mi billetera</span>
+            <span class="eyebrow">{esAdmin ? 'Comisiones de Hilf’e' : 'Mi billetera'}</span>
             <h3>Historial de movimientos</h3>
           </div>
           <button type="button" class="hist__close" id="hist-close" aria-label="Cerrar">×</button>
@@ -266,7 +384,10 @@ const grupos = agruparPorFecha(movimientos);
 
   function abrir(accion: 'recargar' | 'retirar') {
     accionActual = accion;
-    modalTitle.textContent = accion === 'recargar' ? 'Recargar saldo' : 'Retirar dinero';
+    const esBilleteraAdmin = document.querySelector('.wallet')?.getAttribute('data-wallet-admin') === 'true';
+    modalTitle.textContent = accion === 'recargar'
+      ? 'Recargar saldo'
+      : esBilleteraAdmin ? 'Retirar comisiones' : 'Retirar dinero';
     montoInput.value = '';
     bancoSelect.value = '';
     cuentaInput.value = '';
@@ -525,12 +646,15 @@ const grupos = agruparPorFecha(movimientos);
 
     font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
     color: var(--text);
-    max-width: 920px;
+    width: min(100%, 920px);
+    max-width: 100%;
+    box-sizing: border-box;
     margin: 0 auto;
     padding: 3rem 1.25rem 5rem;
     display: grid;
     gap: 1.75rem;
   }
+  .wallet > * { min-width: 0; max-width: 100%; box-sizing: border-box; }
 
   .wallet__head { display: flex; justify-content: space-between; align-items: flex-end; gap: 1rem; }
   .eyebrow { display: block; font-size: 0.8rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--primary); }
@@ -568,12 +692,28 @@ const grupos = agruparPorFecha(movimientos);
   .btn--main { background: var(--primary); color: #fff; }
 
   .card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 28px; padding: 1.75rem 2rem; box-shadow: 0 10px 30px -20px rgba(15, 23, 42, 0.25); }
-  .admin-commission-summary { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: .35rem 1.5rem; border-color: color-mix(in srgb, var(--primary) 28%, var(--border)); }
+  .admin-commission-summary { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 1.1rem 1.5rem; border-color: color-mix(in srgb, var(--primary) 28%, var(--border)); }
+  .admin-commission-summary__head { min-width: 0; }
   .admin-commission-summary h2 { margin: .25rem 0; font-size: 1.15rem; }
   .admin-commission-summary p { margin: 0; color: var(--muted); font-size: .9rem; }
-  .admin-commission-summary > strong { color: var(--primary); font-size: clamp(1.5rem, 3vw, 2rem); font-variant-numeric: tabular-nums; }
+  .admin-commission-summary__total { color: var(--primary); font-size: clamp(1.5rem, 3vw, 2rem); font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .admin-commission-summary__split { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: .8rem; padding-top: 1rem; border-top: 1px solid var(--border); min-width: 0; }
+  .admin-commission-summary__split > div { display: grid; gap: .35rem; min-width: 0; overflow-wrap: anywhere; }
+  .admin-commission-summary__split span { color: var(--muted); font-size: .78rem; line-height: 1.35; }
+  .admin-commission-summary__split b { color: var(--text); font-size: .95rem; font-variant-numeric: tabular-nums; }
   .admin-commission-withdrawn { grid-column: 1 / -1; padding-top: .8rem; border-top: 1px solid var(--border); color: var(--muted); font-size: .85rem; }
   .admin-commission-withdrawn b { color: var(--text); }
+  .admin-commission-detail .card__head { align-items: flex-start; }
+  .admin-commission-detail .card__head h2 { margin: .2rem 0; }
+  .admin-commission-detail__hint { margin: .25rem 0 0; color: var(--muted); font-size: .88rem; }
+  .admin-commission-detail__count { flex: 0 0 auto; padding: .4rem .75rem; border-radius: 999px; color: var(--primary); background: var(--primary-soft); font-size: .8rem; font-weight: 700; }
+  .admin-commission-table-wrap { width: 100%; max-width: 100%; min-width: 0; overflow-x: auto; border: 1px solid var(--border); border-radius: 14px; }
+  .admin-commission-table { width: 100%; min-width: 1080px; border-collapse: collapse; text-align: left; font-size: .82rem; }
+  .admin-commission-table th { padding: .8rem .75rem; color: var(--muted); background: var(--primary-soft); font-size: .7rem; letter-spacing: .04em; text-transform: uppercase; white-space: nowrap; }
+  .admin-commission-table td { padding: .85rem .75rem; border-top: 1px solid var(--border); white-space: nowrap; font-variant-numeric: tabular-nums; }
+  .admin-commission-table td:first-child { white-space: normal; min-width: 150px; }
+  .admin-commission-table td small { display: block; margin-top: .2rem; color: var(--muted); }
+  .admin-commission-table__fee { color: var(--primary); font-weight: 700; }
   .card__head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; }
   .card__head h2 { font-size: 1.15rem; font-weight: 700; margin: 0; }
   .link { color: var(--primary); font-weight: 600; text-decoration: none; background: none; border: 0; cursor: pointer; font: inherit; }
@@ -633,9 +773,17 @@ const grupos = agruparPorFecha(movimientos);
   .hist__empty { text-align: center; color: var(--muted); padding: 2rem 0; }
 
   @media (max-width: 600px) {
+    .admin-commission-summary { grid-template-columns: 1fr; }
+    .admin-commission-summary__total { justify-self: start; }
+    .admin-commission-summary__split { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     .balance { padding: 1.5rem; }
     .balance__actions { width: 100%; flex-direction: row; }
     .balance__actions .btn { flex: 1; }
     .card { padding: 1.25rem; }
+  }
+  @media (max-width: 760px) {
+    .wallet { padding: 2rem 1rem 4rem; gap: 1.25rem; }
+    .admin-commission-summary__split { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .admin-commission-detail .card__head { flex-direction: column; }
   }
 </style>

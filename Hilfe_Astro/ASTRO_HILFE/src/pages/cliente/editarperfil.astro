@@ -236,12 +236,14 @@ const mensaje: string | null = null;
     botonGuardarFotoPerfilCliente.disabled = true;
     estadoFotoPerfilCliente.textContent = "Guardando foto…";
     try {
-      const response = await fetch(`${apiPerfilCliente}/api/usuarios/${encodeURIComponent(usuarioActualPerfilCliente.id)}/foto-perfil`, {
+      const response = await fetch(`/api/usuarios/${encodeURIComponent(usuarioActualPerfilCliente.id)}/foto-perfil`, {
         method: "POST",
+        credentials: "same-origin",
         headers: { Authorization: `Bearer ${token}` },
         body: datos,
       });
       const result = await response.json().catch(() => ({}));
+      if (response.status === 401) throw new Error("Tu sesión venció. Cierra sesión e inicia sesión de nuevo para actualizar tu foto.");
       if (!response.ok) throw new Error(result.mensaje || "No se pudo guardar la foto.");
       fotoPerfilGuardada = true;
       archivoFotoPerfilCliente = null;
@@ -307,12 +309,14 @@ const mensaje: string | null = null;
     const token = localStorage.getItem("token");
     if (!usuario?.id || !token) { mostrarMensajePerfilCliente("Inicia sesión para guardar los cambios."); return; }
     try {
-      const response = await fetch(`${apiPerfilCliente}/api/usuarios/${encodeURIComponent(usuario.id)}`, {
+      const response = await fetch(`/api/usuarios/${encodeURIComponent(usuario.id)}`, {
         method: "PUT",
+        credentials: "same-origin",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify({ nombre: [document.getElementById("nombre").value.trim(), document.getElementById("apellido").value.trim()].filter(Boolean).join(" "), telefono: document.getElementById("telefono").value.trim(), ubicacion: document.getElementById("ubicacion").value.trim() }),
       });
       const result = await response.json().catch(() => ({}));
+      if (response.status === 401) throw new Error("Tu sesión venció. Cierra sesión e inicia sesión de nuevo para actualizar tu perfil.");
       if (!response.ok) throw new Error(result.mensaje || "No se pudieron guardar los cambios.");
       const actualizado = { ...usuario, nombre: [document.getElementById("nombre").value.trim(), document.getElementById("apellido").value.trim()].filter(Boolean).join(" ") };
       localStorage.setItem("usuario", JSON.stringify(actualizado));

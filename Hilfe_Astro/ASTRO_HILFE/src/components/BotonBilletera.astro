@@ -63,7 +63,17 @@ const { variant = 'nav' } = Astro.props; // 'nav' | 'card'
       const chico = w.querySelector('[data-saldo]')!;
       const grande = w.querySelector('[data-saldo-big]')!;
       const recargar = w.querySelector<HTMLElement>('[data-wallet-recharge]');
-      if (recargar && rol === 1) recargar.hidden = true;
+      if (rol === 1) {
+        if (recargar) recargar.hidden = true;
+        const etiqueta = w.querySelector('.ww-text small');
+        const saldoEtiqueta = w.querySelector('.ww-mini-label');
+        const marca = w.querySelector('.ww-mini-brand');
+        const verBilletera = w.querySelector<HTMLAnchorElement>('.ww-actions a[href="/billetera"]');
+        if (etiqueta) etiqueta.textContent = 'Comisiones Hilf\'e';
+        if (saldoEtiqueta) saldoEtiqueta.textContent = 'Disponible para retirar';
+        if (marca) marca.textContent = 'Hilf\'e Admin';
+        if (verBilletera) verBilletera.textContent = 'Ver comisiones';
+      }
 
       const cerrar = () => {
         panel.hidden = true;

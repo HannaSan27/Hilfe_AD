@@ -1,6 +1,7 @@
 ---
 export const prerender = false;
 Astro.cookies.delete('usuario_id', { path: '/' });
+Astro.cookies.delete('backend_token', { path: '/' });
 ---
 <html lang="es">
   <head>
@@ -11,7 +12,7 @@ Astro.cookies.delete('usuario_id', { path: '/' });
     <p>Cerrando sesión…</p>
     <script is:inline>
       try { localStorage.clear(); sessionStorage.clear(); } catch (e) {}
-      window.location.replace('/login/login');
+      window.location.replace('/');
     </script>
   </body>
 </html>

@@ -327,7 +327,22 @@ import '../../components/styles/design-system.css';
 					var fecha = document.createElement('span'); fecha.className = 'review-date';
 					fecha.textContent = calificacion.Fecha_Calificacion ? new Date(calificacion.Fecha_Calificacion).toLocaleDateString('es-CO') : '';
 					var comentario = document.createElement('p'); comentario.textContent = calificacion.Comentario || 'Sin comentario.';
-					item.append(estrellasEl, document.createTextNode('  '), fecha, comentario); lista.appendChild(item);
+					item.append(estrellasEl, document.createTextNode('  '), fecha, comentario);
+					var fotos = Array.isArray(calificacion.fotos) ? calificacion.fotos : [];
+					if (fotos.length) {
+						var galeria = document.createElement('div'); galeria.className = 'review-photos';
+						fotos.forEach(function (foto, indice) {
+							if (!foto || typeof foto.url !== 'string') return;
+							var urlFoto = /^https?:\/\//i.test(foto.url)
+								? foto.url
+								: api.replace(/\/api\/?$/, '') + (foto.url.charAt(0) === '/' ? foto.url : '/' + foto.url);
+							var enlace = document.createElement('a'); enlace.className = 'review-photo'; enlace.href = urlFoto; enlace.target = '_blank'; enlace.rel = 'noopener noreferrer';
+							var imagen = document.createElement('img'); imagen.src = urlFoto; imagen.alt = 'Foto ' + (indice + 1) + ' compartida en la reseña'; imagen.loading = 'lazy'; imagen.decoding = 'async';
+							enlace.appendChild(imagen); galeria.appendChild(enlace);
+						});
+						if (galeria.childElementCount) item.appendChild(galeria);
+					}
+					lista.appendChild(item);
 				});
 			}
 			function actualizarServicio(servicio) {
@@ -651,5 +666,19 @@ import '../../components/styles/design-system.css';
 		@media(max-width:600px){.gallery-lightbox{padding:14px}.gallery-lightbox-dialog{grid-template-columns:36px minmax(0,1fr) 36px;gap:6px;width:100%;height:82vh}.gallery-lightbox-nav{width:34px;height:34px;font-size:25px}.gallery-lightbox figure img{max-height:calc(82vh - 90px)}.gallery-lightbox-close{top:-8px;right:-3px;width:38px;height:38px}.booking-details{grid-template-columns:minmax(0,1fr)}.booking-details p:last-child{grid-column:auto}.modal-field textarea{height:112px;min-height:112px}}
 		.booking-deposit{display:grid;gap:11px;padding:13px;border:1px solid #dbe4f0;border-radius:12px;background:#f8fafc}.booking-deposit-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}.booking-deposit-head>div{display:grid;gap:4px}.booking-deposit-head strong{font-size:13px;color:#1e293b}.booking-deposit-head small{font-size:11px;line-height:1.45;color:#64748b}.booking-deposit-head>span{flex:none;color:#1d4ed8;font-size:11px;font-weight:700;text-align:right}.booking-deposit-options{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}.booking-deposit-option{display:flex;align-items:center;gap:7px;min-width:0;padding:9px;border:1px solid #d7e0ed;border-radius:9px;background:#fff;cursor:pointer}.booking-deposit-option:has(input:checked){border-color:#2563eb;background:#eff6ff;box-shadow:0 0 0 1px #2563eb}.booking-deposit-option input{width:15px;height:15px;accent-color:#2563eb;flex:none}.booking-deposit-option span{display:grid;gap:2px}.booking-deposit-option strong{color:#172554;font-size:13px}.booking-deposit-option small{color:#53657c;font-size:10px;line-height:1.3}.booking-deposit-summary{margin:0!important;padding:8px 10px;border-radius:8px;background:#eaf2ff;color:#244778!important;font-size:11px!important;line-height:1.45!important}.booking-deposit-summary.is-short{background:#fff1f2;color:#991b1b!important}.booking-wallet-link{justify-self:start;color:#1d4ed8;font-size:11px;font-weight:700;text-underline-offset:3px}.booking-confirm:disabled{opacity:.5;cursor:not-allowed}
 		@media(max-width:430px){.booking-deposit{padding:10px}.booking-deposit-head{display:grid}.booking-deposit-head>span{text-align:left}.booking-deposit-options{gap:5px}.booking-deposit-option{padding:7px 5px;gap:4px}.booking-deposit-option small{font-size:9px}}
+		:global(#ratingBreakdown .rating-breakdown-row){display:grid;grid-template-columns:44px minmax(0,1fr) 28px;align-items:center;gap:10px;color:#78869b;font-size:12px}
+		:global(#ratingBreakdown .rating-breakdown-row>span:first-child){color:#52627a;font-weight:700}
+		:global(#ratingBreakdown .rating-bar-track){display:block;height:8px;overflow:hidden;border-radius:99px;background:#edf0f5}
+		:global(#ratingBreakdown .rating-bar-fill){display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,#f6b81c,#ffd76b)}
+		:global(#ratingBreakdown .rating-breakdown-row small){color:#8793a5;text-align:right;font-size:11px}
+		:global(#listaCalificaciones .review-item){display:grid;grid-template-columns:auto 1fr;align-items:center;gap:6px 12px;padding:16px 2px;border-bottom:1px solid #e8edf3}
+		:global(#listaCalificaciones .review-item:last-child){border-bottom:0}
+		:global(#listaCalificaciones .review-item strong){color:#f3ad00;letter-spacing:1px}
+		:global(#listaCalificaciones .review-date){justify-self:end;color:#8793a5;font-size:12px}
+		:global(#listaCalificaciones .review-item p){grid-column:1/-1;margin:0;color:#53627a;line-height:1.6}
+		:global(#listaCalificaciones .review-photos){grid-column:1/-1;display:flex;flex-wrap:wrap;gap:10px;margin-top:8px}
+		:global(#listaCalificaciones .review-photo){display:block;width:clamp(96px,18vw,150px);aspect-ratio:4/3;overflow:hidden;border:1px solid #e2e8f0;border-radius:12px;background:#f1f5f9}
+		:global(#listaCalificaciones .review-photo img){display:block;width:100%;height:100%;object-fit:cover;transition:transform .2s ease}
+		:global(#listaCalificaciones .review-photo:hover img){transform:scale(1.04)}
 	</style>
 </Layout>

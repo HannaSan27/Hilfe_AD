@@ -10,13 +10,13 @@ export const GET: APIRoute = async ({ cookies }) => {
   if (!uid) return Response.json({ ok: false }, { status: 401 });
 
   const [rows] = await pool.query<RowDataPacket[]>(
-    'SELECT Id_Usuario, Id_Rol, Nombre FROM usuarios WHERE Id_Usuario = ? LIMIT 1', [uid]
+    'SELECT Id_Usuario, Id_Rol, Nombre, Correo FROM usuarios WHERE Id_Usuario = ? LIMIT 1', [uid]
   );
   const u = rows[0];
   if (!u) return Response.json({ ok: false }, { status: 401 });
 
   return Response.json(
-    { ok: true, usuario: { id: u.Id_Usuario, rol: u.Id_Rol, nombre: u.Nombre } },
+    { ok: true, usuario: { id: u.Id_Usuario, rol: u.Id_Rol, nombre: u.Nombre, correo: u.Correo } },
     { headers: { 'Cache-Control': 'no-store' } }
   );
 };

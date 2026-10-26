@@ -19,7 +19,10 @@ export const GET: APIRoute = async ({ cookies }) => {
               u.Nombre AS trabajador, s.Direccion AS direccion,
               DATE_FORMAT(s.Fecha_Servicio, '%d/%m/%Y') AS fecha,
               TIME_FORMAT(s.Hora_Servicio, '%H:%i') AS hora,
-              s.Estado_Solicitudes AS estado
+              s.Estado_Solicitudes AS estado,
+              (SELECT c.Puntaje FROM calificaciones c
+                WHERE c.Id_Solicitud = s.Id_Solicitud
+                ORDER BY c.Id_Calificaciones DESC LIMIT 1) AS puntajeCalificacion
          FROM solicitudes s
          JOIN servicios sv ON sv.Id_Servicio = s.Id_Servicio
          JOIN usuarios u ON u.Id_Usuario = s.Id_Trabajador
@@ -32,7 +35,14 @@ export const GET: APIRoute = async ({ cookies }) => {
       const precio = Number(r.precio);
       const total = Math.round(precio * 1.05 * 100) / 100;
       const abonado = Math.min(total, Number(r.abonado || 0));
-      return { ...r, precio, total, abonado, saldoPendiente: Math.round(Math.max(0, total - abonado) * 100) / 100 };
+      return {
+        ...r,
+        precio,
+        total,
+        abonado,
+        saldoPendiente: Math.round(Math.max(0, total - abonado) * 100) / 100,
+        calificacion: r.puntajeCalificacion == null ? null : { puntaje: Number(r.puntajeCalificacion) },
+      };
     });
     return Response.json({ ok: true, citas }, { headers: { 'Cache-Control': 'no-store' } });
   } catch (error) {
