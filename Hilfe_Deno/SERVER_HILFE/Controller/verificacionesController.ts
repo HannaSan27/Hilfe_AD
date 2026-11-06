@@ -14,7 +14,10 @@ import {
 } from "../Models/legalesModel.ts";
 import { nuevaConexion } from "../Models/conexion.ts";
 import { validarTipoDocumento, validarNumeroDocumento, validarFechaExpedicion } from "../Helpers/validaciones.ts";
-import { enviarCorreoBienvenidaAprobadaAscii } from "../Helpers/correoHelper.ts";
+import {
+  enviarCorreoBienvenidaAprobadaAscii,
+  enviarCorreoRechazoVerificacion,
+} from "../Helpers/correoHelper.ts";
 
 function esAdmin(ctx: Context): boolean {
   const usuario = ctx.state.usuario as { id?: number; rol?: number } | undefined;
@@ -185,17 +188,37 @@ export async function rechazarSolicitudAdmin(ctx: RouterContext<string>) {
     return;
   }
 
-  if (!body.motivo || body.motivo.trim().length === 0) {
+  if (typeof body.motivo !== "string" || body.motivo.trim().length === 0) {
     ctx.response.status = 400;
     ctx.response.body = { mensaje: "Debes especificar el motivo del rechazo" };
     return;
   }
 
-  const exito = await rechazarVerificacion(id, adminId, body.motivo.trim());
+  const motivo = body.motivo.trim().slice(0, 2000);
+  const solicitud = await obtenerSolicitudVerificacionPorId(id);
+  if (!solicitud) {
+    ctx.response.status = 404;
+    ctx.response.body = { mensaje: "Solicitud de verificación no encontrada" };
+    return;
+  }
+
+  const exito = await rechazarVerificacion(id, adminId, motivo);
   if (!exito) {
     ctx.response.status = 404;
     ctx.response.body = { mensaje: "Solicitud de verificación no encontrada" };
     return;
+  }
+
+  let correoEnviado = false;
+  try {
+    await enviarCorreoRechazoVerificacion(
+      String(solicitud.Correo_Usuario),
+      String(solicitud.Nombre_Usuario),
+      motivo,
+    );
+    correoEnviado = true;
+  } catch (error) {
+    console.error("No se pudo enviar el correo de rechazo de verificación:", error);
   }
 
   ctx.response.status = 200;
@@ -203,6 +226,7 @@ export async function rechazarSolicitudAdmin(ctx: RouterContext<string>) {
     mensaje: "Solicitud de verificación rechazada.",
     idSolicitud: id,
     estado: "rechazado",
+    correoEnviado,
   };
 }
 

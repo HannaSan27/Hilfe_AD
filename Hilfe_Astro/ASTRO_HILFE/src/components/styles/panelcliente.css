@@ -254,6 +254,34 @@ body {
   flex-shrink: 0;
 }
 
+.cliente-view-site {
+  display: inline-flex;
+  min-height: 42px;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 0 14px;
+  border: 1px solid var(--border, #e2e8f0);
+  border-radius: 11px;
+  background: var(--bg-card, #fff);
+  color: var(--text-secondary, #64748b);
+  font-size: 13px;
+  font-weight: 700;
+  text-decoration: none;
+  transition: border-color .18s ease, background-color .18s ease, color .18s ease;
+}
+
+.cliente-view-site:hover {
+  border-color: var(--primary, #2563eb);
+  background: var(--primary-soft, #eff6ff);
+  color: var(--primary, #2563eb);
+}
+
+.cliente-view-site:focus-visible {
+  outline: 3px solid var(--primary-soft, #eff6ff);
+  outline-offset: 2px;
+}
+
 .cliente-main .content-card {
   max-width: none;
   border: 1px solid var(--border, #e2e8f0);

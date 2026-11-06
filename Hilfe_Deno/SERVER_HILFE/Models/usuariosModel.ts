@@ -55,6 +55,12 @@ export async function crearUsuario(
       perfilProfesional?.descripcion ?? null,
     ]
   );
+  const idUsuario = Number(resultado.lastInsertId);
+  // Crear la billetera desde el alta para que cualquier rol tenga saldo listo.
+  await client.execute(
+    "INSERT IGNORE INTO wallets (user_id, balance) VALUES (?, 0)",
+    [idUsuario]
+  );
   return resultado;
 }
 

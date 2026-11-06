@@ -92,6 +92,29 @@ export const PUT: APIRoute = async ({ params, request, cookies }) => {
   const texto = String(body.notas ?? body.infoRequerida ?? body.motivo ?? '').trim().slice(0, 2000);
   if (def.exigeTexto && !texto) return json({ mensaje: 'Debes escribir la observación.' }, 400);
 
+  // La ruta de Astro se usa como BFF para el panel. Aprobación y rechazo pasan
+  // por Deno para guardar la decisión y enviar el correo correspondiente.
+  if (accion === 'aprobar' || accion === 'rechazar') {
+    const authorization = request.headers.get('authorization');
+    if (!authorization?.startsWith('Bearer ')) {
+      return json({ mensaje: 'La sesión del administrador venció. Inicia sesión otra vez.' }, 401);
+    }
+
+    const apiBase = (import.meta.env.PUBLIC_API_BASE_URL || 'http://127.0.0.1:8000/api').replace(/\/+$/, '');
+    try {
+      const respuesta = await fetch(`${apiBase}/admin/verificaciones/${id}/${accion}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', Authorization: authorization },
+        body: JSON.stringify(accion === 'rechazar' ? { motivo: texto } : { notas: texto }),
+      });
+      const resultado = await respuesta.json().catch(() => ({}));
+      return json(resultado, respuesta.status);
+    } catch (error) {
+      console.error('No se pudo conectar con el servicio de decisión y correo:', error);
+      return json({ mensaje: 'No se pudo conectar con el servidor de verificación. La decisión no fue registrada; intenta de nuevo.' }, 503);
+    }
+  }
+
   // La decisión y el estado de la cuenta deben cambiar juntos. Si solo se
   // actualiza la solicitud, el panel la muestra aprobada pero el usuario queda
   // bloqueado como pendiente en el resto de la plataforma.

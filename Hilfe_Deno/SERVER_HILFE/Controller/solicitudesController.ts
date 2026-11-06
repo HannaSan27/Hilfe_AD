@@ -7,7 +7,8 @@ const TRANSICIONES_VALIDAS: Record<EstadoSolicitud, EstadoSolicitud[]> = {
   aceptado: ["en_proceso", "cancelada"],
   en_proceso: ["rumbo_a_ubicacion"],
   rumbo_a_ubicacion: ["trabajo_realizado"],
-  trabajo_realizado: ["finalizado"],
+  // La única operación que finaliza un servicio es el pago en la billetera.
+  trabajo_realizado: [],
   rechazado: [],
   finalizado: [],
   cancelada: [],
@@ -15,9 +16,17 @@ const TRANSICIONES_VALIDAS: Record<EstadoSolicitud, EstadoSolicitud[]> = {
 
 export const getSolicitudes = async (ctx: Context) => {
   try {
+    const sesion = ctx.state.usuario as { id?: number; rol?: number } | undefined;
+    const usuarioId = Number(sesion?.id);
+    const rol = Number(sesion?.rol);
+    if (!usuarioId || ![1, 2, 3].includes(rol)) {
+      ctx.response.status = 401;
+      ctx.response.body = { mensaje: "Inicia sesión para consultar solicitudes." };
+      return;
+    }
     const url = ctx.request.url;
-    const cliente = url.searchParams.get("cliente");
-    const trabajador = url.searchParams.get("trabajador");
+    const cliente = rol === 3 ? String(usuarioId) : url.searchParams.get("cliente");
+    const trabajador = rol === 2 ? String(usuarioId) : url.searchParams.get("trabajador");
     const estado = url.searchParams.get("estado");
 
     let sql = `
@@ -88,6 +97,14 @@ export const getHorariosOcupados = async (ctx: Context) => {
 export const getSolicitudPorId = async (ctx: RouterContext<string>) => {
   const { id } = ctx.params as { id: string };
   try {
+    const sesion = ctx.state.usuario as { id?: number; rol?: number } | undefined;
+    const usuarioId = Number(sesion?.id);
+    const rol = Number(sesion?.rol);
+    if (!usuarioId || ![1, 2, 3].includes(rol)) {
+      ctx.response.status = 401;
+      ctx.response.body = { mensaje: "Inicia sesión para consultar la solicitud." };
+      return;
+    }
     const result = await client.query(
       `SELECT
          sol.*, s.Titulo AS Titulo_Servicio,
@@ -105,8 +122,14 @@ export const getSolicitudPorId = async (ctx: RouterContext<string>) => {
       ctx.response.body = { mensaje: "Solicitud no encontrada" };
       return;
     }
+    const solicitud = result[0];
+    if (rol !== 1 && Number(solicitud.Id_Cliente) !== usuarioId && Number(solicitud.Id_Trabajador) !== usuarioId) {
+      ctx.response.status = 403;
+      ctx.response.body = { mensaje: "No tienes permiso para consultar esta solicitud." };
+      return;
+    }
     ctx.response.status = 200;
-    ctx.response.body = result[0];
+    ctx.response.body = solicitud;
   } catch (error) {
     ctx.response.status = 500;
     ctx.response.body = { mensaje: "Error al obtener la solicitud", error: String(error) };
@@ -117,7 +140,7 @@ export const crearSolicitud = async (ctx: Context) => {
   let db: Awaited<ReturnType<typeof nuevaConexion>> | undefined;
   let enTransaccion = false;
   try {
-    const body: Partial<Solicitud> = await ctx.request.body.json();
+    const body = await ctx.request.body.json() as Partial<Solicitud> & { porcentajeAbono?: number };
     const {
       Id_Cliente,
       Id_Trabajador,
@@ -129,6 +152,7 @@ export const crearSolicitud = async (ctx: Context) => {
       Descripcion_Solicitud,
     } = body;
     const sesion = ctx.state.usuario as { id?: number; rol?: number } | undefined;
+    const porcentajeAbono = Number(body.porcentajeAbono);
 
     if (!Id_Cliente || !Id_Trabajador || !Id_Servicio || !Fecha_Servicio || !Hora_Servicio) {
       ctx.response.status = 400;
@@ -140,6 +164,11 @@ export const crearSolicitud = async (ctx: Context) => {
     if (Number(sesion?.rol) !== 3 || Number(sesion?.id) !== Number(Id_Cliente)) {
       ctx.response.status = 403;
       ctx.response.body = { mensaje: "Inicia sesión como cliente para enviar una solicitud desde tu propia cuenta" };
+      return;
+    }
+    if (![25, 50, 100].includes(porcentajeAbono)) {
+      ctx.response.status = 400;
+      ctx.response.body = { mensaje: "Elige un abono del 25%, 50% o 100% del servicio." };
       return;
     }
 
@@ -176,12 +205,51 @@ export const crearSolicitud = async (ctx: Context) => {
       ctx.response.body = { mensaje: "Tu cuenta debe estar aprobada para solicitar servicios." };
       return;
     }
-    const servicio = await db.query("SELECT Id_Servicio FROM servicios WHERE Id_Servicio = ? AND Id_Trabajador = ?", [Id_Servicio, Id_Trabajador]);
+    const servicio = await db.query(
+      "SELECT Id_Servicio, Precio, Titulo FROM servicios WHERE Id_Servicio = ? AND Id_Trabajador = ? FOR UPDATE",
+      [Id_Servicio, Id_Trabajador]
+    );
     if (!servicio.length) {
       await db.execute("ROLLBACK");
       enTransaccion = false;
       ctx.response.status = 400;
       ctx.response.body = { mensaje: "El servicio no corresponde a este trabajador." };
+      return;
+    }
+    const precio = Number(servicio[0].Precio);
+    if (!Number.isFinite(precio) || precio <= 0) {
+      await db.execute("ROLLBACK");
+      enTransaccion = false;
+      ctx.response.status = 409;
+      ctx.response.body = { mensaje: "Este servicio no tiene un precio válido para reservar." };
+      return;
+    }
+    const valorAbono = Math.round(precio * porcentajeAbono) / 100;
+    const cobroAbono = Math.round(valorAbono * 1.05 * 100) / 100;
+
+    await db.execute("INSERT IGNORE INTO wallets (user_id, balance) VALUES (?, 0)", [Id_Cliente]);
+    const billeteras = await db.query(
+      "SELECT id, balance FROM wallets WHERE user_id = ? FOR UPDATE",
+      [Id_Cliente]
+    );
+    if (!billeteras.length) {
+      await db.execute("ROLLBACK");
+      enTransaccion = false;
+      ctx.response.status = 503;
+      ctx.response.body = { mensaje: "No se pudo abrir tu billetera. Intenta de nuevo." };
+      return;
+    }
+    const saldoDisponible = Number(billeteras[0].balance);
+    if (saldoDisponible < cobroAbono) {
+      await db.execute("ROLLBACK");
+      enTransaccion = false;
+      ctx.response.status = 402;
+      ctx.response.body = {
+        codigo: "SALDO_INSUFICIENTE",
+        mensaje: `Necesitas ${cobroAbono.toLocaleString("es-CO")} COP para abonar el ${porcentajeAbono}% (incluye 5% de comisión). Tu saldo disponible es ${saldoDisponible.toLocaleString("es-CO")} COP. Recarga tu billetera y vuelve a intentarlo.`,
+        saldoNecesario: cobroAbono,
+        saldoDisponible,
+      };
       return;
     }
     const dateValue = String(Fecha_Servicio).slice(0, 10);
@@ -216,7 +284,7 @@ export const crearSolicitud = async (ctx: Context) => {
       return;
     }
 
-    await db.execute(
+    const resultadoSolicitud = await db.execute(
       `INSERT INTO solicitudes
          (Id_Cliente, Id_Trabajador, Id_Servicio, Fecha_Servicio, Hora_Servicio,
           Estado_Solicitudes, Direccion, Telefono, Descripcion_Solicitud)
@@ -232,11 +300,25 @@ export const crearSolicitud = async (ctx: Context) => {
         Descripcion_Solicitud ?? null,
       ]
     );
+    const idSolicitud = Number(resultadoSolicitud.lastInsertId);
+    await db.execute(
+      `INSERT INTO transactions (wallet_id, solicitud_id, type, amount, description, status)
+       VALUES (?, ?, 'payment', ?, ?, 'completed')`,
+      [billeteras[0].id, idSolicitud, cobroAbono, `Abono del ${porcentajeAbono}% para ${servicio[0].Titulo} (incluye 5% Hilf'e)`]
+    );
+    await db.execute("UPDATE wallets SET balance = balance - ? WHERE id = ?", [cobroAbono, billeteras[0].id]);
     await db.execute("COMMIT");
     enTransaccion = false;
 
     ctx.response.status = 201;
-    ctx.response.body = { mensaje: "Solicitud creada correctamente", estado: "pendiente" };
+    ctx.response.body = {
+      mensaje: `Solicitud creada. Se abonaron ${cobroAbono.toLocaleString("es-CO")} COP (${porcentajeAbono}% del servicio).`,
+      estado: "pendiente",
+      idSolicitud,
+      porcentajeAbono,
+      abono: cobroAbono,
+      saldoDisponible: Math.round((saldoDisponible - cobroAbono) * 100) / 100,
+    };
   } catch (error) {
     if (db && enTransaccion) await db.execute("ROLLBACK").catch(() => {});
     ctx.response.status = 500;
@@ -249,6 +331,15 @@ export const crearSolicitud = async (ctx: Context) => {
 export const cambiarEstadoSolicitud = async (ctx: RouterContext<string>) => {
   const { id } = ctx.params as { id: string };
   try {
+    const sesion = ctx.state.usuario as { id?: number; rol?: number } | undefined;
+    const usuarioId = Number(sesion?.id);
+    const rol = Number(sesion?.rol);
+    if (!usuarioId || (rol !== 1 && rol !== 2)) {
+      ctx.response.status = 403;
+      ctx.response.body = { mensaje: "Solo el trabajador asignado o un administrador puede cambiar el estado." };
+      return;
+    }
+
     const body: Partial<Solicitud> = await ctx.request.body.json();
     const nuevoEstado = body.Estado_Solicitudes as EstadoSolicitud;
 
@@ -259,12 +350,18 @@ export const cambiarEstadoSolicitud = async (ctx: RouterContext<string>) => {
     }
 
     const actual = await client.query(
-      "SELECT Estado_Solicitudes FROM solicitudes WHERE Id_Solicitud = ?",
+      "SELECT Estado_Solicitudes, Id_Trabajador FROM solicitudes WHERE Id_Solicitud = ?",
       [id]
     );
     if (actual.length === 0) {
       ctx.response.status = 404;
       ctx.response.body = { mensaje: "Solicitud no encontrada" };
+      return;
+    }
+
+    if (rol !== 1 && Number(actual[0].Id_Trabajador) !== usuarioId) {
+      ctx.response.status = 403;
+      ctx.response.body = { mensaje: "No puedes modificar una solicitud asignada a otro trabajador." };
       return;
     }
 
@@ -278,6 +375,62 @@ export const cambiarEstadoSolicitud = async (ctx: RouterContext<string>) => {
         transicionesPermitidas: permitidos,
       };
       return;
+    }
+
+    // Si el trabajador rechaza o se cancela una reserva, devuelve al cliente
+    // cualquier abono registrado al agendar, en la misma transacción del cambio.
+    if (nuevoEstado === "rechazado" || nuevoEstado === "cancelada") {
+      const db = await nuevaConexion();
+      let enTransaccion = false;
+      try {
+        await db.execute("START TRANSACTION");
+        enTransaccion = true;
+        const solicitudes = await db.query(
+          "SELECT Id_Cliente, Estado_Solicitudes FROM solicitudes WHERE Id_Solicitud = ? FOR UPDATE",
+          [id]
+        );
+        const solicitud = solicitudes[0];
+        if (!solicitud || solicitud.Estado_Solicitudes !== estadoActual) {
+          await db.execute("ROLLBACK");
+          enTransaccion = false;
+          ctx.response.status = 409;
+          ctx.response.body = { mensaje: "La solicitud cambió mientras se procesaba. Actualiza e intenta de nuevo." };
+          return;
+        }
+        const pagos = await db.query(
+          "SELECT COALESCE(SUM(amount), 0) AS total FROM transactions WHERE solicitud_id = ? AND type = 'payment'",
+          [id]
+        );
+        const reembolsos = await db.query(
+          "SELECT id FROM transactions WHERE solicitud_id = ? AND type = 'refund' LIMIT 1",
+          [id]
+        );
+        const montoReembolso = Number(pagos[0]?.total || 0);
+        if (montoReembolso > 0 && !reembolsos.length) {
+          const wallets = await db.query("SELECT id FROM wallets WHERE user_id = ? FOR UPDATE", [solicitud.Id_Cliente]);
+          if (!wallets.length) throw new Error("No se encontró la billetera para devolver el abono.");
+          await db.execute(
+            `INSERT INTO transactions (wallet_id, solicitud_id, type, amount, description, status)
+             VALUES (?, ?, 'refund', ?, 'Reembolso de abono por cancelación del servicio', 'completed')`,
+            [wallets[0].id, id, montoReembolso]
+          );
+          await db.execute("UPDATE wallets SET balance = balance + ? WHERE id = ?", [montoReembolso, wallets[0].id]);
+        }
+        await db.execute("UPDATE solicitudes SET Estado_Solicitudes = ? WHERE Id_Solicitud = ?", [nuevoEstado, id]);
+        await db.execute("COMMIT");
+        enTransaccion = false;
+        ctx.response.status = 200;
+        ctx.response.body = {
+          mensaje: `Solicitud actualizada a '${nuevoEstado}'${montoReembolso > 0 ? `; se devolvieron ${montoReembolso.toLocaleString("es-CO")} COP a la billetera del cliente` : ""}`,
+          reembolso: montoReembolso,
+        };
+        return;
+      } catch (error) {
+        if (enTransaccion) await db.execute("ROLLBACK").catch(() => {});
+        throw error;
+      } finally {
+        await db.close().catch(() => {});
+      }
     }
 
     await client.execute(
@@ -296,13 +449,29 @@ export const cambiarEstadoSolicitud = async (ctx: RouterContext<string>) => {
 export const eliminarSolicitud = async (ctx: RouterContext<string>) => {
   const { id } = ctx.params as { id: string };
   try {
+    const sesion = ctx.state.usuario as { id?: number; rol?: number } | undefined;
+    const usuarioId = Number(sesion?.id);
+    const rol = Number(sesion?.rol);
+    if (!usuarioId || (rol !== 1 && rol !== 2 && rol !== 3)) {
+      ctx.response.status = 403;
+      ctx.response.body = { mensaje: "Inicia sesión para eliminar una solicitud." };
+      return;
+    }
+
     const actual = await client.query(
-      "SELECT Estado_Solicitudes FROM solicitudes WHERE Id_Solicitud = ?",
+      "SELECT Estado_Solicitudes, Id_Cliente, Id_Trabajador FROM solicitudes WHERE Id_Solicitud = ?",
       [id]
     );
     if (actual.length === 0) {
       ctx.response.status = 404;
       ctx.response.body = { mensaje: "Solicitud no encontrada" };
+      return;
+    }
+
+    const esParte = usuarioId === Number(actual[0].Id_Cliente) || usuarioId === Number(actual[0].Id_Trabajador);
+    if (rol !== 1 && !esParte) {
+      ctx.response.status = 403;
+      ctx.response.body = { mensaje: "No puedes eliminar una solicitud de otra cuenta." };
       return;
     }
 

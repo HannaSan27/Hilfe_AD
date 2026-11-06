@@ -26,9 +26,14 @@ export const POST: APIRoute = async ({ request, cookies }) => {
   } catch {
     return Response.json({ ok: false, mensaje: "No se pudo conectar con el servidor de autenticación." }, { status: 503 });
   }
-  const data = await response.json().catch(() => ({}));
-  if (!response.ok || !data.token || !data.usuario) {
-    return Response.json({ ok: false, ...data }, { status: response.status || 502 });
+  const data = await response.json().catch(() => null);
+  if (!response.ok || !data?.token || !data?.usuario) {
+    const mensaje = data?.mensaje || data?.error ||
+      `El backend de autenticación respondió sin datos de sesión (HTTP ${response.status}). Revisa la conexión en /api/health y la consola de Deno.`;
+    return Response.json(
+      { ok: false, mensaje, codigo: data?.codigo },
+      { status: response.ok ? 502 : response.status || 502 }
+    );
   }
   const destino = DESTINOS[Number(data.usuario.rol)];
   if (!destino) return Response.json({ ok: false, mensaje: 'La cuenta no tiene un rol válido. Contacta al administrador.' }, { status: 403 });

@@ -272,6 +272,107 @@ const porCalificar = solicitudes.filter((s) => s.estado === "finalizado" && s.ca
     const estadoCliente = (estado) => ({ aceptado: "Aceptada", en_proceso: "En proceso", rumbo_a_ubicacion: "En camino", trabajo_realizado: "Trabajo realizado", finalizado: "Finalizada", cancelada: "Cancelada", rechazado: "Rechazada", pendiente: "Pendiente" }[estado] || estado || "Pendiente");
     const claseEstadoCliente = (estado) => ({ pendiente: "badge-warning", aceptado: "badge-primary", en_proceso: "badge-primary", rumbo_a_ubicacion: "badge-primary", trabajo_realizado: "badge-success", finalizado: "badge-success", cancelada: "badge-danger", rechazado: "badge-danger" }[estado] || "badge-neutral");
     const mostrarErrorCliente = (mensaje) => window.alert(mensaje);
+    const MAX_FOTOS = 3;
+    const MAX_BYTES_FOTO = 5 * 1024 * 1024;
+    const inputFotos = document.getElementById("inputFotos");
+    const fotosCalificacion = [];
+    const urlsFotosCalificacion = new Map();
+    const textoPuntaje = ["Toca una estrella", "Muy malo", "Malo", "Regular", "Bueno", "Excelente"];
+
+    function limpiarFotosCalificacion() {
+      urlsFotosCalificacion.forEach((url) => URL.revokeObjectURL(url));
+      urlsFotosCalificacion.clear();
+      fotosCalificacion.length = 0;
+      if (inputFotos) inputFotos.value = "";
+    }
+
+    function fijarPuntaje(valor) {
+      const puntaje = Number.isInteger(valor) ? Math.max(0, Math.min(5, valor)) : 0;
+      const campo = document.getElementById("inputPuntaje");
+      const texto = document.getElementById("ratingTexto");
+      if (campo) campo.value = String(puntaje);
+      if (texto) {
+        texto.textContent = textoPuntaje[puntaje];
+        texto.classList.toggle("has-value", puntaje > 0);
+      }
+      document.querySelectorAll("#starRating .star").forEach((estrella) => {
+        const valorEstrella = Number(estrella.dataset.value);
+        const seleccionada = valorEstrella === puntaje;
+        estrella.classList.toggle("is-active", puntaje > 0 && valorEstrella <= puntaje);
+        estrella.setAttribute("aria-checked", String(seleccionada));
+        estrella.tabIndex = seleccionada || (!puntaje && valorEstrella === 1) ? 0 : -1;
+      });
+    }
+
+    function renderFotosCalificacion() {
+      const lista = document.getElementById("fotoList");
+      const contador = document.getElementById("fotoContador");
+      const botonAgregar = document.getElementById("btnAgregarFoto");
+      if (!lista) return;
+      lista.replaceChildren();
+      lista.hidden = fotosCalificacion.length === 0;
+      if (contador) contador.textContent = `${fotosCalificacion.length}/${MAX_FOTOS}`;
+      if (botonAgregar) botonAgregar.hidden = fotosCalificacion.length >= MAX_FOTOS;
+
+      fotosCalificacion.forEach((archivo, indice) => {
+        let url = urlsFotosCalificacion.get(archivo);
+        if (!url) {
+          url = URL.createObjectURL(archivo);
+          urlsFotosCalificacion.set(archivo, url);
+        }
+        const tarjeta = document.createElement("div");
+        tarjeta.className = "cal-photo";
+        const imagen = document.createElement("img");
+        imagen.src = url;
+        imagen.alt = `Foto ${indice + 1} del trabajo`;
+        const quitar = document.createElement("button");
+        quitar.type = "button";
+        quitar.className = "cal-photo-remove";
+        quitar.dataset.quitarFoto = String(indice);
+        quitar.setAttribute("aria-label", `Quitar foto ${indice + 1}`);
+        quitar.textContent = "×";
+        tarjeta.append(imagen, quitar);
+        lista.appendChild(tarjeta);
+      });
+    }
+
+    inputFotos?.addEventListener("change", () => {
+      const seleccionadas = Array.from(inputFotos.files || []);
+      for (const archivo of seleccionadas) {
+        if (fotosCalificacion.length >= MAX_FOTOS) {
+          mostrarErrorCliente(`Puedes agregar máximo ${MAX_FOTOS} fotos.`);
+          break;
+        }
+        if (!["image/jpeg", "image/png", "image/webp"].includes(archivo.type)) {
+          mostrarErrorCliente("Las fotos deben ser JPG, PNG o WEBP.");
+          continue;
+        }
+        if (archivo.size > MAX_BYTES_FOTO) {
+          mostrarErrorCliente("Cada foto debe pesar máximo 5 MB.");
+          continue;
+        }
+        if (!fotosCalificacion.some((foto) => foto.name === archivo.name && foto.size === archivo.size && foto.lastModified === archivo.lastModified)) {
+          fotosCalificacion.push(archivo);
+        }
+      }
+      inputFotos.value = "";
+      renderFotosCalificacion();
+    });
+
+    document.getElementById("starRating")?.addEventListener("keydown", (event) => {
+      if (!(event.target instanceof Element)) return;
+      const estrella = event.target.closest(".star");
+      if (!estrella) return;
+      const actual = Number(document.getElementById("inputPuntaje")?.value || 0);
+      let siguiente = actual || 1;
+      if (["ArrowRight", "ArrowUp"].includes(event.key)) siguiente = Math.min(5, siguiente + 1);
+      else if (["ArrowLeft", "ArrowDown"].includes(event.key)) siguiente = Math.max(1, siguiente - 1);
+      else if (["Enter", " "].includes(event.key)) siguiente = Number(estrella.dataset.value);
+      else return;
+      event.preventDefault();
+      fijarPuntaje(siguiente);
+      document.querySelector(`#starRating .star[data-value="${siguiente}"]`)?.focus();
+    });
 
     /* ========== PAGO DE SERVICIOS ========== */
     const MSG_PAGO = {
@@ -330,12 +431,15 @@ const porCalificar = solicitudes.filter((s) => s.estado === "finalizado" && s.ca
         const main = document.getElementById("solicitudesTable");
         if (main) main.hidden = solicitudes.length === 0;
 
-        let pendientes = 0, aceptadas = 0, finalizadas = 0;
+        let pendientes = 0, aceptadas = 0, finalizadas = 0, porCalificarTotal = 0;
         for (const s of solicitudes) {
           const estado = String(s.estado || "pendiente").toLowerCase();
           if (estado === "pendiente") pendientes++;
           if (["aceptado", "en_proceso", "rumbo_a_ubicacion", "trabajo_realizado"].includes(estado)) aceptadas++;
-          if (estado === "finalizado") finalizadas++;
+          if (estado === "finalizado") {
+            finalizadas++;
+            if (!s.calificacion) porCalificarTotal++;
+          }
 
           const tr = document.createElement("tr");
 
@@ -368,11 +472,18 @@ const porCalificar = solicitudes.filter((s) => s.estado === "finalizado" && s.ca
             btn.addEventListener("click", () => pagarCita(btn, s));
             tdAcc.appendChild(btn);
           } else if (estado === "finalizado") {
-            const btn = document.createElement("button");
-            btn.type = "button"; btn.className = "btn btn-primary btn-sm btn-calificar";
-            btn.dataset.id = s.id; btn.dataset.servicio = s.servicio || "Servicio";
-            btn.textContent = "Calificar";
-            tdAcc.appendChild(btn);
+            if (s.calificacion) {
+              const calificacion = document.createElement("span");
+              calificacion.className = "badge badge-neutral badge-sm";
+              calificacion.textContent = `★ ${Number(s.calificacion.puntaje)}/5`;
+              tdAcc.appendChild(calificacion);
+            } else {
+              const btn = document.createElement("button");
+              btn.type = "button"; btn.className = "btn btn-primary btn-sm btn-calificar";
+              btn.dataset.id = s.id; btn.dataset.servicio = s.servicio || "Servicio";
+              btn.textContent = "Calificar";
+              tdAcc.appendChild(btn);
+            }
           }
 
           tr.append(tdServicio, tdTrab, tdFecha, tdHora, tdEstado, tdAcc);
@@ -385,8 +496,8 @@ const porCalificar = solicitudes.filter((s) => s.estado === "finalizado" && s.ca
         document.getElementById("statTotal").textContent = String(solicitudes.length);
         const porCalificar = document.getElementById("calificacionesPendientes");
         const contador = document.getElementById("contadorCalificaciones");
-        if (porCalificar) porCalificar.hidden = finalizadas === 0;
-        if (contador) contador.textContent = String(finalizadas);
+        if (porCalificar) porCalificar.hidden = porCalificarTotal === 0;
+        if (contador) contador.textContent = String(porCalificarTotal);
 
         let usuario = null;
         try { usuario = JSON.parse(localStorage.getItem("usuario") || "null"); } catch {}
@@ -416,7 +527,12 @@ const porCalificar = solicitudes.filter((s) => s.estado === "finalizado" && s.ca
       }
       const quitarFoto = target.closest("[data-quitar-foto]");
       if (quitarFoto) {
-        fotosCalificacion.splice(Number(quitarFoto.dataset.quitarFoto), 1);
+        const indice = Number(quitarFoto.dataset.quitarFoto);
+        const [quitada] = fotosCalificacion.splice(indice, 1);
+        if (quitada && urlsFotosCalificacion.has(quitada)) {
+          URL.revokeObjectURL(urlsFotosCalificacion.get(quitada));
+          urlsFotosCalificacion.delete(quitada);
+        }
         renderFotosCalificacion();
         return;
       }
@@ -427,8 +543,8 @@ const porCalificar = solicitudes.filter((s) => s.estado === "finalizado" && s.ca
         document.getElementById("modalServicio").textContent = boton.dataset.servicio || "";
         document.getElementById("comentario").value = "";
         document.getElementById("charCounter").textContent = "0/500";
+        limpiarFotosCalificacion();
         fijarPuntaje(0);
-        fotosCalificacion = [];
         renderFotosCalificacion();
         modalCalificar?.classList.add("active");
       }
@@ -452,6 +568,7 @@ const porCalificar = solicitudes.filter((s) => s.estado === "finalizado" && s.ca
       const idSolicitud = Number(document.getElementById("inputIdSolicitud").value);
       const puntaje = Number(document.getElementById("inputPuntaje").value);
       if (!token || !usuario?.id) return mostrarErrorCliente("Inicia sesión para enviar una calificación.");
+      if (!idSolicitud) return mostrarErrorCliente("No se encontró el servicio que quieres calificar. Actualiza la página e inténtalo de nuevo.");
       if (!puntaje) return mostrarErrorCliente("Selecciona una calificación de 1 a 5 estrellas.");
 
       const btn = document.getElementById("btnSubmitCalificar");
@@ -476,10 +593,17 @@ const porCalificar = solicitudes.filter((s) => s.estado === "finalizado" && s.ca
         try { data = JSON.parse(texto); } catch {}
         if (!response.ok) throw new Error(data.mensaje || `Error ${response.status} al enviar la calificación.`);
         cerrarModalCalificar();
+        limpiarFotosCalificacion();
         window.alert(data.mensaje || "Calificación enviada correctamente.");
         await cargarSolicitudesCliente();
       } catch (error) {
-        window.alert(error instanceof Error ? error.message : "No se pudo enviar la calificación.");
+        if (error instanceof Error && /409|ya fue calificado/i.test(error.message)) {
+          cerrarModalCalificar();
+          await cargarSolicitudesCliente(true);
+          window.alert("Este servicio ya tiene una calificación. Actualizamos tu lista de solicitudes.");
+        } else {
+          window.alert(error instanceof Error ? error.message : "No se pudo enviar la calificación.");
+        }
       } finally {
         btn.disabled = false;
         btn.textContent = "Enviar calificación";

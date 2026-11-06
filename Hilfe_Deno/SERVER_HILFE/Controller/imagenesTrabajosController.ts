@@ -82,6 +82,12 @@ export const getArchivoImagenTrabajo = async (ctx: RouterContext<string>) => {
 export const crearImagenTrabajo = async (ctx: Context) => {
   let nombreArchivo: string | undefined;
   try {
+    const sesion = ctx.state.usuario as { id?: number; rol?: number } | undefined;
+    if (!sesion?.id || Number(sesion.rol) !== 2) {
+      ctx.response.status = 403;
+      ctx.response.body = { mensaje: "Solo el trabajador propietario puede subir fotos." };
+      return;
+    }
     const contentType = ctx.request.headers.get("content-type") || "";
     let Id_Servicio: number;
     let Ruta_Imagen: string;
@@ -109,8 +115,8 @@ export const crearImagenTrabajo = async (ctx: Context) => {
       }
 
       const servicio = await client.query(
-        "SELECT Id_Servicio FROM servicios WHERE Id_Servicio = ?",
-        [idServicio]
+        "SELECT Id_Servicio FROM servicios WHERE Id_Servicio = ? AND Id_Trabajador = ?",
+        [idServicio, sesion.id]
       );
       if (servicio.length === 0) {
         ctx.response.status = 404;
@@ -135,6 +141,17 @@ export const crearImagenTrabajo = async (ctx: Context) => {
     if (!Id_Servicio || !Ruta_Imagen) {
       ctx.response.status = 400;
       ctx.response.body = { mensaje: "Id_Servicio y Ruta_Imagen son obligatorios" };
+      return;
+    }
+
+    const servicioPropio = await client.query(
+      "SELECT Id_Servicio FROM servicios WHERE Id_Servicio = ? AND Id_Trabajador = ?",
+      [Id_Servicio, sesion.id]
+    );
+    if (!servicioPropio.length) {
+      if (nombreArchivo) await Deno.remove(new URL(nombreArchivo, directorioImagenes)).catch(() => {});
+      ctx.response.status = 403;
+      ctx.response.body = { mensaje: "Solo puedes agregar fotos a tus propios servicios." };
       return;
     }
 
@@ -169,10 +186,24 @@ export const crearImagenTrabajo = async (ctx: Context) => {
 export const eliminarImagenTrabajo = async (ctx: RouterContext<string>) => {
   const { id } = ctx.params as { id: string };
   try {
+    const sesion = ctx.state.usuario as { id?: number; rol?: number } | undefined;
+    if (!sesion?.id || Number(sesion.rol) !== 2) {
+      ctx.response.status = 403;
+      ctx.response.body = { mensaje: "Solo el trabajador propietario puede eliminar fotos." };
+      return;
+    }
     const result = await client.query(
-      "SELECT Ruta_Imagen FROM imagenes_trabajos WHERE Id_Imagen = ?",
-      [id]
+      `SELECT i.Ruta_Imagen
+         FROM imagenes_trabajos i
+         JOIN servicios s ON s.Id_Servicio = i.Id_Servicio
+        WHERE i.Id_Imagen = ? AND s.Id_Trabajador = ?`,
+      [id, sesion.id]
     );
+    if (!result.length) {
+      ctx.response.status = 404;
+      ctx.response.body = { mensaje: "No se encontró una foto de tu propio servicio." };
+      return;
+    }
     await client.execute("DELETE FROM imagenes_trabajos WHERE Id_Imagen = ?", [id]);
     const nombreArchivo = result[0]?.Ruta_Imagen;
     if (esNombreImagenSeguro(nombreArchivo)) {

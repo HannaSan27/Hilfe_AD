@@ -15,6 +15,7 @@ interface Usuario {
   Rol: { Nombre_Rol: string } | null;
   Ubicacion: string;
   Activo: boolean;
+  Fecha_Registro: string | Date | null;
 }
 
 const usuarios: Usuario[] = [];
@@ -27,7 +28,6 @@ const search = '<circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" 
 const pencil = '<path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/>';
 const minusCircle = '<circle cx="12" cy="12" r="10"/><line x1="8" y1="12" x2="16" y2="12"/>';
 const plusCircle = minusCircle + '<line x1="12" y1="8" x2="12" y2="16"/>';
-const trash = '<path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/>';
 
 // Iconos que el script necesita para cambiar entre habilitar / deshabilitar
 const icons = {
@@ -50,10 +50,16 @@ const icons = {
               <Fragment set:html={svg(users, 18)} />
               Todos los usuarios
             </h3>
-            <div class="search-wrap admin-search-input">
-              <Fragment set:html={svg(search, 16)} />
-              <input type="text" id="buscarInput" placeholder="Buscar usuario..." class="search-input" onkeyup="buscarUsuario(this.value)" />
-            </div>
+              <div class="users-controls">
+                <div class="user-role-filters" role="group" aria-label="Filtrar usuarios por rol">
+                  <button type="button" class="role-filter" data-rol-filter="2" aria-pressed="false">Trabajadores <span id="totalTrabajadores">0</span></button>
+                  <button type="button" class="role-filter" data-rol-filter="3" aria-pressed="false">Clientes <span id="totalClientes">0</span></button>
+                </div>
+                <label class="search-wrap admin-search-input" for="buscarInput">
+                  <Fragment set:html={svg(search, 16)} />
+                  <input type="search" id="buscarInput" placeholder="Buscar por nombre, correo o ciudad" class="search-input" oninput="buscarUsuario(this.value)" />
+                </label>
+              </div>
           </div>
 
           <div class="table-wrap" style="border-radius:0;border-left:none;border-right:none;border-bottom:none">
@@ -64,17 +70,19 @@ const icons = {
                   <th>Correo</th>
                   <th>Rol</th>
                   <th>Ciudad</th>
+                  <th>Se registró</th>
                   <th>Estado</th>
                   <th>Acciones</th>
                 </tr>
               </thead>
               <tbody id="usrBody">
                 {usuarios.map((u) => (
-                  <tr id={`fila-${u.Id_Usuario}`}>
+                  <tr id={`fila-${u.Id_Usuario}`} data-rol={u.Id_Rol}>
                     <td class="js-nombre"><strong style="color:var(--text)">{u.Nombre}</strong></td>
                     <td class="js-correo">{u.Correo}</td>
                     <td><span class={`badge ${u.Id_Rol === 3 ? 'badge-warning' : 'badge-info'}`}>{u.Rol?.Nombre_Rol ?? 'Cliente'}</span></td>
                     <td class="js-ubic">{u.Ubicacion}</td>
+                    <td class="js-registro">{u.Fecha_Registro ? new Date(u.Fecha_Registro).toLocaleString('es-CO', { dateStyle: 'medium', timeStyle: 'short' }) : 'Fecha no disponible'}</td>
                     <td class="js-estado"><span class={`badge ${u.Activo ? 'badge-success' : 'badge-danger'}`}>{u.Activo ? 'Activo' : 'Inactivo'}</span></td>
                     <td>
                       <button class="btn-tbl js-editar" title="Editar" onclick={`abrirEditarUsuario(${u.Id_Usuario},${JSON.stringify(u.Nombre)},${JSON.stringify(u.Correo)},${JSON.stringify(u.Ubicacion)})`}>
@@ -89,21 +97,19 @@ const icons = {
                           <Fragment set:html={icons.habilitar} />
                         </button>
                       )}
-                      <button class="btn-tbl btn-tbl-danger" title="Eliminar permanentemente" onclick={`eliminarUsuarioPermanente(${u.Id_Usuario}, this)`} style="color:var(--danger)">
-                        <Fragment set:html={svg(trash, 15)} />
-                      </button>
                     </td>
                   </tr>
                 ))}
                 <tr id="usrVacio">
-                  <td colspan="6" class="text-center text-muted" style="padding:2rem">Cargando usuarios…</td>
+                  <td colspan="7" class="text-center text-muted" style="padding:2rem">Cargando usuarios…</td>
                 </tr>
               </tbody>
             </table>
           </div>
 
           <div class="table-footer">
-            <span>Total: <span id="usrTotal">{usuarios.length}</span> usuarios</span>
+            <span><strong id="usrTotal">{usuarios.length}</strong> usuarios encontrados</span>
+            <span id="usersFilterSummary">Todos los roles</span>
           </div>
         </div>
       </div>
@@ -140,6 +146,10 @@ const icons = {
       var total = document.getElementById('usrTotal');
       var input = document.getElementById('buscarInput');
       var modal = document.getElementById('modalEditar');
+      var resumenFiltros = document.getElementById('usersFilterSummary');
+      var cantidadTotal = 0;
+      var rolSeleccionado = null;
+      var botonesRol = Array.from(document.querySelectorAll('[data-rol-filter]'));
 
       function normalizar(s) {
         return String(s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
@@ -148,17 +158,35 @@ const icons = {
       // Muestra solo las filas que coinciden con el texto y actualiza el total.
       function filtrar(texto) {
         var q = normalizar(texto).trim();
+        var mostrarTodos = rolSeleccionado === null;
         var visibles = 0;
         body.querySelectorAll('tr[id^="fila-"]').forEach(function (tr) {
-          var ok = !q || normalizar(tr.textContent).indexOf(q) !== -1;
+          var porRol = mostrarTodos || Number(tr.dataset.rol) === rolSeleccionado;
+          var ok = porRol && (!q || normalizar(tr.textContent).indexOf(q) !== -1);
           tr.hidden = !ok;
           if (ok) visibles++;
         });
         vacio.hidden = visibles > 0;
+        if (!visibles) vacio.querySelector('td').textContent = cantidadTotal
+          ? 'No hay usuarios que coincidan con los filtros actuales.'
+          : 'No hay usuarios registrados aún.';
         total.textContent = visibles;
+        resumenFiltros.textContent = mostrarTodos ? 'Todos los roles' : rolSeleccionado === 2 ? 'Solo trabajadores' : 'Solo clientes';
       }
 
       window.buscarUsuario = filtrar;
+      botonesRol.forEach(function (boton) {
+        boton.addEventListener('click', function () {
+          var rol = Number(boton.dataset.rolFilter);
+          rolSeleccionado = rolSeleccionado === rol ? null : rol;
+          botonesRol.forEach(function (otro) {
+            var activo = Number(otro.dataset.rolFilter) === rolSeleccionado;
+            otro.classList.toggle('is-active', activo);
+            otro.setAttribute('aria-pressed', String(activo));
+          });
+          filtrar(input.value);
+        });
+      });
 
       function rolTexto(usuario) {
         return usuario.Nombre_Rol || usuario.Rol?.Nombre_Rol || ({ 1: 'Administrador', 2: 'Trabajador', 3: 'Cliente' }[Number(usuario.Id_Rol)] || 'Sin rol');
@@ -169,6 +197,7 @@ const icons = {
         var activo = String(usuario.Estado || '').toLowerCase() === 'activo';
         var fila = document.createElement('tr');
         fila.id = 'fila-' + id;
+        fila.dataset.rol = String(Number(usuario.Id_Rol));
         var nombre = document.createElement('td'); nombre.className = 'js-nombre';
         var nombreFuerte = document.createElement('strong'); nombreFuerte.style.color = 'var(--text)'; nombreFuerte.textContent = usuario.Nombre || '';
         nombre.appendChild(nombreFuerte);
@@ -176,6 +205,12 @@ const icons = {
         var rol = document.createElement('td');
         var rolBadge = document.createElement('span'); rolBadge.className = 'badge ' + (Number(usuario.Id_Rol) === 2 ? 'badge-warning' : 'badge-info'); rolBadge.textContent = rolTexto(usuario); rol.appendChild(rolBadge);
         var ubicacion = document.createElement('td'); ubicacion.className = 'js-ubic'; ubicacion.textContent = usuario.Ubicacion || '—';
+        var registro = document.createElement('td'); registro.className = 'js-registro';
+        var fechaRegistro = usuario.Fecha_Registro ? new Date(String(usuario.Fecha_Registro).replace(' ', 'T')) : null;
+        registro.textContent = fechaRegistro && !Number.isNaN(fechaRegistro.getTime())
+          ? fechaRegistro.toLocaleString('es-CO', { dateStyle: 'medium', timeStyle: 'short' })
+          : 'Fecha no disponible';
+        registro.title = fechaRegistro && !Number.isNaN(fechaRegistro.getTime()) ? fechaRegistro.toLocaleString('es-CO') : '';
         var estado = document.createElement('td'); estado.className = 'js-estado';
         var estadoBadge = document.createElement('span'); estadoBadge.className = 'badge ' + (activo ? 'badge-success' : 'badge-danger'); estadoBadge.textContent = activo ? 'Activo' : 'Inactivo'; estado.appendChild(estadoBadge);
         var acciones = document.createElement('td');
@@ -185,7 +220,7 @@ const icons = {
         var alternar = document.createElement('button'); alternar.type = 'button'; alternar.className = 'btn-tbl js-toggle'; alternar.dataset.activo = String(activo);
         alternar.addEventListener('click', function () { window.toggleUsuario(id, alternar, alternar.dataset.activo !== 'true'); });
         acciones.append(editar, alternar);
-        fila.append(nombre, correo, rol, ubicacion, estado, acciones);
+        fila.append(nombre, correo, rol, ubicacion, registro, estado, acciones);
         actualizarBotonEstado(alternar, activo);
         return fila;
       }
@@ -195,8 +230,11 @@ const icons = {
           var respuesta = await fetch('/api/admin/usuarios', { credentials: 'same-origin', cache: 'no-store' });
           var datos = await respuesta.json().catch(function () { return {}; });
           if (!respuesta.ok || !datos.ok || !Array.isArray(datos.usuarios)) throw new Error(datos.mensaje || 'No se pudo cargar la lista de usuarios.');
+          cantidadTotal = datos.usuarios.length;
           body.querySelectorAll('tr[id^="fila-"]').forEach(function (fila) { fila.remove(); });
           datos.usuarios.forEach(function (usuario) { body.insertBefore(crearFila(usuario), vacio); });
+          document.getElementById('totalTrabajadores').textContent = datos.usuarios.filter(function (usuario) { return Number(usuario.Id_Rol) === 2; }).length;
+          document.getElementById('totalClientes').textContent = datos.usuarios.filter(function (usuario) { return Number(usuario.Id_Rol) === 3; }).length;
           vacio.hidden = datos.usuarios.length > 0;
           vacio.querySelector('td').textContent = datos.usuarios.length ? '' : 'No hay usuarios registrados aún.';
           filtrar(input.value);
@@ -277,11 +315,6 @@ const icons = {
         badge.textContent = activo ? 'Activo' : 'Inactivo';
 		actualizarBotonEstado(btn, activo);
 		btn.disabled = false;
-      };
-
-      // ── Eliminar ──
-      window.eliminarUsuarioPermanente = function (id, btn) {
-        window.alert('Para preservar el historial de solicitudes y pagos, desactiva la cuenta en lugar de eliminarla.');
       };
 
       document.addEventListener('keydown', function (e) {

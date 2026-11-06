@@ -1,4 +1,5 @@
 import { Router } from "../Dependencies/dependencies.ts";
+import { verificarSesion } from "../Middlewares/authMiddleware.ts";
 import {
   getDisponibilidad,
   getDisponibilidadPorId,
@@ -12,10 +13,10 @@ const router = new Router();
 
 router
   .get("/api/disponibilidad", getDisponibilidad)
-  .put("/api/disponibilidad/servicio/:id", reemplazarDisponibilidadServicio)
+  .put("/api/disponibilidad/servicio/:id", verificarSesion, reemplazarDisponibilidadServicio)
   .get("/api/disponibilidad/:id", getDisponibilidadPorId)
-  .post("/api/disponibilidad", crearDisponibilidad)
-  .put("/api/disponibilidad/:id", actualizarDisponibilidad)
-  .delete("/api/disponibilidad/:id", eliminarDisponibilidad);
+  .post("/api/disponibilidad", verificarSesion, crearDisponibilidad)
+  .put("/api/disponibilidad/:id", verificarSesion, actualizarDisponibilidad)
+  .delete("/api/disponibilidad/:id", verificarSesion, eliminarDisponibilidad);
 
 export default router;

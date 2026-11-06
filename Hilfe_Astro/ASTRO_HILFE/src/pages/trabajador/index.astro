@@ -22,13 +22,9 @@ const estadoInfo: Record<string, { clase: string; label: string; icono: string }
 	rechazado: { clase: 'badge-danger', label: 'Rechazado', icono: 'x-circle' },
 };
 
-const calificaciones = [
-	{ puntaje: 5, fecha: '25/09/2026', comentario: 'Excelente trabajo, muy puntual y profesional.' },
-	{ puntaje: 4, fecha: '20/09/2026', comentario: 'Buen servicio, quedó todo funcionando perfectamente.' },
-	{ puntaje: 5, fecha: '15/09/2026', comentario: 'Muy atento y limpio. Volvería a contratarlo.' },
-];
+const calificaciones: any[] = [];
 
-const promedio = 4.7;
+const promedio = 0;
 const estrellasLlenas = Math.round(promedio);
 const stars = (n: number) => '★'.repeat(n) + '☆'.repeat(5 - n);
 
@@ -165,7 +161,7 @@ const nombre = usuario.nombre;
 							<i class="bi bi-star-fill"></i>
 						</div>
 						<div class="stat-card-body">
-							<div class="stat-card-value">{promedio}</div>
+							<div class="stat-card-value" id="promedioCalificacionTrabajador">—</div>
 							<div class="stat-card-label">Calificación promedio</div>
 							<div class="stat-card-trend">General</div>
 						</div>
@@ -384,35 +380,21 @@ const nombre = usuario.nombre;
 				<div class="card" style="margin-bottom: 20px;">
 					<div class="card-body flex items-center gap-lg" style="flex-wrap: wrap;">
 						<div class="text-center">
-							<div class="promedio-valor">{promedio}</div>
+							<div class="promedio-valor" id="promedioCalificacionesTrabajador">—</div>
 							<div class="promedio-label">Promedio</div>
 						</div>
 						<div>
-							<div class="estrellas-grandes">{stars(estrellasLlenas)}</div>
+							<div class="estrellas-grandes" id="estrellasCalificacionesTrabajador">☆☆☆☆☆</div>
 							<div class="text-secondary" style="font-size: 13px; margin-top: 4px;">
-								Basado en {calificaciones.length} calificación(es)
+								<span id="conteoCalificacionesTrabajador">Cargando calificaciones…</span>
 							</div>
 						</div>
 					</div>
 				</div>
 
-				{calificaciones.map((c) => (
-					<div class="card calificacion-card">
-						<div class="card-body">
-							<div class="flex justify-between items-center" style="margin-bottom: 8px;">
-								<span class="estrellas">{stars(c.puntaje)}</span>
-								<span class="calificacion-fecha">
-									<i class="bi bi-calendar3"></i> {c.fecha}
-								</span>
-							</div>
-							{c.comentario ? (
-								<p class="calificacion-comentario">"{c.comentario}"</p>
-							) : (
-								<p class="calificacion-sin-comentario">Sin comentario</p>
-							)}
-						</div>
-					</div>
-				))}
+				<div id="listaCalificacionesTrabajador" aria-live="polite">
+					<div class="card"><div class="card-body text-secondary">Cargando calificaciones…</div></div>
+				</div>
 			</div>
 			<div id="section-perfil" class="section-view">
 				<div class="content-header worker-profile-heading">
@@ -696,6 +678,74 @@ const nombre = usuario.nombre;
 		cargarSolicitudesTrabajador(false);
 		window.setInterval(function () { cargarSolicitudesTrabajador(true); }, 12000);
 		window.addEventListener('focus', function () { cargarSolicitudesTrabajador(true); });
+
+		async function cargarCalificacionesTrabajador() {
+			var usuario;
+			try { usuario = JSON.parse(localStorage.getItem('usuario') || 'null'); } catch { usuario = null; }
+			var lista = document.getElementById('listaCalificacionesTrabajador');
+			if (!lista) return;
+			if (Number(usuario && usuario.rol) !== 2 || !usuario.id) {
+				lista.textContent = 'Inicia sesión como trabajador para consultar tus calificaciones.';
+				return;
+			}
+			try {
+				var response = await fetch('http://127.0.0.1:8000/api/calificaciones/trabajador/' + encodeURIComponent(usuario.id));
+				var data = await response.json();
+				if (!response.ok || !Array.isArray(data)) throw new Error(data.mensaje || 'No se pudieron cargar las calificaciones.');
+				var puntos = data.map(function (item) { return Number(item.Puntaje); }).filter(function (n) { return Number.isFinite(n) && n >= 1 && n <= 5; });
+				var promedioReal = puntos.length ? puntos.reduce(function (total, n) { return total + n; }, 0) / puntos.length : 0;
+				var promedioTexto = puntos.length ? promedioReal.toFixed(1) : '—';
+				var promedioResumen = document.getElementById('promedioCalificacionesTrabajador');
+				var promedioTarjeta = document.getElementById('promedioCalificacionTrabajador');
+				var estrellas = document.getElementById('estrellasCalificacionesTrabajador');
+				var conteo = document.getElementById('conteoCalificacionesTrabajador');
+				if (promedioResumen) promedioResumen.textContent = promedioTexto;
+				if (promedioTarjeta) promedioTarjeta.textContent = promedioTexto;
+				if (estrellas) estrellas.textContent = '★'.repeat(Math.round(promedioReal)) + '☆'.repeat(5 - Math.round(promedioReal));
+				if (conteo) conteo.textContent = puntos.length === 1 ? 'Basado en 1 calificación' : 'Basado en ' + puntos.length + ' calificaciones';
+				lista.replaceChildren();
+				if (!data.length) {
+					var vacio = document.createElement('div'); vacio.className = 'card';
+					var cuerpo = document.createElement('div'); cuerpo.className = 'card-body text-secondary'; cuerpo.textContent = 'Aún no tienes calificaciones. Aparecerán aquí cuando un cliente califique un servicio finalizado.';
+					vacio.appendChild(cuerpo); lista.appendChild(vacio); return;
+				}
+				data.forEach(function (item) {
+					var tarjeta = document.createElement('div'); tarjeta.className = 'card calificacion-card';
+					var cuerpo = document.createElement('div'); cuerpo.className = 'card-body';
+					var encabezado = document.createElement('div'); encabezado.className = 'flex justify-between items-center'; encabezado.style.marginBottom = '8px';
+					var valor = Math.max(0, Math.min(5, Number(item.Puntaje) || 0));
+					var estrellasComentario = document.createElement('span'); estrellasComentario.className = 'estrellas'; estrellasComentario.textContent = '★'.repeat(valor) + '☆'.repeat(5 - valor);
+					var fecha = document.createElement('span'); fecha.className = 'calificacion-fecha';
+					var icono = document.createElement('i'); icono.className = 'bi bi-calendar3';
+					var date = item.Fecha_Calificacion ? new Date(item.Fecha_Calificacion) : null;
+					fecha.append(icono, document.createTextNode(' ' + (date && !Number.isNaN(date.getTime()) ? date.toLocaleDateString('es-CO') : 'Fecha no disponible')));
+					encabezado.append(estrellasComentario, fecha); cuerpo.appendChild(encabezado);
+					var servicio = document.createElement('strong');
+					servicio.className = 'calificacion-servicio';
+					servicio.textContent = item.Titulo_Servicio || 'Servicio calificado';
+					cuerpo.appendChild(servicio);
+					if (item.Nombre_Cliente) {
+						var cliente = document.createElement('small');
+						cliente.className = 'calificacion-cliente';
+						cliente.textContent = 'Calificado por ' + item.Nombre_Cliente;
+						cuerpo.appendChild(cliente);
+					}
+					var comentario = document.createElement('p');
+					comentario.className = item.Comentario ? 'calificacion-comentario' : 'calificacion-sin-comentario';
+					comentario.textContent = item.Comentario ? '“' + item.Comentario + '”' : 'Sin comentario';
+					cuerpo.appendChild(comentario);
+					if (Array.isArray(item.fotos) && item.fotos.length) {
+						var galeria = document.createElement('div'); galeria.className = 'work-gallery';
+						item.fotos.forEach(function (foto) { var imagen = document.createElement('img'); imagen.src = 'http://127.0.0.1:8000' + foto.url; imagen.alt = 'Foto del trabajo calificado'; imagen.loading = 'lazy'; galeria.appendChild(imagen); });
+						cuerpo.appendChild(galeria);
+					}
+					tarjeta.appendChild(cuerpo); lista.appendChild(tarjeta);
+				});
+			} catch (error) {
+				lista.textContent = error instanceof Error ? error.message : 'No se pudieron cargar las calificaciones.';
+			}
+		}
+		cargarCalificacionesTrabajador();
 
 		(function conectarServiciosTrabajador() {
 			var api = 'http://127.0.0.1:8000/api';

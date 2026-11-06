@@ -1,4 +1,5 @@
 import { Router } from "../Dependencies/dependencies.ts";
+import { verificarSesion } from "../Middlewares/authMiddleware.ts";
 import {
   getImagenesTrabajos,
   getImagenTrabajoPorId,
@@ -13,7 +14,7 @@ router
   .get("/api/imagenes-trabajos", getImagenesTrabajos)
   .get("/api/imagenes-trabajos/:id/archivo", getArchivoImagenTrabajo)
   .get("/api/imagenes-trabajos/:id", getImagenTrabajoPorId)
-  .post("/api/imagenes-trabajos", crearImagenTrabajo)
-  .delete("/api/imagenes-trabajos/:id", eliminarImagenTrabajo);
+  .post("/api/imagenes-trabajos", verificarSesion, crearImagenTrabajo)
+  .delete("/api/imagenes-trabajos/:id", verificarSesion, eliminarImagenTrabajo);
 
 export default router;

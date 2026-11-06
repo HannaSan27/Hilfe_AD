@@ -10,8 +10,10 @@ import disponibilidadRoutes from "./Routes/disponibilidadRoutes.ts";
 import imagenesTrabajosRoutes from "./Routes/imagenesTrabajosRoutes.ts";
 import solicitudesRoutes from "./Routes/solicitudesRoutes.ts";
 import verificacionesRoutes from "./Routes/verificacionesRoutes.ts";
+import healthRoutes from "./Routes/healthRoutes.ts";
 import chatAyudaRoutes from "./Routes/chatAyudaRoutes.ts";
 import { sincronizarDocumentosLegales } from "./Models/legalesModel.ts";
+import { aplicarMigraciones } from "./migrations/runner.ts";
 
 const app = new Application();
 
@@ -48,8 +50,17 @@ app.use(solicitudesRoutes.allowedMethods());
 app.use(verificacionesRoutes.routes());
 app.use(verificacionesRoutes.allowedMethods());
 
+app.use(healthRoutes.routes());
+app.use(healthRoutes.allowedMethods());
+
 app.use(chatAyudaRoutes.routes());
 app.use(chatAyudaRoutes.allowedMethods());
+
+try {
+  await aplicarMigraciones();
+} catch (e) {
+  console.error("No se pudieron aplicar las migraciones al iniciar:", e);
+}
 
 try {
   await sincronizarDocumentosLegales();
@@ -58,5 +69,6 @@ try {
 }
 
 const puerto = Number(Deno.env.get("PORT")) || 8000;
-console.log(`Servidor corriendo por el puerto ${puerto}`);
-await app.listen({ port: puerto });
+const host = Deno.env.get("HOST") || "0.0.0.0";
+console.log(`Servidor corriendo en ${host}:${puerto}`);
+await app.listen({ hostname: host, port: puerto });

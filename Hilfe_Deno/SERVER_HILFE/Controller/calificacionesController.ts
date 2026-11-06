@@ -125,7 +125,7 @@ export async function registrarCalificacion(ctx: Context) {
     }
 
     // Un solo INSERT: calificación + nombres de las fotos en Foto_Calificacion
-    await crearCalificacion(idSolicitud, puntaje, comentario, guardados);
+    await crearCalificacion(Number(sesion.id), idSolicitud, puntaje, comentario, guardados);
 
     ctx.response.status = 201;
     ctx.response.body = { mensaje: "Calificación registrada correctamente", fotos: guardados.length };
@@ -133,8 +133,18 @@ export async function registrarCalificacion(ctx: Context) {
     for (const nombre of guardados) {
       await Deno.remove(new URL(nombre, directorioFotos)).catch(() => {});
     }
-    ctx.response.status = 500;
-    ctx.response.body = { mensaje: "Error al registrar la calificación", error: String(error) };
+    const codigo = error instanceof Error ? error.message : "";
+    const errores: Record<string, { status: number; mensaje: string }> = {
+      SOLICITUD_NO_ENCONTRADA: { status: 404, mensaje: "Solicitud no encontrada" },
+      NO_AUTORIZADO: { status: 403, mensaje: "Solo puedes calificar tus propias solicitudes" },
+      SERVICIO_NO_FINALIZADO: { status: 400, mensaje: "Solo puedes calificar servicios finalizados" },
+      SERVICIO_YA_CALIFICADO: { status: 409, mensaje: "Este servicio ya fue calificado" },
+    };
+    const conocido = errores[codigo];
+    ctx.response.status = conocido?.status ?? 500;
+    ctx.response.body = conocido
+      ? { mensaje: conocido.mensaje }
+      : { mensaje: "Error al registrar la calificación", error: String(error) };
   }
 }
 

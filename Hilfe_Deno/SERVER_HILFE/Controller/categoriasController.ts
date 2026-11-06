@@ -35,6 +35,11 @@ export const getCategoriaPorId = async (ctx: RouterContext<string>) => {
 
 export const crearCategoria = async (ctx: Context) => {
   try {
+    if (Number((ctx.state.usuario as { rol?: number } | undefined)?.rol) !== 1) {
+      ctx.response.status = 403;
+      ctx.response.body = { mensaje: "Solo un administrador puede crear categorías." };
+      return;
+    }
     const body: Partial<Categoria> = await ctx.request.body.json();
     const { Nombre_Categoria, Descripcion } = body;
 
@@ -68,6 +73,11 @@ export const crearCategoria = async (ctx: Context) => {
 export const actualizarCategoria = async (ctx: RouterContext<string>) => {
   const { id } = ctx.params as { id: string };
   try {
+    if (Number((ctx.state.usuario as { rol?: number } | undefined)?.rol) !== 1) {
+      ctx.response.status = 403;
+      ctx.response.body = { mensaje: "Solo un administrador puede editar categorías." };
+      return;
+    }
     const body: Partial<Categoria> = await ctx.request.body.json();
     const { Nombre_Categoria, Descripcion } = body;
 
@@ -87,6 +97,11 @@ export const actualizarCategoria = async (ctx: RouterContext<string>) => {
 export const eliminarCategoria = async (ctx: RouterContext<string>) => {
   const { id } = ctx.params as { id: string };
   try {
+    if (Number((ctx.state.usuario as { rol?: number } | undefined)?.rol) !== 1) {
+      ctx.response.status = 403;
+      ctx.response.body = { mensaje: "Solo un administrador puede eliminar categorías." };
+      return;
+    }
     await client.execute("DELETE FROM categorias WHERE Id_Categoria = ?", [id]);
     ctx.response.status = 200;
     ctx.response.body = { mensaje: "Categoria eliminada correctamente" };

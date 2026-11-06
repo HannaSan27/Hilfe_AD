@@ -20,7 +20,7 @@ export const GET: APIRoute = async ({ cookies }) => {
     if (!await adminId(cookies)) return Response.json({ ok: false, mensaje: 'Acceso solo para administradores.' }, { status: 403 });
     const [rows] = await pool.query<RowDataPacket[]>(
       `SELECT u.Id_Usuario, u.Nombre, u.Correo, u.Id_Rol, r.Nombre_Rol,
-              u.Ubicacion, u.Estado
+              u.Ubicacion, u.Estado, u.Fecha_Registro
          FROM usuarios u
          LEFT JOIN roles r ON r.Id_Rol = u.Id_Rol
         ORDER BY u.Id_Usuario DESC`

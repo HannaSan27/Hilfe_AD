@@ -762,6 +762,49 @@ img { max-width: 100%; display: block; }
     color: #fff;
 }
 
+/* Avatar claro cuando el trabajador no tiene una foto cargada. */
+.worker-card-photo .photo-placeholder {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    overflow: hidden;
+    background: linear-gradient(145deg, #e8efff 0%, #d9e5ff 55%, #e9f6f7 100%);
+    color: #2856d8;
+    font-size: clamp(2.7rem, 6vw, 4rem);
+    font-weight: 800;
+    letter-spacing: -.06em;
+}
+.worker-card-photo .photo-placeholder::after {
+    content: "";
+    position: absolute;
+    width: 42%;
+    aspect-ratio: 1;
+    bottom: -27%;
+    border: 1px solid rgb(40 86 216 / 16%);
+    border-radius: 50%;
+}
+.worker-card-photo .worker-card-profile-img {
+    z-index: 1;
+    object-position: center;
+}
+.worker-card-photo .worker-card-profile-img[hidden] { display: none !important; }
+[data-theme="dark"] .worker-card-photo .photo-placeholder {
+    background: linear-gradient(145deg, #202d43, #263d62 58%, #1d3a45);
+    color: #a9c3ff;
+}
+.workers-empty-state {
+    grid-column: 1 / -1;
+    margin: 0;
+    padding: 28px 22px;
+    border-radius: 14px;
+    background: var(--bg-card, #fff);
+    color: var(--text-secondary, #64748b);
+    font-size: 14px;
+    line-height: 1.6;
+    text-align: center;
+}
+
 .worker-card-body {
     flex: 1;
     padding: 16px 20px;
