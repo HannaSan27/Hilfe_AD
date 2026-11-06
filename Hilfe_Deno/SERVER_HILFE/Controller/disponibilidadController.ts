@@ -12,6 +12,12 @@ export const reemplazarDisponibilidadServicio = async (ctx: RouterContext<string
   try {
     const body = await ctx.request.body.json();
     const trabajadorId = Number(body.Id_Trabajador);
+    const sesion = ctx.state.usuario as { id?: number; rol?: number } | undefined;
+    if (Number(sesion?.rol) !== 2 || Number(sesion?.id) !== trabajadorId) {
+      ctx.response.status = 403;
+      ctx.response.body = { mensaje: "Solo puedes cambiar la disponibilidad de tus propios servicios." };
+      return;
+    }
     const horarios = Array.isArray(body.horarios) ? body.horarios : null;
     if (!trabajadorId || !horarios || horarios.some((h: any) =>
       !DIAS_VALIDOS.has(h.Dia_Semana) || !h.Hora_Inicio || !h.Hora_Fin || h.Hora_Inicio >= h.Hora_Fin
@@ -97,6 +103,12 @@ export const getDisponibilidadPorId = async (ctx: RouterContext<string>) => {
 
 export const crearDisponibilidad = async (ctx: Context) => {
   try {
+    const sesion = ctx.state.usuario as { id?: number; rol?: number } | undefined;
+    if (!sesion?.id || Number(sesion.rol) !== 2) {
+      ctx.response.status = 403;
+      ctx.response.body = { mensaje: "Solo un trabajador puede crear disponibilidad." };
+      return;
+    }
     const body: Partial<Disponibilidad> = await ctx.request.body.json();
     const { Id_Servicio, Dia_Semana, Hora_Inicio, Hora_Fin } = body;
 
@@ -111,6 +123,16 @@ export const crearDisponibilidad = async (ctx: Context) => {
     if (Hora_Inicio >= Hora_Fin) {
       ctx.response.status = 400;
       ctx.response.body = { mensaje: "Hora_Inicio debe ser anterior a Hora_Fin" };
+      return;
+    }
+
+    const servicio = await client.query(
+      "SELECT Id_Servicio FROM servicios WHERE Id_Servicio = ? AND Id_Trabajador = ?",
+      [Id_Servicio, sesion.id]
+    );
+    if (!servicio.length) {
+      ctx.response.status = 403;
+      ctx.response.body = { mensaje: "Solo puedes crear disponibilidad para tus propios servicios." };
       return;
     }
 
@@ -130,6 +152,23 @@ export const crearDisponibilidad = async (ctx: Context) => {
 export const actualizarDisponibilidad = async (ctx: RouterContext<string>) => {
   const { id } = ctx.params as { id: string };
   try {
+    const sesion = ctx.state.usuario as { id?: number; rol?: number } | undefined;
+    if (!sesion?.id || Number(sesion.rol) !== 2) {
+      ctx.response.status = 403;
+      ctx.response.body = { mensaje: "Solo un trabajador puede editar disponibilidad." };
+      return;
+    }
+    const propia = await client.query(
+      `SELECT d.Id_Disponibilidad FROM disponibilidad d
+       JOIN servicios s ON s.Id_Servicio = d.Id_Servicio
+       WHERE d.Id_Disponibilidad = ? AND s.Id_Trabajador = ?`,
+      [id, sesion.id]
+    );
+    if (!propia.length) {
+      ctx.response.status = 404;
+      ctx.response.body = { mensaje: "No se encontró disponibilidad de tus servicios." };
+      return;
+    }
     const body: Partial<Disponibilidad> = await ctx.request.body.json();
     const { Dia_Semana, Hora_Inicio, Hora_Fin } = body;
 
@@ -155,6 +194,23 @@ export const actualizarDisponibilidad = async (ctx: RouterContext<string>) => {
 export const eliminarDisponibilidad = async (ctx: RouterContext<string>) => {
   const { id } = ctx.params as { id: string };
   try {
+    const sesion = ctx.state.usuario as { id?: number; rol?: number } | undefined;
+    if (!sesion?.id || Number(sesion.rol) !== 2) {
+      ctx.response.status = 403;
+      ctx.response.body = { mensaje: "Solo un trabajador puede eliminar disponibilidad." };
+      return;
+    }
+    const propia = await client.query(
+      `SELECT d.Id_Disponibilidad FROM disponibilidad d
+       JOIN servicios s ON s.Id_Servicio = d.Id_Servicio
+       WHERE d.Id_Disponibilidad = ? AND s.Id_Trabajador = ?`,
+      [id, sesion.id]
+    );
+    if (!propia.length) {
+      ctx.response.status = 404;
+      ctx.response.body = { mensaje: "No se encontró disponibilidad de tus servicios." };
+      return;
+    }
     await client.execute("DELETE FROM disponibilidad WHERE Id_Disponibilidad = ?", [id]);
     ctx.response.status = 200;
     ctx.response.body = { mensaje: "Disponibilidad eliminada correctamente" };

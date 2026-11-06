@@ -12,6 +12,9 @@ export const GET: APIRoute = async ({ cookies }) => {
   try {
     const [rows] = await pool.query<RowDataPacket[]>(
       `SELECT s.Id_Solicitud AS id, sv.Titulo AS servicio, sv.Precio AS precio,
+              (SELECT c.Puntaje FROM calificaciones c
+                WHERE c.Id_Solicitud = s.Id_Solicitud
+                ORDER BY c.Id_Calificaciones DESC LIMIT 1) AS puntajeCalificacion,
               COALESCE((SELECT SUM(t.amount) FROM transactions t
                          JOIN wallets w ON w.id = t.wallet_id
                         WHERE w.user_id = s.Id_Cliente AND t.solicitud_id = s.Id_Solicitud
@@ -32,7 +35,14 @@ export const GET: APIRoute = async ({ cookies }) => {
       const precio = Number(r.precio);
       const total = Math.round(precio * 1.05 * 100) / 100;
       const abonado = Math.min(total, Number(r.abonado || 0));
-      return { ...r, precio, total, abonado, saldoPendiente: Math.round(Math.max(0, total - abonado) * 100) / 100 };
+      return {
+        ...r,
+        precio,
+        total,
+        abonado,
+        saldoPendiente: Math.round(Math.max(0, total - abonado) * 100) / 100,
+        calificacion: r.puntajeCalificacion == null ? null : { puntaje: Number(r.puntajeCalificacion) },
+      };
     });
     return Response.json({ ok: true, citas }, { headers: { 'Cache-Control': 'no-store' } });
   } catch (error) {

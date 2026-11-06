@@ -1010,7 +1010,15 @@ import "../../components/styles/admin-polish.css";
           const data = await res.json().catch(() => ({}));
           if (!res.ok) throw new Error(data.mensaje || "Error al registrar la decisión.");
 
-          alert(`Éxito: ${data.mensaje}`);
+          const esDecisionConCorreo = endpoint === "aprobar" || endpoint === "rechazar";
+          const avisoCorreo = esDecisionConCorreo && data.correoEnviado === false
+            ? "\n\nLa decisión quedó registrada, pero el correo no se pudo enviar. Revisa EMAIL_USER y EMAIL_PASS en el servidor Deno y sus registros."
+            : esDecisionConCorreo && data.correoEnviado === true
+              ? endpoint === "rechazar"
+                ? "\n\nSe envió al usuario un correo con el motivo del rechazo."
+                : "\n\nEl correo de bienvenida fue enviado."
+              : "";
+          alert(`Éxito: ${data.mensaje}${avisoCorreo}`);
           cerrarModal();
           cargarSolicitudes();
         } catch (err) {
@@ -1063,4 +1071,30 @@ import "../../components/styles/admin-polish.css";
       cargarSolicitudes();
     })();
   </script>
+
+  <style is:global>
+    .admin-shell > .admin-main .admin-content > .stats-grid { gap: .75rem !important; margin-bottom: 1.1rem !important; }
+    .admin-shell > .admin-main .stats-grid > .stat-card { min-height: 96px; border-radius: 14px; background: var(--bg-card, #fff); transition: border-color .16s ease, background-color .16s ease; }
+    .admin-shell > .admin-main .stats-grid > .stat-card:hover { transform: none; border-color: var(--primary, #2563eb); }
+    .admin-shell > .admin-main .admin-content > .admin-card { border-radius: 16px; }
+    .admin-shell > .admin-main .admin-card-header { gap: 1rem; padding: 1.1rem 1.2rem; }
+    .admin-shell > .admin-main .admin-card-header h3 { margin: 0; line-height: 1.35; }
+    .admin-shell > .admin-main .admin-card-header > div { gap: .55rem !important; }
+    .admin-shell > .admin-main .admin-card-header select.search-input,
+    .admin-shell > .admin-main .admin-card-header .admin-search-input .search-input { min-height: 44px; border-radius: 10px; }
+    .admin-shell > .admin-main .admin-card .table th { position: sticky; top: 0; z-index: 1; white-space: nowrap; }
+    .admin-shell > .admin-main .admin-card .table tbody tr { border-bottom: 1px solid var(--border-light, #eef2f7); }
+    .admin-shell > .admin-main .admin-card .table tbody tr:last-child { border-bottom: 0; }
+    .admin-shell > .admin-main .admin-card .table-footer { color: var(--text-secondary, #64748b); }
+    .legal-modal-backdrop { background: rgb(15 23 42 / 52%); }
+    .legal-modal-window { border-radius: 18px; }
+    @media (max-width: 760px) {
+      .admin-shell > .admin-main .admin-card-header { align-items: stretch; }
+      .admin-shell > .admin-main .admin-card-header > div { grid-template-columns: minmax(0,1fr) !important; }
+      .admin-shell > .admin-main .admin-card-header .admin-search-input { grid-column: auto; }
+      .admin-shell > .admin-main .admin-card-header .admin-search-input,
+      .admin-shell > .admin-main .admin-card-header .admin-search-input .search-input { width: 100%; }
+      .admin-shell > .admin-main .admin-card .table-footer { align-items: flex-start !important; }
+    }
+  </style>
 </Layout>

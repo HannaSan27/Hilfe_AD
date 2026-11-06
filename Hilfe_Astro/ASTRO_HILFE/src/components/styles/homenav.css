@@ -120,6 +120,12 @@
 .help-chat-form input { min-width: 0; flex: 1; padding: 10px 12px; border: 1px solid var(--border, #cbd5e1); border-radius: 10px; color: var(--text, #0f172a); background: var(--bg-card, #fff); font: inherit; font-size: 13px; }
 .help-chat-form input:focus { outline: 2px solid var(--primary, #2563eb); outline-offset: 1px; }
 .help-chat-form > button { padding: 0 14px; border: 0; border-radius: 10px; color: #fff; background: var(--primary, #2563eb); font: inherit; font-size: 13px; font-weight: 700; cursor: pointer; }
+.help-chat-form > button:disabled { opacity: .65; cursor: wait; }
+.help-chat-form input:disabled { opacity: .75; cursor: wait; }
+.help-chat-prompts button:disabled { opacity: .6; cursor: wait; }
+.help-chat-typing { display: inline-flex; align-items: center; gap: 8px; color: var(--muted, #64748b) !important; }
+.help-chat-typing::after { width: 18px; overflow: hidden; content: '•••'; color: var(--primary, #2563eb); letter-spacing: 2px; animation: help-chat-dots 1s steps(4, end) infinite; }
+@keyframes help-chat-dots { 0% { width: 0; } 100% { width: 18px; } }
 .help-chat .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
 @media (max-width: 480px) {
   .help-chat { right: 14px; bottom: 14px; }

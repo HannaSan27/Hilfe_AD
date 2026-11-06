@@ -192,3 +192,55 @@ export async function enviarCorreoBienvenidaAprobadaAscii(
     await client.close();
   }
 }
+
+export async function enviarCorreoRechazoVerificacion(
+  correoDestino: string,
+  nombre: string,
+  motivo: string,
+) {
+  const emailUser = Deno.env.get("EMAIL_USER") || "";
+  const emailPass = Deno.env.get("EMAIL_PASS") || "";
+  if (!emailUser || !emailPass) throw new Error("SMTP email is not configured.");
+
+  const nombreSeguro = escaparHtml(nombre.trim() || "usuario");
+  const motivoSeguro = escaparHtml(motivo.trim()).replace(/\r?\n/g, "<br />");
+  const client = new SMTPClient({
+    connection: {
+      hostname: "smtp.gmail.com",
+      port: 465,
+      tls: true,
+      auth: { username: emailUser, password: emailPass },
+    },
+  });
+
+  try {
+    await client.send({
+      from: `Hilf'e <${emailUser}>`,
+      to: correoDestino,
+      subject: "Actualización sobre tu verificación en Hilf'e",
+      html: `
+        <div style="margin:0;padding:32px 16px;background:#f3f6fc;font-family:Arial,Helvetica,sans-serif;color:#14213d;">
+          <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:620px;margin:0 auto;background:#fff;border:1px solid #dce4f0;border-radius:18px;overflow:hidden;">
+            <tr><td style="padding:28px 34px;background:#1f3f9d;color:#fff;">
+              <div style="font-size:24px;font-weight:800;">Hilf'e</div>
+              <div style="margin-top:18px;font-size:12px;font-weight:700;letter-spacing:1px;">ACTUALIZACIÓN DE VERIFICACIÓN</div>
+              <h1 style="margin:9px 0 0;font-size:25px;line-height:1.25;">Hay novedades sobre tu solicitud</h1>
+            </td></tr>
+            <tr><td style="padding:30px 34px 18px;">
+              <p style="margin:0 0 14px;font-size:16px;line-height:1.6;">Hola, <strong>${nombreSeguro}</strong>:</p>
+              <p style="margin:0;font-size:15px;line-height:1.65;color:#465572;">Después de revisar la información enviada, no fue posible aprobar tu solicitud de verificación.</p>
+              <div style="margin:22px 0;padding:18px 20px;border:1px solid #f0c7c7;border-radius:12px;background:#fff7f7;color:#5b2630;">
+                <strong style="display:block;margin-bottom:8px;font-size:14px;">Motivo indicado por el equipo de Hilf'e</strong>
+                <div style="font-size:14px;line-height:1.65;">${motivoSeguro}</div>
+              </div>
+              <p style="margin:0 0 20px;font-size:14px;line-height:1.65;color:#465572;">Si tienes dudas sobre esta decisión o necesitas orientación para continuar, comunícate con el equipo de Hilf'e al correo soportehilfe2@gmail.com.</p>
+              <a href="http://localhost:4321/" style="display:inline-block;padding:12px 20px;border-radius:9px;background:#245be9;color:#fff;text-decoration:none;font-weight:700;">Ir a Hilf'e</a>
+            </td></tr>
+            <tr><td style="padding:20px 34px 26px;border-top:1px solid #e9eef7;color:#78859c;font-size:12px;line-height:1.55;">Este es un correo automático de Hilf'e. Si no reconoces esta solicitud, contáctanos desde Ayuda.</td></tr>
+          </table>
+        </div>`,
+    });
+  } finally {
+    await client.close();
+  }
+}

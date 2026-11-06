@@ -5,53 +5,21 @@ import BotonBilletera from '../../components/BotonBilletera.astro';
 import '../../components/styles/admin.css';
 import '../../components/styles/admin-polish.css';
 
-// ─────────────────────────────────────────────
-// DATOS: reemplaza estos valores por tu backend
-// (ej: const res = await fetch('http://localhost:PUERTO/api/admin/dashboard'))
-// ─────────────────────────────────────────────
-const stats = {
-  totalUsuarios: 128,
-  totalTrabajadores: 42,
-  citasMes: 67,
-  califPromedio: 4.6,
-};
-
-interface Cita {
-  cliente: string;
-  trabajador: string;
-  servicio: string;
-  fecha: string; // ISO: YYYY-MM-DD
-  estado: 'confirmada' | 'pendiente' | 'finalizada' | 'cancelada' | string;
+interface DashboardCard {
+  icon: string;
+  color: string;
+  id?: string;
+  value?: string;
+  label: string;
+  trend: string;
 }
 
-const citas: Cita[] = [
-  { cliente: 'Laura Gómez', trabajador: 'Carlos Ruiz', servicio: 'Plomería', fecha: '2026-09-22', estado: 'confirmada' },
-  { cliente: 'Andrés Peña', trabajador: 'María Torres', servicio: 'Electricidad', fecha: '2026-09-21', estado: 'pendiente' },
-  { cliente: 'Sofía Rojas', trabajador: 'Juan Díaz', servicio: 'Pintura', fecha: '2026-09-19', estado: 'finalizada' },
-  { cliente: 'Camilo Ortiz', trabajador: 'Pedro León', servicio: 'Carpintería', fecha: '2026-09-18', estado: 'cancelada' },
-];
-
-const badgeClass = (estado: string) =>
-  ({
-    confirmada: 'badge-success',
-    pendiente: 'badge-warning',
-    finalizada: 'badge-info',
-    cancelada: 'badge-danger',
-  })[estado] ?? 'badge-neutral';
-
-const formatFecha = (iso: string) =>
-  new Date(iso + 'T00:00:00').toLocaleDateString('es-CO', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-  });
-
-const cards = [
-  { icon: 'users', color: 'primary', value: stats.totalUsuarios, label: 'Usuarios totales', trend: 'Clientes registrados', up: true },
-  { icon: 'hard-hat', color: 'success', value: stats.totalTrabajadores, label: 'Trabajadores activos', trend: 'Trabajadores registrados', up: true },
-  { icon: 'calendar-check', color: 'warning', value: stats.citasMes, label: 'Citas este mes', trend: 'Mes actual', up: true },
-  { icon: 'star', color: 'danger', value: stats.califPromedio, label: 'Calificación promedio', trend: 'Sin cambios', up: false },
-  { icon: 'wallet-cards', color: 'success', value: '$0', label: 'Comisión acumulada', trend: 'Cargando movimientos…', up: true },
+const cards: DashboardCard[] = [
+  { icon: 'users', color: 'primary', id: 'adminTotalUsuarios', label: 'Usuarios registrados', trend: 'Cuentas de la plataforma' },
+  { icon: 'hard-hat', color: 'success', id: 'adminTotalTrabajadores', label: 'Trabajadores registrados', trend: 'Perfiles de trabajador' },
+  { icon: 'calendar-check', color: 'warning', id: 'adminCitasMes', label: 'Citas este mes', trend: 'Solicitudes por fecha de servicio' },
+  { icon: 'star', color: 'danger', id: 'adminCalificacionPromedio', label: 'Calificación promedio', trend: 'Reseñas registradas' },
+  { icon: 'wallet-cards', color: 'success', value: '—', label: 'Comisión acumulada', trend: 'Calculada desde pagos registrados' },
 ];
 ---
 
@@ -137,9 +105,9 @@ const cards = [
                 <i data-lucide={c.icon} style="width:22px;height:22px"></i>
               </div>
               <div class="stat-card-body">
-                <div class="stat-card-value" id={c.label === 'Comisión acumulada' ? 'adminComisionTotal' : undefined}>{c.value}</div>
+                <div class="stat-card-value" id={c.id ?? (c.label === 'Comisión acumulada' ? 'adminComisionTotal' : undefined)}>{c.id ? '—' : c.value}</div>
                 <div class="stat-card-label">{c.label}</div>
-                <div class={`stat-card-trend ${c.up ? 'up' : ''}`} id={c.label === 'Comisión acumulada' ? 'adminComisionDetalle' : undefined}>{c.trend}</div>
+                <div class="stat-card-trend" id={c.label === 'Comisión acumulada' ? 'adminComisionDetalle' : undefined}>{c.trend}</div>
               </div>
             </div>
           ))}
@@ -188,31 +156,7 @@ const cards = [
                   <th>Estado</th>
                 </tr>
               </thead>
-              <tbody>
-                {citas.length > 0 ? (
-                  citas.map((c) => (
-                    <tr>
-                      <td><strong>{c.cliente}</strong></td>
-                      <td>{c.trabajador}</td>
-                      <td>{c.servicio}</td>
-                      <td>{formatFecha(c.fecha)}</td>
-                      <td><span class={`badge ${badgeClass(c.estado)}`}>{c.estado}</span></td>
-                    </tr>
-                  ))
-                ) : (
-                  <tr>
-                    <td colspan="5">
-                      <div class="empty-state">
-                        <div class="empty-state-icon">
-                          <i data-lucide="inbox" style="width:40px;height:40px"></i>
-                        </div>
-                        <h3>No hay citas</h3>
-                        <p>Aún no hay citas registradas en la plataforma.</p>
-                      </div>
-                    </td>
-                  </tr>
-                )}
-              </tbody>
+              <tbody id="adminRecentCitasBody"><tr><td colspan="5">Cargando registros reales…</td></tr></tbody>
             </table>
           </div>
         </div>
@@ -256,6 +200,68 @@ const cards = [
       }
       actualizarSolicitudesPendientes();
       window.setInterval(actualizarSolicitudesPendientes, 60000);
+
+      async function actualizarDashboard() {
+        const body = document.getElementById('adminRecentCitasBody');
+        const valores = {
+          totalUsuarios: 'adminTotalUsuarios',
+          totalTrabajadores: 'adminTotalTrabajadores',
+          citasMes: 'adminCitasMes',
+          califPromedio: 'adminCalificacionPromedio',
+        };
+        const mostrarEstado = (mensaje) => {
+          if (!body) return;
+          const fila = document.createElement('tr');
+          const celda = document.createElement('td');
+          celda.colSpan = 5; celda.textContent = mensaje;
+          fila.appendChild(celda); body.replaceChildren(fila);
+        };
+        try {
+          const response = await fetch('/api/admin/dashboard', { credentials: 'same-origin', cache: 'no-store' });
+          const data = await response.json();
+          if (!response.ok || !data.ok) {
+            if (response.status === 401 || response.status === 403) {
+              mostrarEstado(data.mensaje || 'Solo administración puede consultar estos datos.');
+              return;
+            }
+            throw new Error(data.mensaje || 'No se pudieron cargar los datos reales.');
+          }
+          const formato = (n) => new Intl.NumberFormat('es-CO').format(Number(n) || 0);
+          Object.entries(valores).forEach(([clave, id]) => {
+            const elemento = document.getElementById(id);
+            if (!elemento) return;
+            const valor = data.stats?.[clave];
+            elemento.textContent = clave === 'califPromedio'
+              ? valor == null ? '—' : Number(valor).toFixed(1)
+              : formato(valor);
+          });
+
+          const estados = { confirmada: 'badge-success', pendiente: 'badge-warning', finalizado: 'badge-info', finalizada: 'badge-info', rechazado: 'badge-danger', cancelada: 'badge-danger', trabajo_realizado: 'badge-info', en_progreso: 'badge-info' };
+          const citas = Array.isArray(data.citas) ? data.citas : [];
+          if (!citas.length) { mostrarEstado('Aún no hay citas registradas.'); return; }
+          if (!body) return;
+          const filas = citas.map((cita) => {
+            const fila = document.createElement('tr');
+            const cliente = document.createElement('td'); const nombreCliente = document.createElement('strong'); nombreCliente.textContent = cita.cliente || 'Cliente'; cliente.appendChild(nombreCliente);
+            const trabajador = document.createElement('td'); trabajador.textContent = cita.trabajador || 'Trabajador';
+            const servicio = document.createElement('td'); servicio.textContent = cita.servicio || 'Servicio';
+            const fecha = document.createElement('td');
+            const fechaDato = cita.fecha ? new Date(`${cita.fecha}T00:00:00`) : null;
+            fecha.textContent = fechaDato && !Number.isNaN(fechaDato.getTime()) ? fechaDato.toLocaleDateString('es-CO', { day: '2-digit', month: '2-digit', year: 'numeric' }) : 'Sin fecha';
+            const estado = String(cita.estado || 'pendiente').toLowerCase();
+            const estadoCelda = document.createElement('td'); const badge = document.createElement('span');
+            badge.className = `badge ${estados[estado] || 'badge-neutral'}`; badge.textContent = estado.replaceAll('_', ' '); estadoCelda.appendChild(badge);
+            fila.append(cliente, trabajador, servicio, fecha, estadoCelda);
+            return fila;
+          });
+          body.replaceChildren(...filas);
+        } catch (error) {
+          Object.values(valores).forEach((id) => { const elemento = document.getElementById(id); if (elemento) elemento.textContent = '—'; });
+          mostrarEstado(error instanceof Error && error.message.includes('403') ? 'Esta información solo está disponible para administración.' : 'No se pudieron cargar los registros. Intenta actualizar la página.');
+        }
+      }
+      actualizarDashboard();
+      window.setInterval(actualizarDashboard, 60000);
 
       async function actualizarComisiones() {
         if (!commissionElement || !commissionDetail) return;

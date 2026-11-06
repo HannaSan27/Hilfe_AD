@@ -13,10 +13,10 @@ const router = new Router();
 
 router
   .get("/api/solicitudes/horarios-ocupados", getHorariosOcupados)
-  .get("/api/solicitudes", getSolicitudes)
-  .get("/api/solicitudes/:id", getSolicitudPorId)
+  .get("/api/solicitudes", verificarSesion, getSolicitudes)
+  .get("/api/solicitudes/:id", verificarSesion, getSolicitudPorId)
   .post("/api/solicitudes", verificarSesion, crearSolicitud)
-  .put("/api/solicitudes/:id/estado", cambiarEstadoSolicitud)
-  .delete("/api/solicitudes/:id", eliminarSolicitud);
+  .put("/api/solicitudes/:id/estado", verificarSesion, cambiarEstadoSolicitud)
+  .delete("/api/solicitudes/:id", verificarSesion, eliminarSolicitud);
 
 export default router;

@@ -12,16 +12,20 @@ import '../../components/styles/design-system.css';
 		<div class="profile-layout" id="perfilContenido" hidden>
 			<div class="profile-main">
 				<section class="profile-card worker-summary">
-					<div class="worker-avatar"><div class="photo-placeholder" id="trabajadorInicial"></div><img id="trabajadorFoto" alt="Foto del trabajador" hidden /></div>
+					<div class="worker-avatar"><div class="photo-placeholder" id="trabajadorInicial"></div></div>
 					<div class="summary-copy"><h1 id="trabajadorNombre"></h1><p id="trabajadorUbicacion"></p><strong id="servicioResumen"></strong><div class="summary-tags"><span id="badgeVerificacion" style="display:inline-flex;align-items:center;gap:4px;font-size:0.8rem;padding:3px 9px;border-radius:12px;font-weight:700;"></span><span id="trabajadorCategoria"></span><span id="totalResenas"></span><span id="promedioResumen"></span></div></div>
 				</section>
 				<section class="profile-card"><h2>Descripción profesional</h2><p id="perfilProfesionalDescripcion" hidden></p><h3 id="servicioTitulo"></h3><p id="servicioDescripcion"></p><div class="summary-tags"><span id="categoriaDescripcion"></span><span id="experienciaProfesional"></span><span id="disponibilidadResumen"></span></div></section>
-						<section class="profile-card"><div class="gallery-heading"><div><h2>Trabajos realizados</h2><p>Conoce algunos de los proyectos de este trabajador.</p></div><span id="galleryCount" class="gallery-count" hidden></span></div><div class="work-gallery" id="galeriaTrabajos"><p class="gallery-state">Cargando fotos...</p></div></section>
-				<section class="profile-card"><h2 id="calificacionesTitulo">Calificaciones</h2><div class="rating-summary"><strong id="promedioCalificaciones">0.0</strong><span id="estrellasResumen">☆☆☆☆☆</span><small id="cantidadCalificaciones">0 reseñas</small></div><div id="ratingBreakdown" class="rating-breakdown" aria-label="Distribución de calificaciones"></div><div id="listaCalificaciones"></div></section>
+						<section class="profile-card"><div class="gallery-heading"><div><h2>Trabajos realizados</h2><p>Una muestra de sus trabajos y resultados.</p></div><span id="galleryCount" class="gallery-count" hidden></span></div><div class="work-gallery" id="galeriaTrabajos"><p class="gallery-state">Cargando fotos...</p></div></section>
+				<section class="profile-card reviews-section" aria-labelledby="calificacionesTitulo">
+					<div class="reviews-heading"><h2 id="calificacionesTitulo">Calificaciones</h2></div>
+					<div class="rating-summary" aria-label="Resumen de calificaciones"><strong id="promedioCalificaciones">0.0</strong><span class="rating-out-of">/ 5</span><span id="estrellasResumen" class="rating-summary-stars" aria-label="Estrellas promedio">☆☆☆☆☆</span><span id="cantidadCalificaciones" class="rating-summary-count">0 reseñas</span></div>
+					<div id="listaCalificaciones" class="review-list" aria-live="polite"></div>
+				</section>
 			</div>
 			<aside class="profile-card booking-card">
 				<div class="booking-price"><strong id="precioServicio"></strong><small class="booking-price-label">Precio del servicio</small><div class="booking-rating"><span id="estrellasLateral" aria-label="Calificación">☆☆☆☆☆</span><small id="calificacionLateral"></small></div><p id="bookingServiceTitle" class="booking-service-title"></p></div>
-				<div class="booking-details"><p><b>Ubicación</b><span id="ubicacionLateral"></span></p><p><b>Contacto</b><span id="telefonoLateral"></span></p><p><b>Especialidad</b><span id="especialidadLateral"></span></p><p><b>Experiencia</b><span id="experienciaLateral"></span></p><p><b>Disponibilidad</b><span id="horariosLateral"></span></p></div>
+				<div class="booking-details"><p><b>Ubicación</b><span id="ubicacionLateral"></span></p><p><b>Contacto</b><span id="telefonoLateral"></span></p><p><b>Especialidad</b><span id="especialidadLateral"></span></p><p><b>Experiencia</b><span id="experienciaLateral"></span></p><p class="booking-schedule-item"><b>Disponibilidad</b><span id="horariosLateral"></span></p></div>
 				<button type="button" class="booking-open" id="abrirAgendamiento"><svg aria-hidden="true" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 10h18"/></svg> Agendar servicio</button>
 				<p class="booking-note">Servicio disponible en tu zona</p>
 			</aside>
@@ -75,6 +79,13 @@ import '../../components/styles/design-system.css';
 	<script is:inline>
 		(function () {
 			var api = 'http://127.0.0.1:8000/api';
+			function urlFotoCalificacion(ruta) {
+				if (!ruta) return '';
+				try {
+					var base = new URL(api);
+					return new URL(ruta, ruta.startsWith('/api/') ? base.origin : base.href).href;
+				} catch (_) { return ''; }
+			}
 			var params = new URLSearchParams(window.location.search);
 			var trabajadorId = params.get('id');
 			var servicioInicial = params.get('servicioId');
@@ -178,11 +189,35 @@ import '../../components/styles/design-system.css';
 				}
 			}
 			function horariosTexto(items) {
-				if (!items.length) return 'Horario no publicado';
-				return items.map(function (d) {
-					if (String(d.Hora_Inicio).slice(0, 5) === '00:00' && String(d.Hora_Fin) === '23:59:59') return d.Dia_Semana + ' todo el día';
-					return d.Dia_Semana + ' ' + String(d.Hora_Inicio || '').slice(0, 5) + ' - ' + String(d.Hora_Fin || '').slice(0, 5);
-				}).join(' · ');
+				if (!items.length) return ['Horario no publicado'];
+				var orden = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
+				var abreviaturas = { domingo: 'Dom', lunes: 'Lun', martes: 'Mar', miércoles: 'Mié', jueves: 'Jue', viernes: 'Vie', sábado: 'Sáb' };
+				var bloques = new Map();
+				items.forEach(function (item) {
+					var dia = String(item.Dia_Semana || '').toLowerCase();
+					var inicio = String(item.Hora_Inicio || '').slice(0, 5);
+					var fin = String(item.Hora_Fin || '').slice(0, 5);
+					var jornadaCompleta = inicio === '00:00' && fin === '23:59';
+					var clave = jornadaCompleta ? '24 h' : inicio + '–' + fin;
+					if (!bloques.has(clave)) bloques.set(clave, new Set());
+					bloques.get(clave).add(dia);
+				});
+				var dias24 = bloques.get('24 h');
+				if (dias24 && orden.every(function (dia) { return dias24.has(dia); })) return ['Disponible 24/7'];
+				return Array.from(bloques.entries()).map(function (entrada) {
+					var dias = orden.filter(function (dia) { return entrada[1].has(dia); }).map(function (dia) { return abreviaturas[dia]; });
+					var nombreDias = dias.join(', ') || 'Horario';
+					return entrada[0] === '24 h' ? nombreDias + ' · todo el día' : nombreDias + ' · ' + entrada[0];
+				});
+			}
+			function pintarHorarios(contenedor, textos) {
+				contenedor.replaceChildren();
+				textos.forEach(function (texto) {
+					var chip = document.createElement('span');
+					chip.className = 'availability-chip';
+					chip.textContent = texto;
+					contenedor.appendChild(chip);
+				});
 			}
 			function horariosDe(servicioId) {
 				return fetch(api + '/disponibilidad?servicio=' + encodeURIComponent(servicioId))
@@ -303,31 +338,56 @@ import '../../components/styles/design-system.css';
 				document.getElementById('estrellasResumen').textContent = estrellas(promedio);
 				document.getElementById('cantidadCalificaciones').textContent = calificaciones.length + (calificaciones.length === 1 ? ' reseña' : ' reseñas');
 				document.getElementById('totalResenas').textContent = calificaciones.length + (calificaciones.length === 1 ? ' reseña' : ' reseñas');
+				document.getElementById('calificacionesTitulo').textContent = 'Calificaciones (' + calificaciones.length + ')';
 				document.getElementById('promedioResumen').textContent = promedio.toFixed(1) + ' ★';
 				document.getElementById('estrellasLateral').textContent = estrellas(promedio);
 				document.getElementById('calificacionLateral').textContent = promedio.toFixed(1) + ' (' + calificaciones.length + ')';
-				var distribucion = document.getElementById('ratingBreakdown');
-				distribucion.replaceChildren();
-				distribucion.hidden = calificaciones.length === 0;
-				for (var puntaje = 5; puntaje >= 1; puntaje--) {
-					var cantidad = calificaciones.filter(function (c) { return Math.round(Number(c.Puntaje) || 0) === puntaje; }).length;
-					var fila = document.createElement('div'); fila.className = 'rating-breakdown-row';
-					var etiqueta = document.createElement('span'); etiqueta.textContent = puntaje + ' ★';
-					var pista = document.createElement('span'); pista.className = 'rating-bar-track'; pista.setAttribute('aria-hidden', 'true');
-					var barra = document.createElement('span'); barra.className = 'rating-bar-fill'; barra.style.width = (calificaciones.length ? cantidad / calificaciones.length * 100 : 0) + '%'; pista.appendChild(barra);
-					var total = document.createElement('small'); total.textContent = String(cantidad);
-					fila.append(etiqueta, pista, total); distribucion.appendChild(fila);
-				}
 				var lista = document.getElementById('listaCalificaciones');
 				lista.replaceChildren();
-				if (!calificaciones.length) { var vacia = document.createElement('p'); vacia.textContent = 'Este trabajador aún no tiene calificaciones.'; lista.appendChild(vacia); return; }
+				if (!calificaciones.length) {
+					var vacia = document.createElement('div'); vacia.className = 'reviews-empty';
+					var iconoVacio = document.createElement('span'); iconoVacio.className = 'reviews-empty-icon'; iconoVacio.setAttribute('aria-hidden', 'true');
+					iconoVacio.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M12 3.5 14.6 8.8l5.9.9-4.3 4.2 1 5.9-5.2-2.8-5.2 2.8 1-5.9-4.3-4.2 5.9-.9L12 3.5Z"/></svg>';
+					var vaciaTitulo = document.createElement('strong'); vaciaTitulo.textContent = 'Aún no hay opiniones';
+					var vaciaTexto = document.createElement('span'); vaciaTexto.textContent = 'Cuando un cliente finalice un servicio, su experiencia aparecerá aquí.';
+					vacia.append(iconoVacio, vaciaTitulo, vaciaTexto); lista.appendChild(vacia); return;
+				}
 				calificaciones.forEach(function (calificacion) {
 					var item = document.createElement('article'); item.className = 'review-item';
-					var estrellasEl = document.createElement('strong'); estrellasEl.textContent = estrellas(calificacion.Puntaje);
-					var fecha = document.createElement('span'); fecha.className = 'review-date';
-					fecha.textContent = calificacion.Fecha_Calificacion ? new Date(calificacion.Fecha_Calificacion).toLocaleDateString('es-CO') : '';
-					var comentario = document.createElement('p'); comentario.textContent = calificacion.Comentario || 'Sin comentario.';
-					item.append(estrellasEl, document.createTextNode('  '), fecha, comentario); lista.appendChild(item);
+					if (calificacion.Id_Servicio != null) item.dataset.serviceId = String(calificacion.Id_Servicio);
+					var encabezado = document.createElement('div'); encabezado.className = 'review-header';
+					var fotosResena = Array.isArray(calificacion.fotos) ? calificacion.fotos : [];
+					var contenidoEncabezado = document.createElement('div'); contenidoEncabezado.className = 'review-heading-copy';
+				var cliente = String(calificacion.Nombre_Cliente || 'Cliente').trim();
+				var inicial = document.createElement('span'); inicial.className = 'review-avatar'; inicial.setAttribute('aria-hidden', 'true'); inicial.textContent = cliente.charAt(0).toUpperCase() || 'C';
+				var nombreCliente = cliente.split(/\s+/).filter(Boolean);
+				var nombreProtegido = nombreCliente.length > 1 ? nombreCliente[0] + ' ' + nombreCliente[1].charAt(0).toUpperCase() + '***' : (nombreCliente[0] || 'Cliente').slice(0, 1) + '***';
+				var nombre = document.createElement('strong'); nombre.className = 'review-customer-name'; nombre.textContent = nombreProtegido;
+					var fecha = calificacion.Fecha_Calificacion ? new Date(calificacion.Fecha_Calificacion).toLocaleDateString('es-CO') : 'Fecha no disponible';
+				var meta = document.createElement('div'); meta.className = 'review-meta-row';
+					var puntaje = Math.max(0, Math.min(5, Number(calificacion.Puntaje) || 0));
+				var estrellasEl = document.createElement('span'); estrellasEl.className = 'review-stars';
+				estrellasEl.setAttribute('aria-label', puntaje + ' de 5 estrellas'); estrellasEl.textContent = estrellas(puntaje);
+				var fechaEl = document.createElement('time'); fechaEl.className = 'review-date'; fechaEl.textContent = fecha;
+				meta.append(estrellasEl, fechaEl); contenidoEncabezado.append(nombre, meta);
+				var puntajeEl = document.createElement('span'); puntajeEl.className = 'review-score'; puntajeEl.innerHTML = '<strong>' + puntaje.toFixed(0) + '</strong><span>/5</span>';
+				encabezado.append(inicial, contenidoEncabezado, puntajeEl);
+					var comentario = document.createElement('p'); comentario.className = 'review-comment';
+					comentario.textContent = calificacion.Comentario || 'El cliente no dejó un comentario.';
+					item.append(encabezado, comentario);
+					if (fotosResena.length > 0) {
+						var fotosAdicionales = document.createElement('div'); fotosAdicionales.className = 'review-photo-strip';
+						fotosResena.forEach(function (foto, indice) {
+							if (!foto.url) return;
+							var enlaceFoto = document.createElement('a'); enlaceFoto.className = 'review-photo-link';
+							enlaceFoto.href = urlFotoCalificacion(foto.url); enlaceFoto.target = '_blank'; enlaceFoto.rel = 'noopener noreferrer';
+							enlaceFoto.setAttribute('aria-label', 'Abrir foto ' + (indice + 1) + ' adjunta a la calificación');
+							var img = document.createElement('img'); img.src = urlFotoCalificacion(foto.url); img.alt = 'Foto adjunta a la calificación'; img.loading = 'lazy'; img.decoding = 'async';
+							enlaceFoto.appendChild(img); fotosAdicionales.appendChild(enlaceFoto);
+						});
+						if (fotosAdicionales.childElementCount) item.appendChild(fotosAdicionales);
+					}
+					lista.appendChild(item);
 				});
 			}
 			function actualizarServicio(servicio) {
@@ -335,10 +395,25 @@ import '../../components/styles/design-system.css';
 				actualizarResumenAbono();
 				var categoria = servicio.Nombre_Categoria || 'Categoría no especificada';
 				var titulo = servicio.Titulo || 'Servicio';
+				var campoDescripcion = document.getElementById('descripcion');
+				var oficio = (categoria + ' ' + titulo).toLowerCase();
+				var ejemplos = [
+					{ clave: /plomer|fontaner|tuber|grifer|fuga|sanitari/, botones: ['Reparar una fuga', 'Instalar una pieza', 'Revisar una tubería', 'Otro trabajo'], textos: ['Indica dónde está la fuga, cuándo la notaste, qué tan intensa es y si puedes cerrar el paso de agua. Comparte el tipo de llave, tubo o sanitario si lo conoces.', 'Cuéntanos qué pieza necesitas instalar, dónde va, si ya la compraste y qué conexiones o medidas conoces.', 'Describe qué tubería o desagüe necesita revisión, qué problema presenta y desde cuándo ocurre.', 'Explica el trabajo de plomería que necesitas, la ubicación dentro del inmueble y cualquier detalle que ayude a preparar herramientas y materiales.'] },
+					{ clave: /electric|cable|lumin|enchufe|interruptor/, botones: ['Reparar una falla', 'Instalar iluminación', 'Revisar conexiones', 'Otro trabajo'], textos: ['Describe qué dejó de funcionar, desde cuándo ocurre y si afecta una zona o todo el inmueble. No manipules cables expuestos; indica si hay olor, chispas o cortes frecuentes.', 'Indica qué lámpara o luminaria se instalará, en qué espacio y si ya cuentas con el equipo y el punto eléctrico.', 'Cuéntanos qué conexión quieres revisar, qué dispositivo se afecta y qué pruebas o reparaciones ya se hicieron.', 'Describe el trabajo eléctrico, el espacio donde se realizará y las condiciones que el profesional debería conocer antes de visitarte.'] },
+					{ clave: /limpieza|aseo|lavado/, botones: ['Limpieza general', 'Limpieza profunda', 'Limpieza de muebles', 'Otro trabajo'], textos: ['Indica qué espacios se limpiarán, cuántas habitaciones o baños hay y si tienes una fecha preferida.', 'Cuéntanos qué áreas requieren limpieza profunda, su tamaño aproximado y si hay manchas, grasa o acumulación difícil.', 'Describe el tipo y la cantidad de muebles, el material si lo conoces y las manchas que necesitan tratamiento.', 'Explica qué necesitas limpiar, el tamaño del espacio y si se requiere algún producto o cuidado especial.'] },
+					{ clave: /pintur|estuco/, botones: ['Pintar un espacio', 'Resanar paredes', 'Pintura exterior', 'Otro trabajo'], textos: ['Indica qué habitaciones o superficies se pintarán, sus medidas aproximadas, el color deseado y si ya tienes la pintura.', 'Describe grietas, huecos o zonas sueltas, comparte el tamaño aproximado y comenta si la pared tiene humedad.', 'Cuéntanos qué fachada o superficie exterior requiere pintura, su altura y estado actual.', 'Describe las superficies, medidas y acabado que buscas; añade fotos o detalles sobre el estado actual si los tienes.'] },
+					{ clave: /carpinter|mueble|closet|clóset|puerta/, botones: ['Reparar un mueble', 'Fabricar a medida', 'Instalar una puerta', 'Otro trabajo'], textos: ['Describe el mueble, el daño y el material aproximado; menciona si requiere reparación en casa o traslado.', 'Indica qué mueble necesitas, el espacio disponible, las medidas y el material o estilo que prefieres.', 'Cuéntanos el tipo y tamaño de la puerta, el marco disponible y si ya tienes los herrajes.', 'Explica el trabajo de carpintería, las medidas conocidas y dónde se realizará.'] },
+					{ clave: /jardiner|jardín|poda|paisaj/, botones: ['Mantenimiento del jardín', 'Poda', 'Diseño de jardín', 'Otro trabajo'], textos: ['Indica el tamaño del jardín, el tipo de mantenimiento y cada cuánto te gustaría realizarlo.', 'Describe qué árboles o plantas requieren poda, su altura aproximada y el acceso al lugar.', 'Cuéntanos el espacio disponible, el tipo de plantas que te gustan y el tiempo que puedes dedicarles.', 'Explica el trabajo de jardinería, el área aproximada y si hay herramientas o materiales en el sitio.'] },
+					{ clave: /comput|informát|tecnolog|software|redes|celular/, botones: ['Diagnosticar una falla', 'Instalar o configurar', 'Reparar un equipo', 'Otro servicio'], textos: ['Indica el equipo o sistema, el mensaje de error y cuándo comenzó el problema. Añade qué intentaste antes.', 'Cuéntanos qué programa, dispositivo o red necesitas configurar y qué resultado esperas.', 'Describe la marca y el modelo del equipo, la falla y si sufrió golpes, humedad o cambios recientes.', 'Explica qué necesitas resolver, qué equipos están involucrados y cómo debería quedar funcionando.'] }
+				];
+				var guia = ejemplos.find(function (item) { return item.clave.test(oficio); });
+				campoDescripcion.placeholder = 'Cuéntanos qué necesitas con ' + titulo.toLowerCase() + ', en qué lugar se hará y qué resultado esperas. Añade medidas, materiales, síntomas o una fecha preferida si los conoces.';
+				if (guia) document.querySelectorAll('[data-sugerencia]').forEach(function (boton, indice) { boton.textContent = guia.botones[indice]; boton.dataset.textoServicio = guia.textos[indice]; });
+				else document.querySelectorAll('[data-sugerencia]').forEach(function (boton) { delete boton.dataset.textoServicio; });
 				document.getElementById('servicioResumen').textContent = titulo;
 				document.getElementById('trabajadorCategoria').textContent = categoria;
 				document.getElementById('servicioTitulo').textContent = titulo;
-				document.getElementById('servicioDescripcion').textContent = servicio.Descripcion || 'Sin descripción disponible.';
+				document.getElementById('servicioDescripcion').textContent = servicio.Descripcion || 'Este profesional ofrece ' + titulo.toLowerCase() + ' dentro de la categoría ' + categoria + '. Cuéntale qué necesitas, dónde se realizará el trabajo y qué resultado esperas para que pueda orientarte antes de la visita.';
 				document.getElementById('categoriaDescripcion').textContent = categoria;
 				document.getElementById('precioServicio').textContent = precioDe(servicio);
 				document.getElementById('bookingServiceTitle').textContent = titulo;
@@ -350,12 +425,13 @@ import '../../components/styles/design-system.css';
 				document.getElementById('telefonoLateral').textContent = trabajador.Telefono || 'No publicado';
 				return horariosDe(servicio.Id_Servicio).then(function (horarios) {
 					horariosActuales = horarios;
-					var texto = horariosTexto(horarios);
-					document.getElementById('horariosLateral').textContent = texto;
-					document.getElementById('modalHorarios').replaceChildren();
-					document.getElementById('disponibilidadResumen').textContent = horarios.length ? 'Disponible' : 'Horario no publicado';
-					if (!horarios.length) { var sin = document.createElement('span'); sin.textContent = texto; document.getElementById('modalHorarios').appendChild(sin); }
-					horarios.forEach(function (h) { var chip = document.createElement('span'); chip.textContent = h.Dia_Semana + ' ' + (String(h.Hora_Inicio).slice(0,5) === '00:00' && String(h.Hora_Fin) === '23:59:59' ? 'todo el día' : String(h.Hora_Inicio).slice(0,5) + ' - ' + String(h.Hora_Fin).slice(0,5)); document.getElementById('modalHorarios').appendChild(chip); });
+					var textosHorario = horariosTexto(horarios);
+					pintarHorarios(document.getElementById('horariosLateral'), textosHorario);
+					pintarHorarios(document.getElementById('modalHorarios'), textosHorario);
+					var resumenDisponibilidad = horarios.length
+						? (textosHorario.length === 1 && textosHorario[0] === 'Disponible 24/7' ? 'Disponible 24/7' : 'Horario publicado')
+						: 'Horario no publicado';
+					document.getElementById('disponibilidadResumen').textContent = resumenDisponibilidad;
 					validarHorarioSeleccionado();
 					cargarHorariosOcupados();
 				}).catch(function () {
@@ -400,12 +476,12 @@ import '../../components/styles/design-system.css';
 				boton.addEventListener('click', function () {
 					var campo = document.getElementById('descripcion');
 					var plantillas = {
-						'Reparación': 'Necesito reparar [equipo o elemento]. El problema que presenta es [describe la falla] y comenzó [cuándo].',
-						'Instalación': 'Necesito instalar [equipo o elemento] en [lugar]. Ya cuento con [materiales o equipo] / necesito asesoría para conseguirlos.',
-						'Diagnóstico': 'Necesito revisar [equipo o elemento] porque [describe qué ocurre]. El problema empezó [cuándo o en qué situación].',
-						'Limpieza': 'Necesito una limpieza de [espacio, equipo o superficie]. El área aproximada es [tamaño] y requiere atención en [detalle].'
+						'Reparación': 'Describe el elemento que requiere reparación, qué falla presenta, desde cuándo ocurre y si ya intentaste alguna solución.',
+						'Instalación': 'Indica qué necesitas instalar, en qué espacio se hará el trabajo, qué materiales tienes y si requieres que el profesional los consiga.',
+						'Diagnóstico': 'Explica qué comportamiento observas, cuándo comenzó, con qué frecuencia ocurre y qué pruebas o soluciones ya realizaste.',
+						'Limpieza': 'Cuéntanos qué espacio, equipo o superficie se debe limpiar, su tamaño aproximado, el estado actual y si requiere algún cuidado especial.'
 					};
-					campo.value = plantillas[boton.dataset.sugerencia] || '';
+					campo.value = boton.dataset.textoServicio || plantillas[boton.dataset.sugerencia] || 'Describe el trabajo que necesitas, dónde se realizará, cuándo te gustaría atenderlo y cualquier detalle que ayude a preparar el servicio.';
 					document.getElementById('descripcionCount').textContent = String(campo.value.length);
 					document.querySelectorAll('[data-sugerencia]').forEach(function (otra) { var activa = otra === boton; otra.classList.toggle('is-selected', activa); otra.setAttribute('aria-pressed', String(activa)); });
 					campo.focus();
@@ -467,7 +543,9 @@ import '../../components/styles/design-system.css';
 					document.getElementById('ubicacionLateral').textContent = trabajador.Ubicacion || 'No especificada';
 					document.getElementById('telefonoLateral').textContent = trabajador.Telefono || 'No publicado';
 					if (trabajador.Foto_Perfil) {
-						var foto = document.getElementById('trabajadorFoto');
+						var foto = document.createElement('img');
+						foto.id = 'trabajadorFoto'; foto.alt = 'Foto del trabajador';
+						document.querySelector('.worker-avatar').appendChild(foto);
 						var inicialTrabajador = document.getElementById('trabajadorInicial');
 						foto.hidden = true;
 						foto.addEventListener('load', function () {
@@ -503,7 +581,10 @@ import '../../components/styles/design-system.css';
 				if (!sesion || Number(sesion.rol) !== 3 || !sesion.id) { form.hidden = true; document.getElementById('iniciarSesionAviso').hidden = false; return; }
 				var boton = document.getElementById('solicitarBtn');
 				form.dataset.solicitudEnviando = 'true';
-				boton.disabled = true; limpiarErrorSolicitud();
+				boton.disabled = true;
+				boton.setAttribute('aria-busy', 'true');
+				boton.textContent = 'Enviando solicitud…';
+				limpiarErrorSolicitud();
 				try {
 					if (!validarHorarioSeleccionado()) throw new Error('Selecciona una fecha y una hora disponible dentro del horario publicado.');
 					var respuesta = await fetch(api + '/solicitudes', {
@@ -524,8 +605,8 @@ import '../../components/styles/design-system.css';
 					var confirmacion = document.getElementById('solicitudConfirmada');
 					confirmacion.innerHTML = '<span><strong></strong><button type="button" aria-label="Cerrar confirmación">×</button></span>';
 					confirmacion.querySelector('strong').textContent = resultado.mensaje || 'Solicitud creada correctamente.';
-					confirmacion.style.cssText = 'position:fixed;inset:0;z-index:2100;display:grid;place-items:center;padding:20px;background:rgba(15,23,42,.42);backdrop-filter:blur(3px);font-size:16px;font-weight:600;';
-					confirmacion.querySelector('span').style.cssText = 'position:relative;display:block;width:min(100%,420px);padding:32px 48px;border:1px solid #bbf7d0;border-radius:16px;background:#f0fdf4;color:#166534;box-shadow:0 20px 60px rgba(15,23,42,.25);text-align:center;';
+					confirmacion.style.cssText = 'position:fixed;inset:0;z-index:2100;display:grid;place-items:center;padding:20px;background:rgba(15,23,42,.38);font-size:16px;font-weight:600;';
+					confirmacion.querySelector('span').style.cssText = 'position:relative;display:block;width:min(100%,420px);padding:32px 48px;border:1px solid #86c99b;border-radius:16px;background:var(--app-surface,#fff);color:var(--app-ink,#172033);text-align:center;';
 					var cerrarConfirmacion = confirmacion.querySelector('button');
 					cerrarConfirmacion.style.cssText = 'position:absolute;top:8px;right:10px;border:0;background:transparent;color:#166534;font-size:24px;line-height:1;cursor:pointer;padding:4px 8px;';
 					cerrarConfirmacion.addEventListener('click', function () { confirmacion.hidden = true; confirmacion.style.display = 'none'; });
@@ -534,6 +615,8 @@ import '../../components/styles/design-system.css';
 				} catch (error) { mostrarErrorSolicitud(error.message || 'No fue posible enviar la solicitud.'); if (/ocupado/i.test(error.message || '')) cargarHorariosOcupados(); }
 				finally {
 					delete form.dataset.solicitudEnviando;
+					boton.removeAttribute('aria-busy');
+					boton.textContent = 'Confirmar agendamiento';
 					boton.disabled = form.dataset.solicitudEnviada === 'true';
 				}
 			});
@@ -651,5 +734,197 @@ import '../../components/styles/design-system.css';
 		@media(max-width:600px){.gallery-lightbox{padding:14px}.gallery-lightbox-dialog{grid-template-columns:36px minmax(0,1fr) 36px;gap:6px;width:100%;height:82vh}.gallery-lightbox-nav{width:34px;height:34px;font-size:25px}.gallery-lightbox figure img{max-height:calc(82vh - 90px)}.gallery-lightbox-close{top:-8px;right:-3px;width:38px;height:38px}.booking-details{grid-template-columns:minmax(0,1fr)}.booking-details p:last-child{grid-column:auto}.modal-field textarea{height:112px;min-height:112px}}
 		.booking-deposit{display:grid;gap:11px;padding:13px;border:1px solid #dbe4f0;border-radius:12px;background:#f8fafc}.booking-deposit-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}.booking-deposit-head>div{display:grid;gap:4px}.booking-deposit-head strong{font-size:13px;color:#1e293b}.booking-deposit-head small{font-size:11px;line-height:1.45;color:#64748b}.booking-deposit-head>span{flex:none;color:#1d4ed8;font-size:11px;font-weight:700;text-align:right}.booking-deposit-options{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}.booking-deposit-option{display:flex;align-items:center;gap:7px;min-width:0;padding:9px;border:1px solid #d7e0ed;border-radius:9px;background:#fff;cursor:pointer}.booking-deposit-option:has(input:checked){border-color:#2563eb;background:#eff6ff;box-shadow:0 0 0 1px #2563eb}.booking-deposit-option input{width:15px;height:15px;accent-color:#2563eb;flex:none}.booking-deposit-option span{display:grid;gap:2px}.booking-deposit-option strong{color:#172554;font-size:13px}.booking-deposit-option small{color:#53657c;font-size:10px;line-height:1.3}.booking-deposit-summary{margin:0!important;padding:8px 10px;border-radius:8px;background:#eaf2ff;color:#244778!important;font-size:11px!important;line-height:1.45!important}.booking-deposit-summary.is-short{background:#fff1f2;color:#991b1b!important}.booking-wallet-link{justify-self:start;color:#1d4ed8;font-size:11px;font-weight:700;text-underline-offset:3px}.booking-confirm:disabled{opacity:.5;cursor:not-allowed}
 		@media(max-width:430px){.booking-deposit{padding:10px}.booking-deposit-head{display:grid}.booking-deposit-head>span{text-align:left}.booking-deposit-options{gap:5px}.booking-deposit-option{padding:7px 5px;gap:4px}.booking-deposit-option small{font-size:9px}}
+		/* Reserva: una columna clara, disponibilidad legible y estados visibles. */
+		.profile-page { color: var(--app-ink); }
+		.profile-card { border-color: var(--app-line); background: var(--app-surface); box-shadow: none; }
+		.profile-card h2, .profile-card h3 { color: var(--app-ink); }
+		.profile-card p { color: var(--app-muted); }
+		.booking-card { border-radius: 20px; border-color: var(--app-line); }
+		.booking-price { background: linear-gradient(125deg,#2349bb,#285bd8 68%,#2185a0); }
+		.booking-details p { background: var(--app-surface-alt) !important; border-color: var(--app-line) !important; }
+		.booking-details span { color: var(--app-ink); }
+		.booking-open { min-height: 50px; border-radius: 12px; transition: background-color .18s ease, transform .18s ease; }
+		.booking-open:hover { transform: translateY(-1px); background: #1d45b5; }
+		.booking-modal { width: min(100%, 590px); border: 1px solid var(--app-line); border-radius: 20px; background: var(--app-surface); color: var(--app-ink); }
+		.booking-overlay { background: rgb(20 29 43 / 48%); }
+		.booking-modal > header { border-color: var(--app-line); }
+		.booking-modal-content { display: grid; gap: 12px; }
+		.booking-modal form { grid-template-columns: minmax(0,1fr); gap: 13px; }
+		.full-field, .suggestions, .booking-modal form footer { grid-column: 1; }
+		.selected-worker, .modal-availability { border-color: var(--app-line); background: var(--app-surface-alt); }
+		.modal-availability { padding: 14px; }
+		.modal-availability strong { color: var(--app-muted); font-size: 12px; letter-spacing: .07em; }
+		.modal-availability #modalHorarios { display: flex; flex-wrap: wrap; gap: 7px; }
+		.modal-availability span { margin: 0; border-color: var(--app-line); background: var(--app-surface); color: var(--app-ink); font-size: 12px; }
+		.modal-field { color: var(--app-ink); font-size: 13px; }
+		.modal-field input, .modal-field textarea, .modal-field select { min-height: 44px; border-color: var(--app-line); background: var(--app-surface); color: var(--app-ink); }
+		.modal-field textarea { min-height: 118px; height: 118px; }
+		.booking-deposit { padding: 16px; border-color: var(--app-line); background: var(--app-surface-alt); }
+		.booking-deposit-head strong { color: var(--app-ink); font-size: 14px; }
+		.booking-deposit-head small, .booking-deposit-option small { color: var(--app-muted); }
+		.booking-deposit-options { grid-template-columns: minmax(0,1fr); }
+		.booking-deposit-option { min-height: 48px; padding: 10px 12px; border-color: var(--app-line); background: var(--app-surface); }
+		.booking-deposit-option:has(input:checked) { background: color-mix(in srgb, #285bd8 10%, var(--app-surface)); }
+		.booking-deposit-option strong { color: var(--app-ink); }
+		.booking-deposit-summary { background: color-mix(in srgb, #285bd8 9%, var(--app-surface)) !important; color: var(--app-ink) !important; }
+		.booking-modal form footer { margin-inline: -19px; background: var(--app-surface); border-color: var(--app-line); }
+		.booking-confirm[aria-busy="true"] { display: inline-flex; align-items: center; justify-content: center; gap: 9px; }
+		.booking-confirm[aria-busy="true"]::before { content: ""; width: 14px; height: 14px; border: 2px solid currentColor; border-right-color: transparent; border-radius: 50%; animation: reservation-spin .7s linear infinite; }
+		@keyframes reservation-spin { to { transform: rotate(360deg); } }
+		.booking-error-alert { box-shadow: none; }
+		:global(html[data-theme="dark"]) .profile-card,
+		:global(html[data-theme="dark"]) .booking-modal,
+		:global(html[data-theme="dark"]) .booking-modal form footer { background: var(--app-surface); color: var(--app-ink); }
+		:global(html[data-theme="dark"]) .booking-card,
+		:global(html[data-theme="dark"]) .booking-modal > header,
+		:global(html[data-theme="dark"]) .selected-worker,
+		:global(html[data-theme="dark"]) .modal-availability,
+		:global(html[data-theme="dark"]) .booking-deposit { border-color: var(--app-line); background: var(--app-surface-alt); }
+		:global(html[data-theme="dark"]) .booking-deposit-option,
+		:global(html[data-theme="dark"]) .modal-field input,
+		:global(html[data-theme="dark"]) .modal-field textarea,
+		:global(html[data-theme="dark"]) .modal-field select,
+		:global(html[data-theme="dark"]) .modal-availability span { border-color: var(--app-line); background: var(--app-surface); color: var(--app-ink); }
+		:global(html[data-theme="dark"]) .booking-deposit-head strong,
+		:global(html[data-theme="dark"]) .booking-deposit-option strong,
+		:global(html[data-theme="dark"]) .booking-details span { color: var(--app-ink); }
+		:global(html[data-theme="dark"]) .booking-deposit-head small,
+		:global(html[data-theme="dark"]) .booking-deposit-option small { color: var(--app-muted); }
+		:global(html[data-theme="dark"]) .booking-deposit-summary { color: var(--app-ink) !important; }
 	</style>
 </Layout>
+
+<style is:global>
+	.profile-page { color: var(--app-ink); }
+	.profile-card { border-color: var(--app-line); background: var(--app-surface); box-shadow: none; }
+	.profile-card h2, .profile-card h3 { color: var(--app-ink); }
+	.profile-card p { color: var(--app-muted); }
+	.summary-tags span { background: var(--app-surface-alt); color: var(--app-ink); border-radius: 8px; }
+	.booking-card { overflow: hidden; border: 1px solid var(--app-line); border-radius: 18px; background: var(--app-surface); }
+	.profile-page .booking-card .booking-price { background: #2856d8 !important; padding: 24px 20px; }
+	.booking-price > strong { font-size: clamp(34px, 3vw, 42px); letter-spacing: -.04em; }
+	.booking-price-label { opacity: .84; }
+	.profile-page .booking-card .booking-details { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)) !important; gap: 9px; padding: 16px; }
+	.booking-details p { min-width: 0; min-height: 78px; margin: 0 !important; padding: 12px !important; border: 0 !important; border-radius: 10px !important; background: var(--app-surface-alt) !important; }
+	.profile-page .booking-details p:last-child { grid-column: 1 / -1; }
+	.profile-page .booking-card .booking-details .booking-schedule-item { grid-column: span 2 !important; }
+	.booking-details b { color: var(--app-muted); font-size: 10px; letter-spacing: .03em; }
+	.booking-details span { color: var(--app-ink); font-size: 13px; }
+	#horariosLateral { display:flex; flex-wrap:wrap; align-content:start; gap:5px; }
+	.availability-chip { display:inline-flex; align-items:center; width:fit-content; max-width:100%; padding:5px 8px; border:1px solid color-mix(in srgb, var(--app-blue) 20%, var(--app-line)); border-radius:7px; background:color-mix(in srgb, var(--app-blue) 8%, var(--app-surface)); color:var(--app-blue); font-size:11px !important; line-height:1.35; overflow-wrap:anywhere; }
+	.booking-open { min-height: 50px; margin-bottom: 12px; border-radius: 10px !important; background: #2856d8; box-shadow: none !important; }
+	.booking-open:hover { background: #2049bc; transform: translateY(-2px); }
+	.booking-note { margin-bottom: 16px !important; color: var(--app-muted) !important; font-size: 12px !important; }
+	.booking-modal, .selected-worker, .modal-availability, .booking-deposit { border-color: var(--app-line); background: var(--app-surface); color: var(--app-ink); }
+	.modal-availability { background: var(--app-surface-alt); }
+	.modal-availability #modalHorarios { display:flex; flex-wrap:wrap; gap:6px; }
+	.modal-availability strong { color: var(--app-ink); letter-spacing: 0; }
+	.modal-availability .availability-chip { margin:0; border-color:var(--app-line); border-radius:8px; background:var(--app-surface); color:var(--app-ink); font-size:12px !important; }
+	.suggestions { gap: 8px; }
+	.suggestions > span { flex-basis: 100%; color: var(--app-muted); font-size: 12px; }
+	.suggestions button { border-color: var(--app-line); border-radius: 8px; background: var(--app-surface-alt); color: var(--app-ink); font-size: 12px; transition: color .18s ease, background-color .18s ease, transform .18s ease; }
+	.suggestions button:hover, .suggestions button.is-selected { transform: translateY(-1px); border-color: var(--app-blue); background: color-mix(in srgb, var(--app-blue) 12%, var(--app-surface)); color: var(--app-blue); }
+	.booking-deposit-option { border-color: var(--app-line); border-radius: 9px; background: var(--app-surface); }
+	.booking-deposit-option:has(input:checked) { border-color: var(--app-blue); background: color-mix(in srgb, var(--app-blue) 10%, var(--app-surface)); box-shadow: none; }
+	.booking-deposit-option strong, .booking-deposit-head strong { color: var(--app-ink); }
+	.booking-deposit-summary { background: color-mix(in srgb, var(--app-blue) 9%, var(--app-surface)) !important; color: var(--app-ink) !important; }
+	.modal-field { color: var(--app-ink); }
+	.modal-field input, .modal-field textarea, .modal-field select { border-color: var(--app-line); background: var(--app-surface); color: var(--app-ink); }
+	.booking-modal form footer { border-color: var(--app-line); background: var(--app-surface); }
+	.booking-cancel { border-color: var(--app-line); background: var(--app-surface-alt); color: var(--app-ink); }
+	.booking-success-toast span { border-color: #77c49a; background: var(--app-surface); color: var(--app-ink); box-shadow: none; animation: booking-confirm-in .26s ease both; }
+	@keyframes booking-confirm-in { from { opacity: 0; transform: translateY(10px) scale(.98); } to { opacity: 1; transform: translateY(0) scale(1); } }
+	:root[data-theme="dark"] .booking-details p, :root[data-theme="dark"] .selected-worker,
+	:root[data-theme="dark"] .modal-availability, :root[data-theme="dark"] .booking-deposit,
+	:root[data-theme="dark"] .booking-deposit-option, :root[data-theme="dark"] .booking-modal,
+	:root[data-theme="dark"] .booking-modal form footer { background: var(--app-surface-alt); color: var(--app-ink); }
+	:root[data-theme="dark"] .modal-field input, :root[data-theme="dark"] .modal-field textarea,
+	:root[data-theme="dark"] .modal-field select, :root[data-theme="dark"] .modal-availability .availability-chip { background: var(--app-surface); color: var(--app-ink); }
+	@media (max-width: 600px) {
+		.profile-page .booking-card .booking-details { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; gap: 7px; padding: 12px; }
+		.booking-details p { min-height: 70px; padding: 10px !important; }
+		.booking-details span { font-size: 12px; }
+	}
+	@media (prefers-reduced-motion: reduce) { .booking-success-toast span { animation: none; } }
+	/* Reseñas y galería con una estructura compacta, uniforme y compatible con ambos temas. */
+	.reviews-section { display: grid; gap: 14px; }
+	.reviews-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
+	.reviews-heading h2 { margin: 3px 0 4px !important; }
+	.reviews-heading p { margin: 0 !important; font-size: 13px !important; line-height: 1.5 !important; }
+	.reviews-eyebrow { color: var(--app-blue); font-size: 10px; font-weight: 800; letter-spacing: .12em; }
+	.reviews-total { flex: none; padding: 6px 10px; border: 1px solid var(--app-line); border-radius: 8px; background: var(--app-surface-alt); color: var(--app-muted); font-size: 11px; font-weight: 700; }
+	.rating-summary { display: flex; align-items: center; gap: 16px; margin: 0 !important; padding: 15px 17px; border: 1px solid var(--app-line); border-radius: 12px; background: var(--app-surface-alt); }
+	.rating-score { display: flex; align-items: baseline; gap: 4px; }
+	.rating-score strong { color: var(--app-ink) !important; font-size: 32px !important; line-height: 1; font-variant-numeric: tabular-nums; }
+	.rating-score > span { color: var(--app-muted); font-size: 12px; }
+	.rating-summary-copy { display: grid; gap: 3px; }
+	.rating-summary-copy > span { color: #d59600; font-size: 16px; letter-spacing: .08em; }
+	.rating-summary-copy small { color: var(--app-muted); font-size: 12px; }
+	.rating-breakdown { margin: 0 4px 2px !important; }
+	.rating-breakdown { display: grid; gap: 7px; }
+	.rating-breakdown[hidden] { display: none !important; }
+	.rating-breakdown-row { display: grid; grid-template-columns: 42px minmax(0, 1fr) 24px; align-items: center; gap: 10px; color: var(--app-muted); }
+	.rating-breakdown-row > span:first-child { color: var(--app-ink); }
+	.rating-breakdown-row small { color: var(--app-muted); }
+	.rating-bar-track { display: block; height: 6px; overflow: hidden; border-radius: 999px; background: var(--app-surface-alt); }
+	.rating-bar-fill { display: block; height: 100%; border-radius: inherit; background: #e8ae29; }
+	.review-list { display: grid; gap: 10px; }
+	.review-item { display: grid; gap: 12px; margin: 0; padding: 14px; border: 1px solid var(--app-line); border-radius: 12px; background: var(--app-surface); }
+	.review-header { display: grid; grid-template-columns: 68px minmax(0, 1fr) auto; align-items: center; gap: 12px; min-width: 0; }
+	.review-service-thumb { position: relative; display: grid; width: 68px; height: 58px; overflow: hidden; place-items: center; border: 1px solid var(--app-line); border-radius: 9px; background: var(--app-surface-alt); }
+	.review-service-thumb img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+	.review-thumb-fallback { display: grid; width: 100%; height: 100%; place-items: center; color: var(--app-blue); }
+	.review-thumb-fallback svg { width: 22px; height: 22px; }
+	.review-heading-copy { min-width: 0; }
+	.review-service-title { display: -webkit-box; margin: 0 0 4px !important; overflow: hidden; color: var(--app-ink) !important; font-size: 14px !important; font-weight: 750; line-height: 1.35; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
+	.review-byline { margin: 0 !important; color: var(--app-muted) !important; font-size: 11px !important; line-height: 1.4 !important; }
+	.review-score { display: inline-flex; align-items: center; gap: 3px; padding: 6px 8px; border: 1px solid color-mix(in srgb, #d59600 30%, var(--app-line)); border-radius: 8px; background: color-mix(in srgb, #d59600 10%, var(--app-surface)); color: #9a6800; font-size: 12px; font-weight: 800; font-variant-numeric: tabular-nums; white-space: nowrap; }
+	.review-comment { margin: 0 !important; padding: 10px 12px; color: var(--app-ink) !important; font-size: 13px !important; line-height: 1.6 !important; }
+	.review-photo-strip { display: flex; flex-wrap: wrap; gap: 7px; }
+	.review-photo-link { display: block; width: 64px; height: 48px; overflow: hidden; border: 1px solid var(--app-line); border-radius: 7px; background: var(--app-surface-alt); }
+	.review-photo-link img { display: block; width: 100%; height: 100%; object-fit: cover; transition: transform .2s ease; }
+	.review-photo-link:hover img { transform: scale(1.05); }
+	.review-photo-link:focus-visible { outline: 2px solid var(--app-blue); outline-offset: 2px; }
+	/* Reseñas compactas: el contenido destacado es la experiencia y su foto real. */
+	.reviews-section { gap: 14px; box-shadow: none !important; }
+	.reviews-heading h2 { margin: 0 !important; font-size: 18px !important; }
+	.profile-card .rating-summary { display: flex !important; flex-wrap: wrap; align-items: baseline; gap: 7px 11px; margin: 0 !important; padding: 0; border: 0; border-radius: 0; background: transparent; box-shadow: none; }
+	.profile-card .rating-summary > strong { color: #e8a32a !important; font-size: 25px !important; font-variant-numeric: tabular-nums; line-height: 1; }
+	.rating-out-of { margin-left: -8px; color: var(--app-muted); font-size: 12px; white-space: nowrap; }
+	.rating-summary-stars { color: #e8a32a !important; font-size: 14px; letter-spacing: .05em !important; line-height: 1; white-space: nowrap; }
+	.rating-summary-count { color: var(--app-muted); font-size: 12px; white-space: nowrap; }
+	.review-list { gap: 0; }
+	.review-item { grid-template-columns: minmax(0, 1fr); gap: 11px; padding: 18px 0; border: 0; border-bottom: 1px solid var(--app-line); border-radius: 0; background: transparent; box-shadow: none; }
+	.review-item:last-child { border-bottom: 0; }
+	.review-header { grid-template-columns: 48px minmax(0, 1fr) auto; gap: 13px; }
+	.review-avatar { display: grid; width: 46px; height: 46px; place-items: center; border-radius: 50%; background: var(--app-blue); color: #fff; font-size: 17px; font-weight: 750; }
+	.review-customer-name { display: block; overflow: hidden; color: var(--app-ink); font-size: 14px; font-weight: 750; text-overflow: ellipsis; white-space: nowrap; }
+	.review-meta-row { display: flex; align-items: center; gap: 9px; margin-top: 4px; }
+	.review-stars { color: #e8a32a; font-size: 13px; letter-spacing: .04em; line-height: 1; white-space: nowrap; }
+	.review-date { color: var(--app-muted); font-size: 11px; }
+	.review-score { display: inline-flex; align-items: baseline; gap: 2px; padding: 0; border: 0; border-radius: 0; background: transparent; color: var(--app-muted); font-size: 14px; font-weight: 500; }
+	.review-score strong { color: var(--app-ink) !important; font-size: 20px; line-height: 1; }
+	.review-comment { margin: 0 0 0 61px !important; padding: 0 !important; border: 0 !important; background: transparent !important; color: var(--app-muted) !important; font-size: 14px !important; font-style: italic; line-height: 1.55 !important; }
+	.review-photo-strip { margin-left: 61px; gap: 8px; }
+	.review-photo-link { width: 80px; height: 78px; border-radius: 9px; box-shadow: none; }
+	:root[data-theme="dark"] .review-comment { color: var(--app-muted) !important; }
+	.reviews-empty { display: grid; justify-items: center; gap: 7px; padding: 26px 18px; border: 1px dashed var(--app-line); border-radius: 12px; text-align: center; }
+	.reviews-empty-icon { display: grid; width: 38px; height: 38px; place-items: center; border-radius: 10px; background: var(--app-surface-alt); color: var(--app-blue); }
+	.reviews-empty-icon svg { width: 20px; height: 20px; }
+	.reviews-empty strong { color: var(--app-ink); font-size: 13px; }
+	.reviews-empty > span:last-child { max-width: 38ch; color: var(--app-muted); font-size: 12px; line-height: 1.5; }
+	.work-gallery { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 11px; }
+	.gallery-tile { aspect-ratio: 4 / 3; border: 1px solid var(--app-line); border-radius: 11px; background: var(--app-surface-alt); }
+	@media (max-width: 600px) {
+		.reviews-section { gap: 12px; }
+		.profile-card .rating-summary { gap: 7px 10px; }
+		.review-item { padding: 15px 0; }
+		.review-header { grid-template-columns: 42px minmax(0, 1fr) auto; gap: 10px; }
+		.review-avatar { width: 40px; height: 40px; font-size: 15px; }
+		.review-score strong { font-size: 18px; }
+		.review-comment, .review-photo-strip { margin-left: 50px !important; }
+		.review-photo-link { width: 72px; height: 70px; }
+		.work-gallery { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 9px; }
+	}
+	@media (prefers-reduced-motion: reduce) { .gallery-tile img, .review-photo-link img { transition: none; } }
+</style>

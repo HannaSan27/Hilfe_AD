@@ -15,6 +15,13 @@ const {
 		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
 		<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
 		<link rel="icon" href="/favicon.ico" />
+		<script is:inline>
+			(function () {
+				var tema = 'light';
+				try { tema = localStorage.getItem('theme') || 'light'; } catch (e) {}
+				document.documentElement.setAttribute('data-theme', tema);
+			})();
+		</script>
 		<link rel="preconnect" href="https://fonts.googleapis.com" />
 		<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 		<link
@@ -22,6 +29,39 @@ const {
 			rel="stylesheet"
 		/>
 		<title>{title}</title>
+		<style is:global>
+			:root {
+				color-scheme: light;
+				--app-page: #f5f7fb;
+				--app-surface: #ffffff;
+				--app-surface-alt: #edf2f8;
+				--app-ink: #172033;
+				--app-muted: #64748b;
+				--app-line: #d9e1ec;
+				--app-blue: #2856d8;
+			}
+			:root[data-theme="dark"] {
+				color-scheme: dark;
+				--app-page: #111722;
+				--app-surface: #171f2b;
+				--app-surface-alt: #202b39;
+				--app-ink: #e8edf5;
+				--app-muted: #aab5c4;
+				--app-line: #344255;
+				--app-blue: #7ca5ff;
+			}
+			body { background-color: var(--app-page); color: var(--app-ink); }
+			*, *::before, *::after {
+				box-shadow: none !important;
+				text-shadow: none !important;
+				backdrop-filter: none !important;
+				-webkit-backdrop-filter: none !important;
+			}
+			:focus-visible { outline: 2px solid var(--app-blue); outline-offset: 3px; }
+			@media (prefers-reduced-motion: reduce) {
+				*, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
+			}
+		</style>
 	<script is:inline>
 	(function () {
 		var ruta = window.location.pathname.replace(/\/+$/, '') || '/';
@@ -73,6 +113,44 @@ const {
 	</head>
 	<body>
 		<slot />
+		<style is:global>
+			/* Shared surface and text tokens used by the marketing pages and role dashboards. */
+			:root {
+				--bg-body: var(--app-page) !important;
+				--bg-card: var(--app-surface) !important;
+				--bg-card-alt: var(--app-surface-alt) !important;
+				--bg-elevated: var(--app-surface) !important;
+				--bg-nav: var(--app-surface) !important;
+				--text: var(--app-ink) !important;
+				--text-secondary: var(--app-muted) !important;
+				--text-muted: var(--app-muted) !important;
+				--border: var(--app-line) !important;
+				--border-light: var(--app-line) !important;
+				--input-bg: var(--app-surface) !important;
+				--input-border: var(--app-line) !important;
+				--primary: var(--app-blue) !important;
+				--primary-dark: var(--app-blue) !important;
+				--primary-soft: var(--app-surface-alt) !important;
+				--shadow-sm: none !important;
+				--shadow: none !important;
+				--shadow-lg: none !important;
+				--shadow-xl: none !important;
+			}
+			:root[data-theme="dark"] {
+				--success-soft: #183c31 !important;
+				--warning-soft: #443716 !important;
+				--danger-soft: #44272b !important;
+				--info-soft: #203751 !important;
+				--tag-bg: var(--app-surface-alt) !important;
+				--tag-color: var(--app-ink) !important;
+				--hover-bg: var(--app-surface-alt) !important;
+			}
+			body { background: var(--app-page) !important; color: var(--app-ink); }
+			::selection { background: color-mix(in srgb, var(--app-blue) 24%, transparent); }
+			@media (prefers-reduced-motion: reduce) {
+				*, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
+			}
+		</style>
 
 		<script is:inline>
 			(function () {
@@ -86,12 +164,12 @@ const {
 					aviso.setAttribute('role', 'status');
 					aviso.setAttribute('aria-live', 'polite');
 					aviso.textContent = mensajeLogin;
-					aviso.style.cssText = 'position:fixed;top:20px;right:20px;z-index:5000;padding:12px 18px;border:1px solid #86efac;border-radius:12px;background:#f0fdf4;color:#166534;box-shadow:0 12px 36px rgba(15,23,42,.18);font:600 14px Inter,system-ui,sans-serif;opacity:0;transform:translateY(-8px);transition:opacity .2s ease,transform .2s ease';
+					aviso.style.cssText = 'position:fixed;top:24px;left:50%;z-index:5000;max-width:min(92vw,520px);padding:13px 20px;border:1px solid var(--app-line);border-radius:14px;background:var(--app-surface);color:var(--app-ink);font:600 14px Inter,system-ui,sans-serif;text-align:center;opacity:0;transform:translate(-50%,-10px);transition:opacity .24s ease,transform .24s ease';
 					document.body.appendChild(aviso);
-					requestAnimationFrame(function () { aviso.style.opacity = '1'; aviso.style.transform = 'translateY(0)'; });
+					requestAnimationFrame(function () { aviso.style.opacity = '1'; aviso.style.transform = 'translate(-50%,0)'; });
 					window.setTimeout(function () {
 						aviso.style.opacity = '0';
-						aviso.style.transform = 'translateY(-8px)';
+						aviso.style.transform = 'translate(-50%,-10px)';
 						window.setTimeout(function () { aviso.remove(); }, 220);
 					}, 3200);
 				}

@@ -252,6 +252,17 @@ export async function login(ctx: Context) {
     return;
   }
 
+  if (![1, 2, 3].includes(Number(usuario.Id_Rol))) {
+    ctx.response.status = 403;
+    ctx.response.body = { mensaje: "Esta cuenta no tiene un rol válido. Contacta al administrador.", codigo: "ROL_INVALIDO" };
+    return;
+  }
+  if (usuario.Estado && usuario.Estado !== "Activo") {
+    ctx.response.status = 403;
+    ctx.response.body = { mensaje: "Esta cuenta está desactivada. Contacta al administrador.", codigo: "CUENTA_INACTIVA" };
+    return;
+  }
+
   // Verificación de estado de autorización
   const esAdmin = Number(usuario.Id_Rol) === 1;
   const estadoVerif = usuario.Estado_Verificacion || (usuario.Verificado === 1 ? "aprobado" : "pendiente");

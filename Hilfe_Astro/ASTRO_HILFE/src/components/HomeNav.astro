@@ -50,7 +50,7 @@ import BotonBilletera from './BotonBilletera.astro';
 	</div>
 </nav>
 
-<div class="help-chat" id="helpChat">
+<div class="help-chat" id="helpChat" data-api-base={import.meta.env.PUBLIC_API_BASE_URL || 'http://127.0.0.1:8000/api'}>
 	<section class="help-chat-panel" id="helpChatPanel" aria-label="Chat de ayuda" hidden>
 		<header class="help-chat-header">
 			<div><strong>Ayuda Hilf'e</strong><span>Pregúntame lo que necesites</span></div>
@@ -68,7 +68,7 @@ import BotonBilletera from './BotonBilletera.astro';
 		<form class="help-chat-form" id="helpChatForm">
 			<label class="sr-only" for="helpChatInput">Escribe tu pregunta</label>
 			<input id="helpChatInput" type="text" placeholder="Escribe tu pregunta…" autocomplete="off" />
-			<button type="submit" aria-label="Enviar pregunta">Enviar</button>
+			<button type="submit" id="helpChatSend" aria-label="Enviar pregunta">Enviar</button>
 		</form>
 	</section>
 	<button type="button" class="help-chat-toggle" id="helpChatToggle" aria-expanded="false" aria-controls="helpChatPanel">
@@ -132,12 +132,15 @@ import BotonBilletera from './BotonBilletera.astro';
 		var helpToggle = document.getElementById('helpChatToggle');
 		var helpInput = document.getElementById('helpChatInput');
 		var helpMessages = document.getElementById('helpChatMessages');
+		var helpRoot = document.getElementById('helpChat');
+		var helpSend = document.getElementById('helpChatSend');
 		var temporizadorInactividadAyuda = null;
 		var temporizadorCierreChatAyuda = null;
 		var esperaDecisionInactividad = false;
 		var conversacionFinalizadaAyuda = false;
 		var accionesAyudaActuales = [];
 		var accionesAntesInactividad = [];
+		var procesandoAyuda = false;
 		var bienvenidaChatAyuda = '¡Hola! Puedo responder tus preguntas, buscar profesionales, consultar sus horarios y ayudarte a agendar. ¿Qué necesitas?';
 		function toggleHelpChat(open) {
 			helpPanel.hidden = !open;
@@ -160,7 +163,7 @@ import BotonBilletera from './BotonBilletera.astro';
 			if (links) links.classList.remove('open');
 			if (actions) actions.classList.remove('open');
 		});
-		var apiAyuda = 'http://127.0.0.1:8000/api';
+		var apiAyuda = (helpRoot && helpRoot.dataset.apiBase || 'http://127.0.0.1:8000/api').replace(/\/+$/, '');
 		var flujoReserva = null;
 		var busquedaProfesional = null;
 		var historialAyuda = [{ role: 'assistant', content: bienvenidaChatAyuda, reserva: false }];
@@ -173,37 +176,105 @@ import BotonBilletera from './BotonBilletera.astro';
 		}
 		function fechaProximoDia(dia) {
 			var fecha = new Date();
-			var diferencia = (dia - fecha.getDay() + 7) % 7 || 7;
+			var diferencia = (dia - fecha.getDay() + 7) % 7;
 			fecha.setDate(fecha.getDate() + diferencia);
 			return [fecha.getFullYear(), String(fecha.getMonth() + 1).padStart(2, '0'), String(fecha.getDate()).padStart(2, '0')].join('-');
 		}
+		function etiquetaDiaConFecha(nombreDia) {
+			var dias = ['domingo', 'lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado'];
+			var dia = normalizarAyuda(nombreDia).trim();
+			var indice = dias.indexOf(dia);
+			if (indice < 0) return String(nombreDia || 'Día');
+			var partes = fechaProximoDia(indice).split('-').map(Number);
+			var meses = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
+			var fecha = new Date(partes[0], partes[1] - 1, partes[2]);
+			return dias[indice] + ' ' + fecha.getDate() + ' de ' + meses[fecha.getMonth()];
+		}
+		function diaDeFechaLocal(fechaTexto) {
+			var partes = String(fechaTexto || '').match(/^(\d{4})-(\d{2})-(\d{2})$/);
+			if (!partes) return -1;
+			var fecha = new Date(Number(partes[1]), Number(partes[2]) - 1, Number(partes[3]));
+			if (fecha.getFullYear() !== Number(partes[1]) || fecha.getMonth() !== Number(partes[2]) - 1 || fecha.getDate() !== Number(partes[3])) return -1;
+			return fecha.getDay();
+		}
+		function analizarFechaAyuda(texto) {
+			var q = normalizarAyuda(texto).trim();
+			var iso = q.match(/\b(\d{4})-(\d{1,2})-(\d{1,2})\b/);
+			var local = q.match(/\b(\d{1,2})[\/](\d{1,2})[\/](\d{4})\b/);
+			var fecha = '';
+			if (iso) fecha = [iso[1], String(iso[2]).padStart(2, '0'), String(iso[3]).padStart(2, '0')].join('-');
+			else if (local) fecha = [local[3], String(local[2]).padStart(2, '0'), String(local[1]).padStart(2, '0')].join('-');
+			else if (/\bpasado manana\b/.test(q)) {
+				var pasadoManana = new Date(); pasadoManana.setDate(pasadoManana.getDate() + 2);
+				fecha = [pasadoManana.getFullYear(), String(pasadoManana.getMonth() + 1).padStart(2, '0'), String(pasadoManana.getDate()).padStart(2, '0')].join('-');
+			} else if (/\bmanana\b/.test(q)) {
+				var manana = new Date(); manana.setDate(manana.getDate() + 1);
+				fecha = [manana.getFullYear(), String(manana.getMonth() + 1).padStart(2, '0'), String(manana.getDate()).padStart(2, '0')].join('-');
+			} else if (/\bhoy\b/.test(q)) {
+				var hoy = new Date();
+				fecha = [hoy.getFullYear(), String(hoy.getMonth() + 1).padStart(2, '0'), String(hoy.getDate()).padStart(2, '0')].join('-');
+			} else {
+				var dia = diaSolicitado(q);
+				if (dia >= 0) fecha = fechaProximoDia(dia);
+			}
+			var indiceDia = diaDeFechaLocal(fecha);
+			if (indiceDia < 0) return null;
+			var dias = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
+			return { fecha: fecha, dia: indiceDia, nombreDia: dias[indiceDia], explicita: Boolean(iso || local) };
+		}
+		function extraerUbicacionAyuda(servicios, texto) {
+			var q = normalizarAyuda(texto);
+			var ubicaciones = Array.from(new Set((servicios || []).map(function (s) { return String(s.Ubicacion || '').trim(); }).filter(Boolean)))
+				.sort(function (a, b) { return b.length - a.length; });
+			for (var i = 0; i < ubicaciones.length; i++) {
+				var ubicacion = normalizarAyuda(ubicaciones[i]);
+				if (ubicacion.length > 2 && q.includes(ubicacion)) return ubicacion;
+			}
+			var tokensQ = q.split(/[^a-z0-9]+/).filter(Boolean);
+			for (var j = 0; j < ubicaciones.length; j++) {
+				var tokensLugar = normalizarAyuda(ubicaciones[j]).split(/[^a-z0-9]+/).filter(function (p) { return p.length > 3; });
+				var tokenCoincidente = tokensLugar.find(function (p) { return tokensQ.includes(p); });
+				if (tokenCoincidente) return tokenCoincidente;
+			}
+			var indicada = q.match(/\b(?:en|de|cerca de)\s+(?:la ciudad de\s+|el municipio de\s+)?([a-z0-9]+(?:\s+[a-z0-9]+){0,2})/);
+			if (indicada) {
+				var partes = indicada[1].split(/\s+/).filter(function (p) { return !/^(el|la|los|las|un|una|para|con|servicio|plomero|plomeria|electricista|aseo|disponible|disponibilidad|lunes|martes|miercoles|jueves|viernes|sabado|domingo)$/.test(p); });
+				if (partes.length) return partes.join(' ');
+			}
+			return '';
+		}
 		async function consultarDisponibilidadChat(pregunta) {
 			var q = normalizarAyuda(pregunta);
-			var dia = diaSolicitado(q);
-			if (dia < 0 || !(/disponib|quien.*(atiende|trabaja|puede|libre)|hay.*profesional|busco.*profesional/.test(q))) return false;
-			var nombresDias = ['domingo', 'lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado'];
-			var fecha = fechaProximoDia(dia);
+			var fechaPedida = analizarFechaAyuda(q);
+			var expresaDisponibilidad = /disponib|horario|quien.*(atiende|trabaja|puede|libre)|hay.*profesional|busco.*profesional/.test(q);
+			if (!fechaPedida || !expresaDisponibilidad) return false;
+			var diaEscrito = diaSolicitado(q);
+			if (fechaPedida.explicita && diaEscrito >= 0 && diaEscrito !== fechaPedida.dia) {
+				addHelpMessage('La fecha ' + fechaPedida.fecha + ' cae ' + fechaPedida.nombreDia + ', no ' + ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'][diaEscrito] + '. Consultaré la disponibilidad para el día que corresponde a la fecha.', 'bot');
+			}
 			try {
 				var respuesta = await fetch(apiAyuda + '/servicios');
 				if (!respuesta.ok) throw new Error();
 				var servicios = await respuesta.json();
 				if (!Array.isArray(servicios)) servicios = servicios.value || [];
-				var stop = /^(quien|esta|estan|disponible|disponibles|para|el|la|los|las|este|esta|proximo|proxima|hay|algun|alguna|profesional|profesionales|trabajador|trabajadores|atiende|trabaja|puede|libre|busco|servicio|servicios|de|en|por|favor|me|pueden|puede|lunes|martes|miercoles|jueves|viernes|sabado|domingo)$/;
-				var terminos = q.replace(/\b(lunes|martes|miercoles|jueves|viernes|sabado|domingo)\b/g, ' ').split(/\s+/).filter(function (p) { return p.length > 2 && !stop.test(p); });
-				if (terminos.length) {
-					var coinciden = servicios.filter(function (s) {
-						var datos = normalizarAyuda([s.Titulo, s.Nombre_Categoria, s.Nombre_Trabajador, s.Ubicacion].join(' '));
-						return terminos.some(function (p) { return datos.includes(p); });
-					});
-					if (coinciden.length) servicios = coinciden;
-				}
+				var ubicacion = extraerUbicacionAyuda(servicios, q);
+				var stop = /^(quien|esta|estan|disponible|disponibles|disponibilidad|horario|horarios|para|el|la|los|las|este|esta|proximo|proxima|hay|algun|alguna|profesional|profesionales|trabajador|trabajadores|atiende|trabaja|puede|libre|busco|servicio|servicios|de|en|por|favor|me|pueden|lunes|martes|miercoles|jueves|viernes|sabado|domingo|hoy|manana|pasado|fecha|dia|del|que|quien|un|una)$/;
+				var sinFecha = q.replace(/\b\d{4}-\d{1,2}-\d{1,2}\b|\b\d{1,2}\/\d{1,2}\/\d{4}\b/g, ' ')
+					.replace(/\b(lunes|martes|miercoles|jueves|viernes|sabado|domingo|hoy|manana|pasado manana)\b/g, ' ');
+				var terminos = sinFecha.split(/[^a-z0-9]+/).filter(function (p) { return p.length > 2 && !stop.test(p) && (!ubicacion || !ubicacion.includes(p)); });
+				servicios = servicios.filter(function (s) {
+					var datosServicio = normalizarAyuda([s.Titulo, s.Nombre_Categoria, s.Nombre_Trabajador].join(' '));
+					var coincideServicio = !terminos.length || terminos.some(function (p) { return datosServicio.includes(p); });
+					var coincideUbicacion = !ubicacion || normalizarAyuda(s.Ubicacion).includes(ubicacion);
+					return coincideServicio && coincideUbicacion;
+				});
 				var respuestaHorarios = await fetch(apiAyuda + '/disponibilidad');
 				if (!respuestaHorarios.ok) throw new Error();
 				var horarios = await respuestaHorarios.json();
 				if (!Array.isArray(horarios)) horarios = horarios.value || [];
 				var resultados = servicios.map(function (s) {
 					var coincidencias = horarios.filter(function (h) {
-						return String(h.Id_Servicio) === String(s.Id_Servicio) && normalizarAyuda(h.Dia_Semana) === nombresDias[dia];
+						return String(h.Id_Servicio) === String(s.Id_Servicio) && normalizarAyuda(h.Dia_Semana) === normalizarAyuda(fechaPedida.nombreDia);
 					});
 					if (!coincidencias.length) return null;
 					return { servicio: s, horas: coincidencias.map(function (h) {
@@ -213,11 +284,11 @@ import BotonBilletera from './BotonBilletera.astro';
 				});
 				resultados = resultados.filter(Boolean).slice(0, 6);
 				if (!resultados.length) {
-					addHelpMessage('No encontré servicios con horario publicado para el ' + nombresDias[dia] + ' ' + fecha + (terminos.length ? ' que coincidan con lo que buscas.' : '.') + ' Si me dices qué servicio y ciudad necesitas, puedo afinar la búsqueda.', 'bot');
+					addHelpMessage('No encontré profesionales con horario publicado para el ' + fechaPedida.nombreDia + ' ' + fechaPedida.fecha + (terminos.length ? ' que coincidan con ' + terminos.join(' ') : '') + (ubicacion ? ' en ' + ubicacion : '') + '. Prueba con otra fecha, servicio o ubicación.', 'bot');
 					accionesAyuda([{ label: 'Ver categorías', action: 'categories' }]);
 					return true;
 				}
-				addHelpMessage('Para el ' + nombresDias[dia] + ' ' + fecha + ' encontré estos horarios publicados:\n' + resultados.map(function (r) {
+				addHelpMessage('Para el ' + fechaPedida.nombreDia + ' ' + fechaPedida.fecha + (ubicacion ? ' en ' + ubicacion : '') + ' encontré estos horarios publicados:\n' + resultados.map(function (r) {
 					var s = r.servicio;
 					return '• ' + (s.Nombre_Trabajador || 'Profesional') + ' — ' + (s.Titulo || s.Nombre_Categoria || 'Servicio') + ' (' + (s.Ubicacion || 'ubicación no indicada') + '): ' + r.horas;
 				}).join('\n') + '\n\nEl horario publicado no confirma que cada hora siga libre; la disponibilidad exacta se verifica al enviar la solicitud.', 'bot');
@@ -239,7 +310,7 @@ import BotonBilletera from './BotonBilletera.astro';
 			var esperandoCiudadPorContexto = /ciudad|barrio|zona/.test(ultimaRespuesta) && /profesional|servicio|busc/.test(ultimaRespuesta);
 			var stop = /^(quiero|busco|buscar|necesito|necesitamos|un|una|unos|unas|el|la|los|las|de|del|en|por|favor|profesional|profesionales|trabajador|trabajadores|servicio|servicios|alguien|que|me|ayude|ayuda|para|con|tienes|tienen|hay|puedes|puede|como|contactar|contacto|ver|encontrar|ciudad|barrio|zona|esta|estoy|vivo|disponible|disponibles|lunes|martes|miercoles|jueves|viernes|sabado|domingo)$/;
 			var terminos = q.split(/[^a-z0-9]+/).filter(function (p) { return p.length > 2 && !stop.test(p); });
-			var servicioDirecto = /\b(manicure|manicura|peluqueria|plomeria|aseo|limpieza|belleza|electricista|carpinteria|pintura|jardineria|cerrajeria|mudanza|domicilio|mandados)\b/.test(q);
+			var servicioDirecto = /\b(manicure|manicura|peluqueria|plomeros?|plomeria|fontaneros?|fontaneria|fugas?|aseo|limpieza|belleza|electricista|carpinteria|pintura|jardineria|cerrajeria|mudanza|domicilio|mandados)\b/.test(q);
 			var inicioExplicito = /\b(busca|buscar|busco|necesito|quiero|encuentra|encontrar|contactar|ver perfil)\b/.test(q) && /\b(profesional|trabajador|servicio|manicure|manicura|plomer|aseo|belleza|electric|carpinter|pintor|jardin|tecnico)\w*/.test(q);
 			var busquedaDirecta = servicioDirecto && !/[?¿]/.test(pregunta) && terminos.length <= 4;
 			if (!busquedaProfesional && !inicioExplicito && !busquedaDirecta && !esperandoCiudadPorContexto) return false;
@@ -249,15 +320,12 @@ import BotonBilletera from './BotonBilletera.astro';
 				if (!respuesta.ok) throw new Error();
 				var servicios = await respuesta.json();
 				if (!Array.isArray(servicios)) servicios = servicios.value || [];
-				var ubicacionConocida = servicios.map(function (s) { return String(s.Ubicacion || '').trim(); }).filter(Boolean).find(function (ubicacion) {
-					var ubicacionNormalizada = normalizarAyuda(ubicacion);
-					return q.includes(ubicacionNormalizada) || ubicacionNormalizada.split(/[^a-z0-9]+/).some(function (parte) { return parte.length > 3 && q.split(/[^a-z0-9]+/).includes(parte); });
-				});
+				var ubicacionConocida = extraerUbicacionAyuda(servicios, q);
 				if (busquedaProfesional && busquedaProfesional.paso === 'ciudad') {
 					busquedaProfesional.ubicacion = ubicacionConocida || pregunta.trim();
 					busquedaProfesional.paso = 'resultados';
 				} else {
-					var terminosServicio = terminos.filter(function (p) { return !ubicacionConocida || !normalizarAyuda(ubicacionConocida).includes(p); });
+					var terminosServicio = terminos.filter(function (p) { return !ubicacionConocida || !ubicacionConocida.includes(p); });
 					var candidatos = terminosServicio.length ? servicios.filter(function (s) {
 						var datos = normalizarAyuda([s.Titulo, s.Nombre_Categoria].join(' '));
 						return terminosServicio.some(function (p) { return datos.includes(p); });
@@ -326,11 +394,24 @@ import BotonBilletera from './BotonBilletera.astro';
 					})
 				});
 				var data = await response.json().catch(function () { return {}; });
-				if (!response.ok) throw new Error(data.mensaje || 'No pude consultar al asistente. Inténtalo de nuevo.');
-				return data.respuesta || 'No recibí una respuesta. Inténtalo de nuevo.';
-			} catch (error) {
-				return error && error.message ? error.message : 'No hay conexión con el asistente en este momento.';
+				if (!response.ok) throw new Error(data.mensaje || 'No pude consultar al asistente.');
+				return data.respuesta || respuestaLocalAyuda(pregunta);
+			} catch (_) {
+				return respuestaLocalAyuda(pregunta);
 			}
+		}
+		function respuestaLocalAyuda(pregunta) {
+			var q = normalizarAyuda(pregunta);
+			if (/^(hola|buenas|buenos dias|buenas tardes|buenas noches|hey|que tal)[!.?\s]*$/.test(q)) return '¡Hola! Puedo ayudarte a buscar profesionales, revisar perfiles y horarios o agendar un servicio. ¿Qué necesitas?';
+			if (/calific|resena|estrell/.test(q)) return 'Cuando el servicio aparezca como finalizado, ve a “Mis solicitudes”, abre esa solicitud y envía tu calificación. Cada servicio se puede calificar una sola vez.';
+			if (/billetera|saldo|recarg|abono|pago/.test(q)) return 'Tu saldo y movimientos están en “Mi billetera”. Antes de confirmar una solicitud, revisa el valor del abono y que tengas saldo suficiente.';
+			if (/horario|disponib|fecha|hora/.test(q)) return 'Los horarios publicados aparecen en el perfil del profesional. La hora se vuelve a validar al enviar la solicitud; el horario publicado no garantiza que siga libre.';
+			if (/registr|crear cuenta|cuenta/.test(q)) return 'Pulsa “Registrarse” y elige si quieres contratar como cliente o trabajar como profesional. Completa los datos solicitados para crear la cuenta.';
+			if (/contact|telefono|celular/.test(q)) return 'Abre el perfil del profesional desde “Categorías” o desde los resultados y usa la opción de contacto que aparece allí.';
+			if (/agend|reserv|solicitud|contratar/.test(q)) return 'Elige un servicio y un profesional, selecciona fecha, hora y dirección, y confirma el abono. La solicitud queda pendiente hasta que el profesional la acepte.';
+			if (/profesional|trabajador|servicio|categoria|categorias|buscar|encontrar|plom|fuga|electric|aseo|limpieza/.test(q)) return 'Ve a “Categorías”, busca el servicio que necesitas y abre el perfil de un profesional para revisar precio, experiencia y disponibilidad. Desde allí puedes continuar con la solicitud.';
+			if (/gracias|listo|perfecto/.test(q)) return '¡Con gusto! Si necesitas otra cosa sobre un servicio o tu cuenta, dime y te indico cómo continuar.';
+			return 'Puedo orientarte sobre cómo buscar profesionales, revisar perfiles y horarios, agendar, consultar tu billetera o calificar un trabajo. Cuéntame qué quieres hacer y te indico el siguiente paso.';
 		}
 		function addHelpMessage(text, kind) {
 			var message = document.createElement('div');
@@ -354,7 +435,7 @@ import BotonBilletera from './BotonBilletera.astro';
 		function programarTemporizadorInactividad() {
 			window.clearTimeout(temporizadorInactividadAyuda);
 			temporizadorInactividadAyuda = null;
-			if (helpPanel.hidden || esperaDecisionInactividad || conversacionFinalizadaAyuda) return;
+			if (helpPanel.hidden || esperaDecisionInactividad || conversacionFinalizadaAyuda || procesandoAyuda) return;
 			temporizadorInactividadAyuda = window.setTimeout(function () {
 				temporizadorInactividadAyuda = null;
 				esperaDecisionInactividad = true;
@@ -436,6 +517,59 @@ import BotonBilletera from './BotonBilletera.astro';
 				addHelpMessage(error.message + ' Puedes abrir “Categorías” y seleccionar “Ver perfil” para agendar desde allí.', 'bot');
 			}
 		}
+		async function seleccionarServicioPorTexto(texto) {
+			if (!flujoReserva) return false;
+			var q = normalizarAyuda(texto)
+				.replace(/\b(plomeros?|plomeria|fontaneros?|fontaneria)\b/g, ' plomer ')
+				.replace(/\b(necesito|quiero|busco|por favor|un|una|el|la|servicio|servicios|agendar|reservar|contratar|con|para)\b/g, ' ')
+				.replace(/\s+/g, ' ').trim();
+			var palabras = q.split(/[^a-z0-9]+/).filter(function (p) { return p.length > 2; });
+			try {
+				var response = await fetch(apiAyuda + '/servicios');
+				if (!response.ok) throw new Error();
+				var catalogo = await response.json(); if (!Array.isArray(catalogo)) catalogo = catalogo.value || [];
+				var ubicacion = extraerUbicacionAyuda(catalogo, normalizarAyuda(texto));
+				if (ubicacion) palabras = palabras.filter(function (p) { return !ubicacion.includes(p); });
+				var serviciosEnUbicacion = catalogo.filter(function (s) { return !ubicacion || normalizarAyuda(s.Ubicacion).includes(ubicacion); });
+				if (ubicacion && !serviciosEnUbicacion.length) {
+					addHelpMessage('No encontré profesionales con ubicación publicada en «' + ubicacion + '». Puedes probar con otra ciudad o elegir una opción de Categorías.', 'bot');
+					accionesAyuda([{ label: 'Ver categorías', action: 'categories' }]);
+					return true;
+				}
+				if (!palabras.length && !ubicacion) {
+					addHelpMessage('Dime qué servicio quieres agendar y, si lo prefieres, en qué ciudad. Por ejemplo: “plomero en Sogamoso”.', 'bot');
+					return true;
+				}
+				var coincidencias = serviciosEnUbicacion.map(function (s) {
+					var datos = normalizarAyuda([s.Titulo, s.Nombre_Categoria, s.Nombre_Trabajador].join(' '));
+					var puntuacion = palabras.reduce(function (total, palabra) { return total + (datos.includes(palabra) ? 1 : 0); }, 0);
+					return { servicio: s, puntuacion: puntuacion };
+				}).filter(function (item) { return !palabras.length || item.puntuacion > 0; })
+					.sort(function (a, b) { return b.puntuacion - a.puntuacion; })
+					.map(function (item) { return item.servicio; }).slice(0, 6);
+				if (!coincidencias.length) {
+					addHelpMessage('No encontré «' + texto.trim() + '»' + (ubicacion ? ' en ' + ubicacion : '') + ' entre los servicios publicados. Prueba con otro servicio o ciudad.', 'bot');
+					return true;
+				}
+				flujoReserva.servicios = coincidencias;
+				if (coincidencias.length === 1) {
+					flujoReserva.servicio = coincidencias[0];
+					flujoReserva.paso = 'horario';
+					accionesAyuda([]);
+					addHelpMessage('Encontré ' + (coincidencias[0].Titulo || coincidencias[0].Nombre_Categoria || 'el servicio') + (coincidencias[0].Nombre_Trabajador ? ' con ' + coincidencias[0].Nombre_Trabajador : '') + (coincidencias[0].Ubicacion ? '. Ubicación publicada: ' + coincidencias[0].Ubicacion : '') + '. Revisaré los horarios publicados.', 'bot');
+					await mostrarDisponibilidadParaAgendar();
+					return true;
+				}
+				flujoReserva.paso = 'servicio';
+				addHelpMessage('Encontré estas opciones' + (ubicacion ? ' en ' + ubicacion : '') + ' para «' + texto.trim() + '». Elige el servicio y profesional con quien quieres agendar:', 'bot');
+				accionesAyuda(coincidencias.map(function (s, i) { return { label: (s.Titulo || s.Nombre_Categoria || 'Servicio') + ' · ' + (s.Nombre_Trabajador || 'Profesional'), action: 'service', value: String(i) }; }));
+				return true;
+			} catch (_) {
+				addHelpMessage('No pude consultar los servicios ahora. Intenta de nuevo o abre “Categorías” para elegir un profesional.', 'bot');
+				accionesAyuda([{ label: 'Ver categorías', action: 'categories' }]);
+				return true;
+			}
+		}
 		async function buscarAlternativas(texto) {
 			var q = normalizarAyuda(texto).replace(/\b(que|otro|otros|otra|otras|profesional|profesionales|trabajador|trabajadores|hay|opcion|opciones|alternativa|alternativas|de|del|la|el|en|para|un|una|mas|busco|quiero|cambiar|dime)\b/g, ' ').replace(/\s+/g, ' ').trim();
 			var palabras = q.split(' ').filter(function (palabra) { return palabra.length > 2; });
@@ -476,7 +610,7 @@ import BotonBilletera from './BotonBilletera.astro';
 		function textoHorarioPublicado(horarios) {
 			return horarios.map(function (h) {
 				var inicio = String(h.Hora_Inicio || '').slice(0, 5), fin = String(h.Hora_Fin || '').slice(0, 5);
-				return h.Dia_Semana + ': ' + (String(h.Hora_Fin) === '23:59:59' ? 'todo el día' : inicio + ' a ' + fin);
+				return etiquetaDiaConFecha(h.Dia_Semana) + ': ' + (String(h.Hora_Fin) === '23:59:59' ? 'todo el día' : inicio + ' a ' + fin);
 			});
 		}
 		async function mostrarDisponibilidadParaAgendar() {
@@ -498,7 +632,7 @@ import BotonBilletera from './BotonBilletera.astro';
 					return;
 				}
 				flujoReserva.paso = 'fecha';
-				addHelpMessage('Elegiste ' + (servicio.Titulo || 'este servicio') + ' con ' + (servicio.Nombre_Trabajador || 'el profesional') + '. Estos son sus días y horarios publicados:\n• ' + textoHorarioPublicado(horarios).join('\n• ') + '\n\nElige una fecha que corresponda a uno de esos días y escríbela como AAAA-MM-DD (por ejemplo, 2026-10-22).', 'bot');
+				addHelpMessage('Elegiste ' + (servicio.Titulo || 'este servicio') + ' con ' + (servicio.Nombre_Trabajador || 'el profesional') + (servicio.Ubicacion ? ' · ubicación publicada: ' + servicio.Ubicacion : '') + '. Estos son sus días y horarios publicados:\n• ' + textoHorarioPublicado(horarios).join('\n• ') + '\n\nIndica una fecha como AAAA-MM-DD, DD/MM/AAAA o escribe el día (por ejemplo, martes). Te confirmaré qué día de la semana corresponde antes de seguir.', 'bot');
 				accionesAyuda([]);
 			} catch (_) {
 				addHelpMessage('No pude consultar los días y horarios de este profesional ahora. Puedes volver a intentarlo.', 'bot');
@@ -506,7 +640,10 @@ import BotonBilletera from './BotonBilletera.astro';
 			}
 		}
 		async function reservarServicio(servicio, fecha, hora, direccion) {
-			var diaNombre = new Intl.DateTimeFormat('es-CO', { weekday: 'long', timeZone: 'UTC' }).format(new Date(fecha + 'T12:00:00Z'));
+			var diaFecha = diaDeFechaLocal(fecha);
+			if (diaFecha < 0) throw new Error('La fecha no es válida. Indícala como AAAA-MM-DD.');
+			var diasNombre = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
+			var diaNombre = diasNombre[diaFecha];
 			var diaNormal = normalizarAyuda(diaNombre);
 			var resDisp = await fetch(apiAyuda + '/disponibilidad?servicio=' + encodeURIComponent(servicio.Id_Servicio));
 			if (!resDisp.ok) throw new Error('No se pudo comprobar el horario publicado.');
@@ -524,7 +661,7 @@ import BotonBilletera from './BotonBilletera.astro';
 			flujoReserva.fecha = fecha; flujoReserva.hora = hora; flujoReserva.direccion = direccion;
 			flujoReserva.paso = 'abono';
 			var precio = Number(servicio.Precio) || 0;
-			addHelpMessage('Elige el abono para reservar:\n• Servicio: ' + (servicio.Titulo || 'Servicio') + '\n• Profesional: ' + (servicio.Nombre_Trabajador || 'Profesional') + '\n• Fecha: ' + fecha + ' a las ' + hora + '\n• Precio: $' + precio.toLocaleString('es-CO') + '\n\nPuedes abonar el 25%, 50% o 100%. El cargo incluye 5% de comisión y se descuenta ahora de tu billetera.', 'bot');
+			addHelpMessage('Elige el abono para reservar:\n• Servicio: ' + (servicio.Titulo || 'Servicio') + '\n• Profesional: ' + (servicio.Nombre_Trabajador || 'Profesional') + (servicio.Ubicacion ? ' · ' + servicio.Ubicacion : '') + '\n• Fecha: ' + diaNombre + ' ' + fecha + ' a las ' + hora + '\n• Dirección del servicio: ' + direccion + '\n• Precio: $' + precio.toLocaleString('es-CO') + '\n\nPuedes abonar el 25%, 50% o 100%. El cargo incluye 5% de comisión y se descuenta ahora de tu billetera.', 'bot');
 			accionesAyuda([
 				{ label: 'Abonar 25%', action: 'deposit-percent', value: '25' },
 				{ label: 'Abonar 50%', action: 'deposit-percent', value: '50' },
@@ -646,8 +783,12 @@ import BotonBilletera from './BotonBilletera.astro';
 					await buscarAlternativas(clean);
 					return;
 				}
+				if (flujoReserva.paso === 'servicio' || flujoReserva.paso === 'elegirAlternativa') {
+					await seleccionarServicioPorTexto(clean);
+					return;
+				}
 				var parecePregunta = /[?¿]/.test(clean) || /^(dime|cuentame|explicame|recomiend|como|que|quien|cuando|donde|por que|puedo|puedes|podrias|quiero saber|necesito saber|haz|cuenta|sabes|ayuda|busco otro)/.test(preguntaNormalizada);
-				var pareceDatoEsperado = flujoReserva.paso === 'fecha' ? /^\d{4}-\d{2}-\d{2}$/.test(clean)
+				var pareceDatoEsperado = flujoReserva.paso === 'fecha' ? Boolean(analizarFechaAyuda(clean))
 					: flujoReserva.paso === 'hora' ? /^([01]\d|2[0-3]):[0-5]\d$/.test(clean)
 					: flujoReserva.paso === 'direccion' ? clean.length >= 5 && !parecePregunta : false;
 				var esPregunta = parecePregunta || /horario|disponib|precio|cuesta|cuanto|funciona|cancel|registr|chiste/.test(preguntaNormalizada);
@@ -657,21 +798,27 @@ import BotonBilletera from './BotonBilletera.astro';
 				}
 				try {
 					if (flujoReserva.paso === 'fecha') {
-						if (!/^\d{4}-\d{2}-\d{2}$/.test(clean)) { addHelpMessage(await responderDudaDuranteReserva(clean), 'bot'); return; }
-						var fecha = new Date(clean + 'T12:00:00'); var hoy = new Date();
+						var fechaInterpretada = analizarFechaAyuda(clean);
+						if (!fechaInterpretada) { addHelpMessage('No reconocí esa fecha. Escríbela como AAAA-MM-DD, DD/MM/AAAA o indica un día de la semana.', 'bot'); return; }
+						var fecha = fechaInterpretada.fecha; var hoy = new Date();
 						var fechaLocal = [hoy.getFullYear(), String(hoy.getMonth() + 1).padStart(2, '0'), String(hoy.getDate()).padStart(2, '0')].join('-');
-						if (Number.isNaN(fecha.getTime()) || fecha < new Date(fechaLocal + 'T00:00:00') || fecha.toISOString().slice(0, 10) !== clean) throw new Error('Esa fecha no es válida o ya pasó. Intenta con AAAA-MM-DD.');
-						var diaFecha = normalizarAyuda(new Intl.DateTimeFormat('es-CO', { weekday: 'long', timeZone: 'UTC' }).format(new Date(clean + 'T12:00:00Z')));
+						if (fecha < fechaLocal) throw new Error('Esa fecha ya pasó. Elige una fecha futura.');
+						var diaNombreFecha = fechaInterpretada.nombreDia;
+						var diaMencionado = diaSolicitado(normalizarAyuda(clean));
+						if (fechaInterpretada.explicita && diaMencionado >= 0 && diaMencionado !== fechaInterpretada.dia) {
+							addHelpMessage('Verifiqué la fecha: ' + fecha + ' cae ' + diaNombreFecha + ', no ' + ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'][diaMencionado] + '. Revisaré el horario de ' + diaNombreFecha + '.', 'bot');
+						}
+						var diaFecha = normalizarAyuda(diaNombreFecha);
 						var horariosDia = (flujoReserva.horarios || []).filter(function (h) { return normalizarAyuda(h.Dia_Semana) === diaFecha; });
 						if (!horariosDia.length) {
 							var diasDisponibles = Array.from(new Set((flujoReserva.horarios || []).map(function (h) { return h.Dia_Semana; })));
-							addHelpMessage('Ese día no aparece en el horario publicado por ' + (flujoReserva.servicio.Nombre_Trabajador || 'el profesional') + '. Sus días disponibles son: ' + diasDisponibles.join(', ') + '. Elige otra fecha con formato AAAA-MM-DD.', 'bot');
+							addHelpMessage('La fecha ' + fecha + ' corresponde a ' + diaNombreFecha + ', pero ese día no aparece en el horario publicado por ' + (flujoReserva.servicio.Nombre_Trabajador || 'el profesional') + '. Sus días disponibles son: ' + diasDisponibles.join(', ') + '. Elige otra fecha o escribe uno de esos días.', 'bot');
 							return;
 						}
-						flujoReserva.fecha = clean; flujoReserva.paso = 'hora'; addHelpMessage('Para ' + horariosDia[0].Dia_Semana + ', el horario publicado es: ' + textoHorarioPublicado(horariosDia).join(' y ') + '. ¿A qué hora quieres el servicio? Escríbela como HH:MM.', 'bot');
+						flujoReserva.fecha = fecha; flujoReserva.paso = 'hora'; addHelpMessage('Confirmado: ' + diaNombreFecha + ' ' + fecha + '. El horario publicado es: ' + textoHorarioPublicado(horariosDia).join(' y ') + '. ¿A qué hora quieres el servicio? Escríbela como HH:MM.', 'bot');
 					} else if (flujoReserva.paso === 'hora') {
 						if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(clean)) { addHelpMessage(await responderDudaDuranteReserva(clean), 'bot'); return; }
-						var diaHora = normalizarAyuda(new Intl.DateTimeFormat('es-CO', { weekday: 'long', timeZone: 'UTC' }).format(new Date(flujoReserva.fecha + 'T12:00:00Z')));
+						var diaHora = normalizarAyuda(['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'][diaDeFechaLocal(flujoReserva.fecha)]);
 						var rangosHora = (flujoReserva.horarios || []).filter(function (h) { return normalizarAyuda(h.Dia_Semana) === diaHora; });
 						var horaPermitida = rangosHora.some(function (h) {
 							var fin = String(h.Hora_Fin || '').slice(0, 5);
@@ -697,11 +844,35 @@ import BotonBilletera from './BotonBilletera.astro';
 			}
 			if (await buscarProfesionalesChat(clean)) return;
 			var answerFinal = await consultarIAChat(clean);
-			window.setTimeout(function () { addHelpMessage(answerFinal, 'bot'); accionesAyuda([{ label: 'Quiero agendar un servicio', action: 'book' }]); }, 200);
+			addHelpMessage(answerFinal, 'bot');
+			accionesAyuda([{ label: 'Quiero agendar un servicio', action: 'book' }]);
+		}
+		async function enviarPreguntaAyuda(question) {
+			if (procesandoAyuda) return;
+			procesandoAyuda = true;
+			helpInput.disabled = true;
+			helpSend.disabled = true;
+			listaAcciones.querySelectorAll('button').forEach(function (button) { button.disabled = true; });
+			var escribiendo = document.createElement('div');
+			escribiendo.className = 'help-chat-message bot help-chat-typing';
+			escribiendo.setAttribute('role', 'status');
+			escribiendo.textContent = 'Estoy revisando tu mensaje…';
+			helpMessages.appendChild(escribiendo);
+			helpMessages.scrollTop = helpMessages.scrollHeight;
+			try { await sendHelpQuestion(question); }
+			catch (_) { addHelpMessage(respuestaLocalAyuda(question), 'bot'); }
+			finally {
+				escribiendo.remove();
+				procesandoAyuda = false;
+				helpInput.disabled = false;
+				helpSend.disabled = false;
+				listaAcciones.querySelectorAll('button').forEach(function (button) { button.disabled = false; });
+				if (!helpPanel.hidden) helpInput.focus();
+			}
 		}
 		document.getElementById('helpChatForm').addEventListener('submit', function (e) {
 			e.preventDefault();
-			sendHelpQuestion(helpInput.value);
+			enviarPreguntaAyuda(helpInput.value);
 			helpInput.value = '';
 		});
 			document.getElementById('helpChatPrompts').addEventListener('click', function (e) {
@@ -711,7 +882,7 @@ import BotonBilletera from './BotonBilletera.astro';
 				registrarActividadChat();
 				if (button.dataset.helpAction === 'book') iniciarAgendamiento('');
 				else procesarAccionAyuda(button.dataset.helpAction, button.dataset.helpValue);
-			} else sendHelpQuestion(button.textContent || '');
+			} else enviarPreguntaAyuda(button.textContent || '');
 		});
 	})();
 </script>

@@ -117,7 +117,7 @@ const servicios = [];
 						</div>
 						<div class="filter-slider-range">
 							<span>$10.000</span>
-							<span>$500.000</span>
+							<span id="priceRangeMax">$500.000</span>
 						</div>
 					</div>
 				</div>
@@ -233,9 +233,9 @@ const servicios = [];
 			document.getElementById('searchInput').value = '';
 			document.getElementById('soloDisponibles').checked = false;
 			document.getElementById('calSlider').value = 0;
-			document.getElementById('priceSlider').value = 500000;
+			document.getElementById('priceSlider').value = document.getElementById('priceSlider').max;
 			document.getElementById('calVal').innerHTML = '0 <span style="color:var(--star);">★</span>';
-			document.getElementById('priceVal').textContent = '$ 500.000';
+			document.getElementById('priceVal').textContent = '$ ' + parseInt(document.getElementById('priceSlider').max).toLocaleString('es-CO');
 			document.querySelectorAll('.cat-grid-item').forEach(function (b) { b.classList.remove('active'); });
 			document.querySelectorAll('.cat-filter-item').forEach(function (b) { b.classList.remove('active'); });
 			var todos = document.querySelector('.cat-grid-item[data-cat=""]');
@@ -314,11 +314,20 @@ const servicios = [];
 				var trabajadoresPorId = new Map(trabajadores.map(function (trabajador) {
 					return [String(trabajador.Id_Usuario), trabajador];
 				}));
+				var serviciosVisibles = servicios.filter(function (servicio) {
+					return trabajadoresPorId.has(String(servicio.Id_Trabajador));
+				});
+				var precioMaximo = serviciosVisibles.reduce(function (maximo, servicio) { return Math.max(maximo, Number(servicio.Precio) || 0); }, 500000);
+				var precioTopeCatalogo = Math.ceil(precioMaximo / 50000) * 50000;
+				priceSlider.max = String(precioTopeCatalogo);
+				priceSlider.value = String(precioTopeCatalogo);
+				priceVal.textContent = '$ ' + precioTopeCatalogo.toLocaleString('es-CO');
+				document.getElementById('priceRangeMax').textContent = '$ ' + precioTopeCatalogo.toLocaleString('es-CO');
 				var grid = document.getElementById('catGrid');
 				var filtros = document.querySelector('.cat-filter-list');
 				var container = document.getElementById('workersContainer');
 				var conteos = {};
-				servicios.forEach(function (s) { var id = String(s.Id_Categoria); conteos[id] = (conteos[id] || 0) + 1; });
+				serviciosVisibles.forEach(function (s) { var id = String(s.Id_Categoria); conteos[id] = (conteos[id] || 0) + 1; });
 				categorias.forEach(function (cat, i) {
 					var id = String(cat.Id_Categoria);
 					var nombre = cat.Nombre_Categoria || 'Categoría';
@@ -332,8 +341,17 @@ const servicios = [];
 					bFiltro.innerHTML = '<span>' + seguro(nombre) + '</span><span class="cat-filter-count">' + (conteos[id] || 0) + '</span>';
 					bFiltro.addEventListener('click', function () { selectCat(bFiltro, id); }); filtros.appendChild(bFiltro);
 				});
-				document.getElementById('allCategoryCount').textContent = servicios.length;
-				servicios.forEach(function (s) {
+				document.getElementById('allCategoryCount').textContent = serviciosVisibles.length;
+				if (!serviciosVisibles.length) {
+					var sinProfesionales = document.createElement('p');
+					sinProfesionales.className = 'workers-empty-state';
+					sinProfesionales.textContent = servicios.length
+						? 'No hay profesionales activos y verificados disponibles para mostrar en este momento.'
+						: 'Aún no hay servicios publicados por profesionales activos.';
+					container.replaceChildren(sinProfesionales);
+					return;
+				}
+				serviciosVisibles.forEach(function (s) {
 					var disponible = disponibilidad.some(function (d) { return String(d.Id_Servicio) === String(s.Id_Servicio) && String(d.Dia_Semana).toLowerCase() === diaHoy; });
 					var nombre = s.Nombre_Trabajador || 'Trabajador'; var titulo = s.Titulo || 'Servicio';
 					var cat = s.Nombre_Categoria || 'Servicio'; var precio = Number(s.Precio) || 0;
@@ -342,23 +360,26 @@ const servicios = [];
 					card.className = 'worker-card fade-in-up'; card.dataset.name = nombre.toLowerCase(); card.dataset.title = titulo.toLowerCase();
 					card.dataset.category = String(s.Id_Categoria); card.dataset.categoryName = cat.toLowerCase(); card.dataset.price = String(precio);
 					card.dataset.rating = String(rating); card.dataset.estado = estado;
-					card.innerHTML = '<div class="worker-card-photo"><div class="photo-placeholder">' + seguro(nombre.charAt(0).toUpperCase()) + '</div><span class="worker-card-badge" style="background:rgba(239,68,68,0.12);color:#ef4444;">âœ— Sin verificar</span><span class="worker-card-status ' + estado + '">' + (disponible ? 'Disponible hoy' : 'No disponible') + '</span></div><div class="worker-card-body"><div class="worker-card-top"><div class="worker-card-name">' + seguro(nombre) + '</div><div class="worker-card-rating">' + rating.toFixed(1) + ' <small>(' + resenas + ')</small></div></div><div class="worker-card-service">' + seguro(titulo) + '</div><div class="worker-card-meta"><span><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>' + seguro(s.Ubicacion || 'Ubicación no disponible') + '</span><span><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>' + resenas + ' reseñas</span></div><div class="worker-card-tags"><span class="worker-tag">' + seguro(cat) + '</span></div><div class="worker-card-footer"><div class="worker-card-price">$' + precio.toLocaleString('es-CO') + '<small>/servicio</small></div><a href="/trabajador/perfil/?id=' + encodeURIComponent(s.Id_Trabajador) + '&servicioId=' + encodeURIComponent(s.Id_Servicio) + '" class="worker-card-btn">Ver perfil<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg></a></div></div>';
+					card.innerHTML = '<div class="worker-card-photo"><div class="photo-placeholder" aria-label="Avatar de ' + seguro(nombre) + '">' + seguro(nombre.charAt(0).toUpperCase()) + '</div><span class="worker-card-badge" style="background:rgba(239,68,68,0.12);color:#ef4444;">Verificación pendiente</span><span class="worker-card-status ' + estado + '">' + (disponible ? 'Disponible hoy' : 'No disponible') + '</span></div><div class="worker-card-body"><div class="worker-card-top"><div class="worker-card-name">' + seguro(nombre) + '</div><div class="worker-card-rating">' + rating.toFixed(1) + ' <small>(' + resenas + ')</small></div></div><div class="worker-card-service">' + seguro(titulo) + '</div><div class="worker-card-meta"><span><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>' + seguro(s.Ubicacion || 'Ubicación no disponible') + '</span><span><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>' + resenas + ' reseñas</span></div><div class="worker-card-tags"><span class="worker-tag">' + seguro(cat) + '</span></div><div class="worker-card-footer"><div class="worker-card-price">$' + precio.toLocaleString('es-CO') + '<small>/servicio</small></div><a href="/trabajador/perfil/?id=' + encodeURIComponent(s.Id_Trabajador) + '&servicioId=' + encodeURIComponent(s.Id_Servicio) + '" class="worker-card-btn">Ver perfil<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg></a></div></div>';
 					var trabajador = trabajadoresPorId.get(String(s.Id_Trabajador));
 					var badgeVerificacion = card.querySelector('.worker-card-badge');
 					var estaVerificado = trabajador && (trabajador.Verificado === true || Number(trabajador.Verificado) === 1);
-					badgeVerificacion.textContent = estaVerificado ? '✓ Verificado' : '✗ Sin verificar';
+					badgeVerificacion.textContent = estaVerificado ? 'Verificado' : 'Verificación pendiente';
 					if (estaVerificado) badgeVerificacion.removeAttribute('style');
-					if (trabajador && trabajador.Foto_Perfil) {
+					if (s.Id_Trabajador) {
 						var foto = document.createElement('img');
 						var areaFoto = card.querySelector('.worker-card-photo');
 						var inicial = card.querySelector('.photo-placeholder');
 						foto.className = 'worker-card-profile-img';
 						foto.alt = 'Foto de ' + nombre;
+						foto.decoding = 'async';
+						foto.loading = 'lazy';
 						foto.hidden = true;
 						foto.onload = function () { foto.hidden = false; inicial.hidden = true; };
-						foto.onerror = function () { foto.hidden = true; inicial.hidden = false; };
+						foto.onerror = function () { foto.remove(); inicial.hidden = false; inicial.setAttribute('aria-label', 'Avatar de ' + nombre); };
 						areaFoto.insertBefore(foto, areaFoto.firstChild);
-						foto.src = api + '/usuarios/' + encodeURIComponent(s.Id_Trabajador) + '/foto-perfil?v=' + encodeURIComponent(trabajador.Foto_Perfil);
+						var versionFoto = trabajador && trabajador.Foto_Perfil ? encodeURIComponent(trabajador.Foto_Perfil) : Date.now();
+						foto.src = api + '/usuarios/' + encodeURIComponent(s.Id_Trabajador) + '/foto-perfil?v=' + versionFoto;
 					}
 					container.appendChild(card);
 				});

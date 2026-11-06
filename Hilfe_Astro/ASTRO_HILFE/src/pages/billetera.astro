@@ -19,6 +19,7 @@ let esAdmin = false;
 let esCliente = false;
 let comisionesGeneradas = 0;
 let totalRetirado = 0;
+let billeteraCargada = false;
 try {
   const [usuarios] = await pool.query<any[]>('SELECT Id_Rol FROM usuarios WHERE Id_Usuario = ? LIMIT 1', [usuarioId]);
   const rol = Number(usuarios[0]?.Id_Rol);
@@ -42,6 +43,7 @@ try {
     totalRetirado = Number(resumen[0]?.retiros || 0);
   }
   pendientes = await obtenerPendientesPago(usuarioId);
+  billeteraCargada = true;
 } catch (error) {
   console.error('No se pudo cargar la billetera:', error);
   errorBilletera = 'No se pudo cargar tu billetera. Revisa que MySQL esté activo y vuelve a intentarlo.';
@@ -63,7 +65,7 @@ const grupos = agruparPorFecha(movimientos);
 ---
 
 <Layout title="Mi Billetera | Hilf'e">
-  <main class="wallet">
+  <main class:list={['wallet', esAdmin && 'wallet--admin']}>
     <header class="wallet__head">
       <div>
         <a href="/" class="brand" aria-label="Ir al inicio de Hilf'e">
@@ -77,19 +79,19 @@ const grupos = agruparPorFecha(movimientos);
           <span class="brand__text">Hilf<span class="brand__accent">'e</span></span>
         </a>
         <span class="eyebrow">{esAdmin ? 'Billetera de administración' : 'Mi billetera'}</span>
-        <h1>Saldo <span class="grad">disponible</span></h1>
+        <h1>{esAdmin ? <>Comisiones de <span class="grad">Hilf’e</span></> : <>Saldo <span class="grad">disponible</span></>}</h1>
       </div>
-      <button type="button" class="btn btn--ghost" data-open-hist>Historial</button>
+      {esAdmin ? <div class="wallet__head-actions"><a class="btn btn--ghost wallet-back" href="/" aria-label="Volver al sitio"><span aria-hidden="true">←</span> Volver al sitio</a><button type="button" class="btn btn--ghost" data-open-hist>Historial</button></div> : <button type="button" class="btn btn--ghost" data-open-hist>Historial</button>}
     </header>
 
-    {errorBilletera && <p class="wallet__error" role="alert">{errorBilletera}</p>}
+    {errorBilletera && (esAdmin ? <div class="wallet__error" role="alert"><span>No fue posible cargar los datos reales de la billetera. Revisa la conexión con la base de datos e inténtalo de nuevo.</span><button type="button" class="wallet__retry" id="wallet-retry">Reintentar</button></div> : <p class="wallet__error" role="alert">{errorBilletera}</p>)}
 
-    <p class="demo">{esAdmin ? 'Billetera del administrador: aquí se acumulan comisiones de servicios. Los retiros son simulados.' : 'Modo demostración: las recargas y retiros son simulados.'}</p>
+    <p class="demo">{esAdmin ? 'Aquí se acumulan las comisiones de servicios finalizados. Puedes consultar los movimientos y simular un retiro.' : 'Modo demostración: las recargas y retiros son simulados.'}</p>
 
     <section class="balance">
       <div class="balance__info">
         <p class="balance__label">Saldo actual</p>
-        <p class="balance__amount" id="saldo-actual">{cop(saldo)}</p>
+        <p class="balance__amount" id="saldo-actual">{esAdmin && !billeteraCargada ? '—' : cop(saldo)}</p>
         <p class="balance__hint">{esAdmin ? 'Comisiones de servicios finalizados' : "Disponible para usar en Hilf'e"}</p>
       </div>
       <div class="balance__actions">
@@ -97,9 +99,9 @@ const grupos = agruparPorFecha(movimientos);
           <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
           Recargar
         </button>}
-        <button class="btn btn--soft" id="btn-retirar">
+        <button class="btn btn--soft" id="btn-retirar" disabled={esAdmin && !billeteraCargada}>
           <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M6 13l6 6 6-6"/></svg>
-          Retirar
+          {esAdmin ? 'Retirar comisiones' : 'Retirar'}
         </button>
       </div>
     </section>
@@ -110,8 +112,21 @@ const grupos = agruparPorFecha(movimientos);
         <h2>Comisiones generadas</h2>
         <p>Comisión acumulada por servicios finalizados.</p>
       </div>
-      <strong>{cop(comisionesGeneradas)}</strong>
-      <div class="admin-commission-withdrawn">Retiros simulados: <b>{cop(totalRetirado)}</b></div>
+      <div class="admin-commission-intro"><span class="eyebrow">Ingresos de la plataforma</span><h2>Comisiones acumuladas</h2><p>Por cada servicio finalizado, Hilf’e recibe el 5% del cliente y el 5% del trabajador.</p></div>
+      <strong id="admin-comision-total">{billeteraCargada ? cop(comisionesGeneradas) : '—'}</strong>
+      <div class="admin-commission-metrics">
+        <div><span>5% aportado por clientes</span><b id="admin-comision-cliente">—</b></div>
+        <div><span>5% descontado a trabajadores</span><b id="admin-comision-trabajador">—</b></div>
+        <div><span>Servicios con comisión</span><b id="admin-servicios-comision">—</b></div>
+        <div><span>Retiros registrados</span><b id="admin-retiros-comision">{billeteraCargada ? cop(totalRetirado) : '—'}</b></div>
+      </div>
+      <p class="admin-commission-withdrawn">Disponible para retirar: <b>{billeteraCargada ? cop(saldo) : '—'}</b>. Los retiros de esta demostración se descuentan del saldo y quedan en el historial; no se envía dinero real.</p>
+    </section>}
+
+    {esAdmin && <section class="card admin-trace-card">
+      <div class="admin-trace-heading"><div><span class="eyebrow">Trazabilidad de cobros</span><h2>Comisiones por servicio</h2><p>Consulta quién pagó y quién recibió cada servicio, junto con el valor descontado a cada parte.</p></div><span id="admin-trace-count" class="admin-trace-count">— servicios</span></div>
+      <div class="admin-trace-table-wrap" role="region" aria-label="Cobros por servicio; desplázate horizontalmente para ver todas las columnas" tabindex="0"><table class="admin-trace-table"><thead><tr><th>Servicio</th><th>Cliente</th><th>Trabajador</th><th>Valor del servicio</th><th>Pagó el cliente</th><th>Descuento cliente</th><th>Recibió trabajador</th><th>Descuento trabajador</th><th>Total Hilf’e</th><th>Comprobante</th></tr></thead><tbody id="admin-trace-list" aria-live="polite"><tr><td colspan="10" class="admin-trace-empty">Cargando movimientos registrados…</td></tr></tbody></table></div>
+      <button type="button" id="admin-trace-more" class="admin-trace-more" aria-expanded="false" hidden>Ver todos los servicios</button>
     </section>}
 
     {esCliente && <section class="card">
@@ -147,8 +162,8 @@ const grupos = agruparPorFecha(movimientos);
       {grupos.length === 0 ? (
         <div class="empty">
           <div class="empty__icon">💳</div>
-          <h3>Aún no tienes movimientos</h3>
-          <p>Cuando completes trabajos, tus ingresos aparecerán aquí.</p>
+          <h3>{errorBilletera && esAdmin ? 'Historial no disponible' : 'Aún no tienes movimientos'}</h3>
+          <p>{errorBilletera && esAdmin ? 'Revisa la conexión con la base de datos e inténtalo de nuevo.' : esAdmin ? 'Cuando se registren comisiones, aparecerán aquí.' : 'Cuando completes trabajos, tus ingresos aparecerán aquí.'}</p>
         </div>
       ) : (
         grupos.map(g => (
@@ -229,6 +244,22 @@ const grupos = agruparPorFecha(movimientos);
         <div class="hist__body" id="hist-body"></div>
       </div>
     </dialog>
+
+    {esAdmin && <dialog id="admin-ticket" class="hist admin-ticket" aria-labelledby="admin-ticket-title">
+      <div class="hist__box">
+        <header class="admin-ticket-head">
+          <div class="admin-ticket-brand" aria-label="Hilf’e"><span class="admin-ticket-brand-icon"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="5"/><path d="M12 7v10M7 12h10"/></svg></span>Hilf<span>’e</span></div>
+          <button type="button" class="hist__close" id="admin-ticket-close" aria-label="Cerrar ticket">×</button>
+        </header>
+        <div class="admin-ticket-body">
+          <div class="admin-ticket-summary"><div class="admin-ticket-summary-top"><span>COMPROBANTE DE SERVICIO</span><span class="admin-ticket-status"><i></i> Liquidado</span></div><h2 id="admin-ticket-title">Servicio</h2><div class="admin-ticket-meta"><span id="ticket-id">Solicitud</span><span id="ticket-date"></span></div></div>
+          <div class="admin-ticket-parties"><div class="admin-ticket-party"><span class="admin-ticket-avatar client">C</span><div><small>CLIENTE</small><strong id="ticket-client">—</strong></div></div><span class="admin-ticket-connector" aria-hidden="true">→</span><div class="admin-ticket-party"><span class="admin-ticket-avatar pro">P</span><div><small>PROFESIONAL</small><strong id="ticket-worker">—</strong></div></div></div>
+          <section class="admin-ticket-section"><h3>Liquidación del servicio</h3><dl class="admin-ticket-values"><div><dt>Valor del servicio</dt><dd id="ticket-price">—</dd></div><div><dt>Pago neto del cliente</dt><dd id="ticket-client-paid">—</dd></div><div><dt>Devolución al cliente</dt><dd id="ticket-refund">—</dd></div><div><dt>Recibido por el profesional</dt><dd id="ticket-worker-paid">—</dd></div></dl></section>
+          <section class="admin-ticket-section fee-section"><h3>Comisiones de Hilf’e</h3><dl class="admin-ticket-values"><div><dt>Aporte del cliente <span>5%</span></dt><dd id="ticket-client-fee">—</dd></div><div><dt>Aporte del profesional <span>5%</span></dt><dd id="ticket-worker-fee">—</dd></div></dl><div class="admin-ticket-total"><span>Total Hilf’e</span><strong id="ticket-total-fee">—</strong></div></section>
+          <p class="admin-ticket-footnote">Comprobante informativo del movimiento registrado en la billetera de Hilf’e.</p>
+        </div>
+      </div>
+    </dialog>}
   </main>
 </Layout>
 
@@ -284,6 +315,8 @@ const grupos = agruparPorFecha(movimientos);
   function cerrarModal() {
     modal.close();
   }
+
+  document.getElementById('wallet-retry')?.addEventListener('click', () => location.reload());
 
   document.getElementById('btn-recargar')?.addEventListener('click', () => abrir('recargar'));
   document.getElementById('btn-retirar')?.addEventListener('click', () => abrir('retirar'));
@@ -509,6 +542,103 @@ const grupos = agruparPorFecha(movimientos);
     })
   );
 
+  async function cargarDetalleComisionesAdmin() {
+    if (!document.querySelector('.wallet--admin')) return;
+    const lista = document.getElementById('admin-trace-list');
+    const contador = document.getElementById('admin-trace-count');
+    const botonMas = document.getElementById('admin-trace-more') as HTMLButtonElement | null;
+    const ticket = document.getElementById('admin-ticket') as HTMLDialogElement | null;
+    const tickets = new Map<number, any>();
+    const dinero = (valor: number) => cop(Number(valor) || 0);
+    function mostrarTicket(servicio: any) {
+      if (!ticket || !servicio) return;
+      const setTicket = (id: string, texto: string) => { const nodo = document.getElementById(id); if (nodo) nodo.textContent = texto; };
+      setTicket('ticket-id', `Solicitud #${servicio.id}`);
+      setTicket('admin-ticket-title', servicio.servicio || 'Servicio finalizado');
+      const fecha = servicio.fecha ? new Date(`${servicio.fecha}T00:00:00`).toLocaleDateString('es-CO', { day: '2-digit', month: 'long', year: 'numeric' }) : 'Fecha no registrada';
+      setTicket('ticket-date', `${fecha}${servicio.hora ? ` · ${servicio.hora}` : ''}`);
+      setTicket('ticket-client', servicio.cliente || 'Cliente sin nombre registrado');
+      setTicket('ticket-worker', servicio.trabajador || 'Profesional sin nombre registrado');
+      setTicket('ticket-price', dinero(servicio.precioServicio));
+      setTicket('ticket-client-paid', dinero(servicio.pagoClienteNeto));
+      setTicket('ticket-refund', dinero(servicio.devolucionCliente));
+      setTicket('ticket-worker-paid', dinero(servicio.pagoTrabajador));
+      setTicket('ticket-client-fee', dinero(servicio.comisionCliente));
+      setTicket('ticket-worker-fee', dinero(servicio.comisionTrabajador));
+      setTicket('ticket-total-fee', dinero(servicio.comisionTotal));
+      const inicialCliente = document.querySelector('.admin-ticket-avatar.client');
+      const inicialProfesional = document.querySelector('.admin-ticket-avatar.pro');
+      if (inicialCliente) inicialCliente.textContent = String(servicio.cliente || 'C').trim().charAt(0).toUpperCase();
+      if (inicialProfesional) inicialProfesional.textContent = String(servicio.trabajador || 'P').trim().charAt(0).toUpperCase();
+      ticket.showModal();
+    }
+    document.getElementById('admin-ticket-close')?.addEventListener('click', () => ticket?.close());
+    ticket?.addEventListener('click', (event) => { if (event.target === ticket) ticket.close(); });
+    botonMas?.addEventListener('click', () => {
+      const expandir = botonMas.getAttribute('aria-expanded') !== 'true';
+      botonMas.setAttribute('aria-expanded', String(expandir));
+      botonMas.textContent = expandir ? 'Ver menos' : 'Ver todos los servicios';
+      lista?.querySelectorAll<HTMLElement>('.admin-trace-extra').forEach((fila) => { fila.hidden = !expandir; });
+    });
+    lista?.addEventListener('click', (event) => {
+      const boton = (event.target as HTMLElement).closest<HTMLButtonElement>('[data-ticket-id]');
+      if (boton) mostrarTicket(tickets.get(Number(boton.dataset.ticketId)));
+    });
+    try {
+      const response = await fetch('/api/admin/comisiones', { credentials: 'same-origin', cache: 'no-store' });
+      const data = await response.json();
+      if (!response.ok || !data.ok) throw new Error(data.mensaje || 'No se pudieron cargar las comisiones.');
+      const setTexto = (id: string, texto: string) => { const nodo = document.getElementById(id); if (nodo) nodo.textContent = texto; };
+      setTexto('admin-comision-total', dinero(data.comisionTotal));
+      setTexto('admin-comision-cliente', dinero(data.comisionCliente));
+      setTexto('admin-comision-trabajador', dinero(data.comisionTrabajador));
+      setTexto('admin-servicios-comision', new Intl.NumberFormat('es-CO').format(Number(data.serviciosConMovimiento) || 0));
+      setTexto('admin-retiros-comision', dinero(data.retirosRegistrados));
+      const servicios = (Array.isArray(data.servicios) ? data.servicios : []).filter((servicio: any) => {
+        const clienteSinNombre = /^Cliente #\d+$/.test(String(servicio.cliente || '').trim());
+        const trabajadorSinNombre = /^Trabajador #\d+$/.test(String(servicio.trabajador || '').trim());
+        return !(clienteSinNombre && trabajadorSinNombre);
+      });
+      setTexto('admin-trace-count', `${new Intl.NumberFormat('es-CO').format(servicios.length)} ${servicios.length === 1 ? 'servicio' : 'servicios'}`);
+      if (!lista) return;
+      if (!servicios.length) {
+        const vacio = document.createElement('tr'); vacio.className = 'admin-trace-empty-row';
+        const mensaje = document.createElement('td'); mensaje.colSpan = 10; mensaje.className = 'admin-trace-empty';
+        mensaje.textContent = 'Todavía no hay servicios finalizados con movimientos de pago.';
+        vacio.appendChild(mensaje); lista.replaceChildren(vacio);
+        return;
+      }
+      const fragmento = document.createDocumentFragment();
+      servicios.forEach((servicio: any, indice: number) => {
+        tickets.set(Number(servicio.id), servicio);
+        const fila = document.createElement('tr'); fila.className = 'admin-trace-row';
+        if (indice >= 5) { fila.classList.add('admin-trace-extra'); fila.hidden = true; }
+        const celda = (texto: string, clase = '') => { const td = document.createElement('td'); if (clase) td.className = clase; td.textContent = texto; return td; };
+        const detalle = celda(''); detalle.className = 'admin-trace-service-cell';
+        const servicioTexto = document.createElement('strong'); servicioTexto.className = 'admin-trace-service'; servicioTexto.textContent = servicio.servicio || 'Servicio finalizado';
+        const solicitudTexto = document.createElement('small'); solicitudTexto.textContent = `Solicitud #${servicio.id}`;
+        detalle.append(servicioTexto, solicitudTexto);
+        fila.append(detalle,
+          celda(servicio.cliente || 'Cliente', 'admin-trace-person-cell'),
+          celda(servicio.trabajador || 'Profesional', 'admin-trace-person-cell'),
+          celda(dinero(servicio.precioServicio), 'admin-trace-money'),
+          celda(dinero(servicio.pagoClienteNeto), 'admin-trace-money'),
+          celda(dinero(servicio.comisionCliente), 'admin-trace-money admin-trace-fee-value'),
+          celda(dinero(servicio.pagoTrabajador), 'admin-trace-money'),
+          celda(dinero(servicio.comisionTrabajador), 'admin-trace-money admin-trace-fee-value'),
+          celda(dinero(servicio.comisionTotal), 'admin-trace-money admin-trace-total-value'));
+        const verTicket = document.createElement('button'); verTicket.type = 'button'; verTicket.className = 'admin-ticket-button'; verTicket.dataset.ticketId = String(servicio.id); verTicket.setAttribute('aria-label', `Ver comprobante del servicio ${servicio.servicio || ''}`); verTicket.innerHTML = '<svg viewBox="0 0 20 20" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M5 2.75h7l3 3v11.5H5z"/><path d="M12 2.75v3h3M7.5 9h5M7.5 12h5M7.5 15h3"/></svg><span>Ver ticket</span>';
+        const ticketCell = document.createElement('td'); ticketCell.className = 'admin-trace-ticket-cell'; ticketCell.appendChild(verTicket);
+        fila.appendChild(ticketCell); fragmento.appendChild(fila);
+      });
+      lista.replaceChildren(fragmento);
+      if (botonMas) botonMas.hidden = servicios.length <= 5;
+    } catch {
+      if (lista) { const fila = document.createElement('tr'); const aviso = document.createElement('td'); aviso.colSpan = 10; aviso.className = 'admin-trace-empty'; aviso.textContent = 'No fue posible cargar la trazabilidad de cobros.'; fila.appendChild(aviso); lista.replaceChildren(fila); }
+    }
+  }
+  cargarDetalleComisionesAdmin();
+
   /* ========== Accesos desde el navbar ========== */
   if (location.hash === '#recargar') abrir('recargar');
   if (location.hash === '#historial') abrirHistorial();
@@ -637,5 +767,226 @@ const grupos = agruparPorFecha(movimientos);
     .balance__actions { width: 100%; flex-direction: row; }
     .balance__actions .btn { flex: 1; }
     .card { padding: 1.25rem; }
+  }
+
+  .wallet--admin { max-width: 1080px; gap: 1.25rem; }
+  .wallet--admin .wallet__head { align-items: center; padding: 0 0 1.1rem; border-bottom: 1px solid var(--border); }
+  .wallet--admin .wallet__head-actions { display: flex; align-items: center; flex-wrap: wrap; gap: .65rem; }
+  .wallet--admin .wallet-back { border-radius: 12px; }
+  .wallet--admin .wallet-back span { font-size: 1.15rem; }
+  .wallet--admin .balance { min-height: 210px; border-radius: 22px; background: #2856d8; }
+  .wallet--admin .balance::after { display: none; }
+  .wallet--admin .balance__label, .wallet--admin .balance__hint { opacity: 1; color: #edf3ff; }
+  .wallet--admin .balance__amount { color: #fff; font-variant-numeric: tabular-nums; }
+  .wallet--admin .card { border-radius: 18px; }
+  .wallet--admin .demo { border: 0; border-left: 3px solid var(--primary); border-radius: 0 10px 10px 0; background: var(--bg-card); color: var(--text); }
+  .wallet--admin .grad { background-image: none; color: var(--primary); }
+  :global(html[data-theme="dark"]) .wallet--admin {
+    --bg-card: #171f2b;
+    --text: #e8edf5;
+    --muted: #aab5c4;
+    --border: #344255;
+    --primary-soft: #202b39;
+    color: var(--text);
+  }
+  :global(html[data-theme="dark"]) .wallet--admin .card,
+  :global(html[data-theme="dark"]) .wallet--admin .modal,
+  :global(html[data-theme="dark"]) .wallet--admin .hist { background: var(--bg-card); color: var(--text); }
+  :global(html[data-theme="dark"]) .wallet--admin .demo { border-color: var(--primary); background: var(--bg-card-alt); color: var(--text); }
+  :global(html[data-theme="dark"]) .wallet--admin .hist__head { background: #202b39; }
+  @media (max-width: 640px) {
+    .wallet--admin { padding-top: 1.5rem; }
+    .wallet--admin .wallet__head { align-items: flex-start; flex-direction: column; }
+    .wallet--admin .wallet__head-actions { width: 100%; }
+    .wallet--admin .wallet__head-actions .btn { flex: 1; }
+    .wallet--admin .balance { min-height: auto; }
+  }
+  .wallet--admin .brand__mark { background: var(--primary); border-radius: 11px; }
+  .wallet--admin .brand__accent { background: none; color: var(--primary); }
+  .wallet--admin .balance { border: 1px solid color-mix(in srgb, var(--primary) 55%, transparent); }
+  .wallet--admin .balance .btn--primary { border-radius: 11px; box-shadow: none; }
+  .wallet--admin .balance .btn--soft { border-radius: 11px; background: rgb(255 255 255 / 12%); backdrop-filter: none; }
+  .wallet--admin .card { border-radius: 16px; box-shadow: none; }
+  .wallet--admin .modal, .wallet--admin .hist { border: 1px solid var(--border); box-shadow: 0 18px 48px rgb(12 22 40 / 18%); }
+  .wallet--admin .modal::backdrop, .wallet--admin .hist::backdrop { backdrop-filter: none; }
+  .wallet--admin .item { transition: background-color .18s ease; }
+  .wallet--admin .item:hover { background: var(--bg-card-alt); }
+  .wallet--admin .wallet__head h1 { letter-spacing: -.045em; }
+  .wallet--admin .wallet-back { min-height: 44px; }
+  .wallet--admin .balance { min-height: 150px; padding: 1.5rem 1.75rem; border-radius: 16px; background: #294fbd; }
+  .wallet--admin .balance__actions { min-width: auto; }
+  .wallet--admin #btn-retirar { min-height: 44px; }
+  .wallet--admin .admin-commission-summary { grid-template-columns: minmax(0, 1fr) auto; gap: .65rem 1.5rem; }
+  .wallet--admin .admin-commission-intro h2 { margin: .22rem 0; font-size: 1.1rem; }
+  .wallet--admin .admin-commission-intro p, .wallet--admin .admin-trace-heading p { margin: 0; color: var(--muted); font-size: .86rem; line-height: 1.5; }
+  .wallet--admin .admin-commission-summary > strong { align-self: center; color: var(--primary); font-size: clamp(1.45rem, 3vw, 1.9rem); font-variant-numeric: tabular-nums; }
+  .wallet--admin .admin-commission-metrics { display: grid; grid-column: 1 / -1; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 1rem; padding: .9rem 0; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
+  .admin-commission-metrics > div { display: grid; gap: .32rem; min-width: 0; }
+  .admin-commission-metrics span { color: var(--muted); font-size: .74rem; line-height: 1.4; }
+  .admin-commission-metrics b { color: var(--text); font-size: .95rem; font-variant-numeric: tabular-nums; }
+  .wallet--admin .admin-commission-withdrawn { grid-column: 1 / -1; margin: 0; padding: 0; border: 0; color: var(--muted); font-size: .8rem; line-height: 1.5; }
+  .wallet--admin .admin-commission-withdrawn b { color: var(--text); }
+  .wallet--admin .admin-trace-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 1.2rem; }
+  .wallet--admin .admin-trace-heading h2 { margin: .2rem 0 .35rem; font-size: 1.1rem; }
+  .wallet--admin .admin-trace-count { flex: none; padding: .4rem .65rem; border: 1px solid var(--border); border-radius: 999px; color: var(--primary); font-size: .75rem; font-weight: 700; }
+  .wallet--admin .admin-trace-card { min-width: 0; max-width: 100%; box-sizing: border-box; }
+  .wallet--admin .admin-trace-table-wrap { display: block; width: 100%; min-width: 0; max-width: 100%; box-sizing: border-box; margin-top: 1.2rem; overflow-x: auto; overflow-y: hidden; overscroll-behavior-x: contain; border: 1px solid var(--border); border-radius: 14px; background: var(--bg-card); scrollbar-color: #8b95a5 var(--primary-soft); scrollbar-width: thin; }
+  .wallet--admin .admin-trace-table { width: 100%; min-width: 1435px; table-layout: fixed; border-collapse: separate; border-spacing: 0; color: var(--text); font-size: .78rem; text-align: left; }
+  .wallet--admin .admin-trace-table th { height: 44px; padding: .75rem 1rem; background: var(--primary-soft); color: var(--muted); font-size: .64rem; font-weight: 800; letter-spacing: .055em; text-transform: uppercase; white-space: nowrap; }
+  .wallet--admin .admin-trace-table th:first-child { border-top-left-radius: 12px; }
+  .wallet--admin .admin-trace-table th:last-child { border-top-right-radius: 12px; }
+  .wallet--admin .admin-trace-table td { height: 64px; padding: .85rem 1rem; border-bottom: 1px solid var(--border); vertical-align: middle; white-space: nowrap; }
+  .wallet--admin .admin-trace-table th:nth-child(1), .wallet--admin .admin-trace-table td:nth-child(1) { width: 220px; }
+  .wallet--admin .admin-trace-table th:nth-child(2), .wallet--admin .admin-trace-table td:nth-child(2) { width: 150px; }
+  .wallet--admin .admin-trace-table th:nth-child(3), .wallet--admin .admin-trace-table td:nth-child(3) { width: 160px; }
+  .wallet--admin .admin-trace-table th:nth-child(4), .wallet--admin .admin-trace-table td:nth-child(4) { width: 145px; }
+  .wallet--admin .admin-trace-table th:nth-child(5), .wallet--admin .admin-trace-table td:nth-child(5) { width: 145px; }
+  .wallet--admin .admin-trace-table th:nth-child(6), .wallet--admin .admin-trace-table td:nth-child(6) { width: 140px; }
+  .wallet--admin .admin-trace-table th:nth-child(7), .wallet--admin .admin-trace-table td:nth-child(7) { width: 160px; }
+  .wallet--admin .admin-trace-table th:nth-child(8), .wallet--admin .admin-trace-table td:nth-child(8) { width: 160px; }
+  .wallet--admin .admin-trace-table th:nth-child(9), .wallet--admin .admin-trace-table td:nth-child(9) { width: 130px; }
+  .wallet--admin .admin-trace-table th:nth-child(10), .wallet--admin .admin-trace-table td:nth-child(10) { width: 125px; }
+  .wallet--admin .admin-trace-table tbody tr:last-child td { border-bottom: 0; }
+  .wallet--admin .admin-trace-table tbody tr:not(.admin-trace-empty-row):hover td { background: var(--primary-soft); }
+  .wallet--admin .admin-trace-service-cell { position: sticky; left: 0; z-index: 1; background: var(--bg-card); box-shadow: 1px 0 0 var(--border); }
+  .wallet--admin .admin-trace-service-cell strong, .wallet--admin .admin-trace-service-cell small { display: block; overflow: hidden; text-overflow: ellipsis; }
+  .wallet--admin .admin-trace-service-cell strong { color: var(--text); font-size: .76rem; }
+  .wallet--admin .admin-trace-service-cell small { margin-top: .22rem; color: var(--muted); font-size: .65rem; }
+  .wallet--admin .admin-trace-person-cell { overflow: hidden; text-overflow: ellipsis; }
+  .wallet--admin .admin-trace-money { font-variant-numeric: tabular-nums; text-align: right; }
+  .wallet--admin .admin-trace-table th:nth-child(n+4):nth-child(-n+9) { text-align: right; }
+  .wallet--admin .admin-trace-ticket-cell, .wallet--admin .admin-trace-table th:last-child { text-align: center; }
+  .wallet--admin .admin-trace-fee-value { color: var(--primary); font-weight: 700; }
+  .wallet--admin .admin-trace-total-value { font-weight: 800; }
+  .wallet--admin .admin-trace-ticket-cell { min-width: 115px; }
+  :global(html[data-theme="dark"]) .wallet--admin .admin-trace-table tbody tr:not(.admin-trace-empty-row):hover td { background: #202b39; }
+  :global(html[data-theme="dark"]) .wallet--admin .admin-trace-service-cell { background: var(--bg-card); }
+  .wallet--admin .admin-trace-empty { padding: 1.2rem; color: var(--muted); font-size: .82rem; text-align: center; white-space: normal !important; }
+  .wallet--admin .admin-trace-more { margin-top: .65rem; padding: .45rem 0; border: 0; background: transparent; color: var(--primary); font: inherit; font-size: .78rem; font-weight: 700; cursor: pointer; }
+  .wallet--admin .admin-trace-more:hover { text-decoration: underline; text-underline-offset: 3px; }
+  .wallet--admin .admin-ticket-button { display: inline-flex; min-height: 34px; align-items: center; justify-content: center; gap: .4rem; padding: .4rem .6rem; border: 1px solid var(--primary); border-radius: 9px; background: var(--primary); color: #fff; font: inherit; font-size: .7rem; font-weight: 700; white-space: nowrap; cursor: pointer; transition: background .16s ease, border-color .16s ease, transform .16s ease; }
+  .wallet--admin .admin-ticket-button:hover { border-color: color-mix(in srgb, var(--primary) 82%, black); background: color-mix(in srgb, var(--primary) 88%, black); transform: translateY(-1px); }
+  .wallet--admin .admin-ticket-button:focus-visible, .wallet--admin .admin-ticket .hist__close:focus-visible { outline: 3px solid color-mix(in srgb, var(--primary) 55%, white); outline-offset: 3px; }
+  .admin-ticket { width: min(94vw, 590px); max-height: min(88vh, 760px); border-radius: 18px; }
+  .admin-ticket[open] { animation: admin-ticket-in .2s cubic-bezier(.2,.8,.2,1); }
+  .admin-ticket::backdrop { background: rgb(10 18 32 / 48%); backdrop-filter: none; }
+  @keyframes admin-ticket-in { from { opacity: 0; transform: translateY(8px) scale(.985); } to { opacity: 1; transform: none; } }
+  .admin-ticket-head { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: .95rem 1.35rem; border-bottom: 1px solid var(--border); }
+  .admin-ticket-brand { display: inline-flex; align-items: center; gap: .55rem; color: var(--text); font-size: .95rem; font-weight: 800; text-decoration: none; }
+  .admin-ticket-brand > span:last-child { margin-left: -.5rem; color: var(--primary); }
+  .admin-ticket-brand-icon { display: grid; width: 32px; height: 32px; place-items: center; border-radius: 9px; background: var(--primary); color: #fff; }
+  .admin-ticket-body { display: grid; gap: 1rem; overflow-y: auto; padding: 1.25rem 1.35rem 1.4rem; }
+  .admin-ticket-summary { padding: 1rem 1.1rem; border: 1px solid var(--border); border-radius: 13px; background: var(--bg-card-alt, var(--bg-card)); }
+  .admin-ticket-summary-top { display: flex; align-items: center; justify-content: space-between; gap: .75rem; }
+  .admin-ticket-summary-top > span:first-child { color: var(--muted); font-size: .65rem; font-weight: 800; letter-spacing: .1em; }
+  .admin-ticket-status { display: inline-flex; align-items: center; gap: .35rem; color: #16804a; font-size: .68rem; font-weight: 750; }
+  .admin-ticket-status i { width: 7px; height: 7px; border-radius: 50%; background: #20a364; }
+  .admin-ticket-summary h2 { margin: .65rem 0 .5rem; color: var(--text); font-size: 1.2rem; line-height: 1.3; }
+  .admin-ticket-meta { display: flex; flex-wrap: wrap; gap: .45rem 1rem; color: var(--muted); font-size: .72rem; }
+  .admin-ticket-parties { display: grid; grid-template-columns: minmax(0, 1fr) 28px minmax(0, 1fr); align-items: center; gap: .65rem; }
+  .admin-ticket-party { display: flex; align-items: center; gap: .65rem; min-width: 0; padding: .7rem .75rem; border: 1px solid var(--border); border-radius: 12px; }
+  .admin-ticket-avatar { display: grid; width: 34px; height: 34px; flex: 0 0 34px; place-items: center; border-radius: 50%; background: #e8eefc; color: #3158b7; font-size: .8rem; font-weight: 800; }
+  .admin-ticket-avatar.pro { background: #e8f5ee; color: #21754b; }
+  .admin-ticket-party > div { display: grid; min-width: 0; gap: .15rem; }
+  .admin-ticket-party small { color: var(--muted); font-size: .58rem; font-weight: 800; letter-spacing: .08em; }
+  .admin-ticket-party strong { overflow: hidden; color: var(--text); font-size: .76rem; text-overflow: ellipsis; white-space: nowrap; }
+  .admin-ticket-connector { color: var(--muted); font-size: 1rem; text-align: center; }
+  .admin-ticket-section { padding-top: .1rem; }
+  .admin-ticket-section h3 { margin: 0 0 .25rem; color: var(--text); font-size: .82rem; }
+  .admin-ticket-values { display: grid; grid-template-columns: 1fr 1fr; gap: 0 1.15rem; margin: 0; }
+  .admin-ticket-values > div { display: flex; justify-content: space-between; gap: .6rem; padding: .55rem 0; border-bottom: 1px solid var(--border); }
+  .admin-ticket-values dt { color: var(--muted); font-size: .72rem; }
+  .admin-ticket-values dd { margin: 0; color: var(--text); font-size: .73rem; font-weight: 700; font-variant-numeric: tabular-nums; text-align: right; white-space: nowrap; }
+  .fee-section { padding-top: .8rem; border-top: 1px dashed var(--border); }
+  .admin-ticket-total { display: flex; align-items: center; justify-content: space-between; gap: .8rem; margin-top: .75rem; padding: .8rem 1rem; border-radius: 11px; background: var(--primary); color: #fff; }
+  .admin-ticket-total span { font-size: .78rem; font-weight: 650; }
+  .admin-ticket-total strong { font-size: 1.1rem; font-variant-numeric: tabular-nums; }
+  .admin-ticket-footnote { margin: -.25rem 0 0; color: var(--muted); font-size: .68rem; text-align: center; }
+  :global(html[data-theme="dark"]) .wallet--admin .admin-ticket-avatar.client { background: #253451; color: #a9c4ff; }
+  :global(html[data-theme="dark"]) .wallet--admin .admin-ticket-avatar.pro { background: #22392e; color: #8de0ad; }
+  :global(html[data-theme="dark"]) .wallet--admin .admin-ticket-status { color: #8de0ad; }
+  .wallet--admin .wallet__error { display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin: 0; padding: .85rem 1rem; border: 1px solid #efb7b7; border-radius: 12px; background: #fff6f6; color: #8f2626; font-size: .9rem; line-height: 1.45; }
+  .wallet--admin .wallet__retry { flex: none; border: 0; background: transparent; color: #8f2626; font: inherit; font-weight: 700; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+  .wallet--admin .btn:focus-visible, .wallet--admin .wallet__retry:focus-visible { outline: 3px solid color-mix(in srgb, var(--primary) 55%, white); outline-offset: 3px; }
+  .wallet--admin .btn:disabled { opacity: .5; }
+  :global(html[data-theme="dark"]) .wallet--admin .wallet__error { border-color: #65383b; background: #2a2024; color: #f3b8ba; }
+  :global(html[data-theme="dark"]) .wallet--admin .wallet__retry { color: #f3b8ba; }
+  @media (max-width: 640px) {
+    .wallet--admin .balance { padding: 1.4rem; }
+    .wallet--admin .admin-commission-summary { grid-template-columns: 1fr; }
+    .wallet--admin .admin-commission-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .8rem; }
+    .wallet--admin .admin-trace-heading { flex-direction: column; }
+    .wallet--admin .admin-trace-table { min-width: 1435px; }
+    .wallet--admin .admin-trace-table th, .wallet--admin .admin-trace-table td { padding: .7rem .85rem; }
+    .wallet--admin .admin-ticket-parties { grid-template-columns: minmax(0, 1fr); gap: .45rem; }
+    .wallet--admin .admin-ticket-connector { display: none; }
+    .wallet--admin .admin-ticket-values { grid-template-columns: 1fr; }
+    .wallet--admin .admin-ticket-body { padding: 1rem; }
+    .wallet--admin .wallet__error { align-items: flex-start; flex-direction: column; }
+  }
+  .wallet--admin .admin-ticket { width: min(94vw, 560px); max-height: min(88vh, 700px); border-radius: 16px; }
+  .wallet--admin .admin-ticket-head { padding: .75rem 1rem; }
+  .wallet--admin .admin-ticket-body { gap: .65rem; padding: .85rem 1rem 1rem; }
+  .wallet--admin .admin-ticket-summary { padding: .75rem .9rem; border-radius: 11px; }
+  .wallet--admin .admin-ticket-summary h2 { margin: .4rem 0 .3rem; font-size: 1.05rem; }
+  .wallet--admin .admin-ticket-parties { gap: .2rem; padding: .4rem .7rem; border: 1px solid var(--border); border-radius: 11px; background: var(--bg-card); }
+  .wallet--admin .admin-ticket-party { gap: .5rem; padding: .35rem .25rem; border: 0; }
+  .wallet--admin .admin-ticket-party:first-child { border-right: 1px solid var(--border); }
+  .wallet--admin .admin-ticket-avatar { width: 30px; height: 30px; flex-basis: 30px; }
+  .wallet--admin .admin-ticket-section { padding: .6rem .75rem .35rem; border: 1px solid var(--border); border-radius: 11px; background: var(--bg-card); }
+  .wallet--admin .admin-ticket-section h3 { margin: 0 0 .25rem; font-size: .76rem; }
+  .wallet--admin .admin-ticket-values { grid-template-columns: minmax(0, 1fr); gap: 0; }
+  .wallet--admin .admin-ticket-values > div { padding: .37rem 0; }
+  .wallet--admin .admin-ticket-values > div:last-child { border-bottom: 0; }
+  .wallet--admin .admin-ticket-values dt { font-size: .69rem; }
+  .wallet--admin .admin-ticket-values dt span { margin-left: .25rem; color: var(--muted); font-size: .62rem; }
+  .wallet--admin .admin-ticket-values dd { font-size: .72rem; }
+  .wallet--admin .fee-section { padding-top: .6rem; border-top: 1px solid var(--border); }
+  .wallet--admin .admin-ticket-total { margin: .25rem 0 .2rem; padding: .5rem .65rem; border: 1px solid color-mix(in srgb, var(--primary) 24%, var(--border)); border-radius: 8px; background: var(--primary-soft); color: var(--text); }
+  .wallet--admin .admin-ticket-total span { font-size: .7rem; }
+  .wallet--admin .admin-ticket-total strong { color: var(--primary); font-size: .9rem; }
+  .wallet--admin .admin-ticket-footnote { margin: 0; font-size: .63rem; }
+  @media (max-width: 640px) {
+    .wallet--admin .admin-ticket-parties { grid-template-columns: minmax(0, 1fr); padding: .35rem .6rem; }
+    .wallet--admin .admin-ticket-party:first-child { border-right: 0; border-bottom: 1px solid var(--border); }
+    .wallet--admin .admin-ticket-connector { display: none; }
+  }
+</style>
+
+<style is:global>
+  .wallet--admin .admin-trace-table-wrap { width: 100%; min-width: 0; max-width: 100%; overflow-x: auto; overflow-y: hidden; border-radius: 14px; scrollbar-color: #778397 var(--bg-card); scrollbar-width: thin; }
+  .wallet--admin .admin-trace-table { width: 100%; min-width: 1435px; table-layout: fixed; }
+  .wallet--admin .admin-trace-table th,
+  .wallet--admin .admin-trace-table td { box-sizing: border-box; padding: .85rem 1rem; }
+  .wallet--admin .admin-trace-table th:nth-child(1), .wallet--admin .admin-trace-table td:nth-child(1) { width: 220px; }
+  .wallet--admin .admin-trace-table th:nth-child(2), .wallet--admin .admin-trace-table td:nth-child(2) { width: 150px; }
+  .wallet--admin .admin-trace-table th:nth-child(3), .wallet--admin .admin-trace-table td:nth-child(3) { width: 160px; }
+  .wallet--admin .admin-trace-table th:nth-child(4), .wallet--admin .admin-trace-table td:nth-child(4) { width: 145px; }
+  .wallet--admin .admin-trace-table th:nth-child(5), .wallet--admin .admin-trace-table td:nth-child(5) { width: 145px; }
+  .wallet--admin .admin-trace-table th:nth-child(6), .wallet--admin .admin-trace-table td:nth-child(6) { width: 140px; }
+  .wallet--admin .admin-trace-table th:nth-child(7), .wallet--admin .admin-trace-table td:nth-child(7) { width: 160px; }
+  .wallet--admin .admin-trace-table th:nth-child(8), .wallet--admin .admin-trace-table td:nth-child(8) { width: 160px; }
+  .wallet--admin .admin-trace-table th:nth-child(9), .wallet--admin .admin-trace-table td:nth-child(9) { width: 130px; }
+  .wallet--admin .admin-trace-table th:nth-child(10), .wallet--admin .admin-trace-table td:nth-child(10) { width: 125px; }
+  .wallet--admin .admin-trace-service-cell strong,
+  .wallet--admin .admin-trace-service-cell small { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .wallet--admin .admin-trace-service-cell strong { color: var(--text); font-size: .78rem; }
+  .wallet--admin .admin-trace-service-cell small { margin-top: .32rem; color: var(--muted); font-size: .67rem; }
+  .wallet--admin .admin-trace-person-cell { overflow: hidden; text-overflow: ellipsis; }
+  .wallet--admin .admin-trace-money { font-variant-numeric: tabular-nums; text-align: right; }
+  .wallet--admin .admin-trace-table th:nth-child(n+4):nth-child(-n+9) { text-align: right; }
+  .wallet--admin .admin-trace-ticket-cell,
+  .wallet--admin .admin-trace-table th:last-child { text-align: center; }
+  .wallet--admin .admin-ticket-button { display: inline-flex; min-height: 36px; align-items: center; justify-content: center; gap: .4rem; padding: .45rem .7rem; border: 1px solid var(--primary); border-radius: 9px; background: var(--primary); color: #fff; font: inherit; font-size: .72rem; font-weight: 700; line-height: 1; white-space: nowrap; cursor: pointer; transition: background-color .16s ease, border-color .16s ease, transform .16s ease; }
+  .wallet--admin .admin-ticket-button:hover { border-color: color-mix(in srgb, var(--primary) 82%, black); background: color-mix(in srgb, var(--primary) 88%, black); transform: translateY(-1px); }
+  .wallet--admin .admin-ticket-button:focus-visible { outline: 3px solid color-mix(in srgb, var(--primary) 55%, white); outline-offset: 3px; }
+  .wallet--admin .admin-trace-table-wrap::-webkit-scrollbar { height: 8px; }
+  .wallet--admin .admin-trace-table-wrap::-webkit-scrollbar-track { background: var(--bg-card); border-radius: 0 0 14px 14px; }
+  .wallet--admin .admin-trace-table-wrap::-webkit-scrollbar-thumb { background: #778397; border: 2px solid var(--bg-card); border-radius: 999px; }
+  .wallet--admin .admin-trace-table-wrap::-webkit-scrollbar-thumb:hover { background: var(--primary); }
+  @media (max-width: 640px) {
+    .wallet--admin .admin-trace-table { min-width: 1435px; }
+    .wallet--admin .admin-trace-table th,
+    .wallet--admin .admin-trace-table td { padding: .75rem .85rem; }
   }
 </style>
